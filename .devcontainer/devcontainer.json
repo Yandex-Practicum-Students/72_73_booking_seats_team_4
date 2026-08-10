@@ -1,0 +1,44 @@
+{
+  "name": "FastAPI & SQLAlchemy & Postgres",
+  "dockerComposeFile": "./docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers-extra/features/uv:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "42Crunch.vscode-openapi",
+        "ms-ossdata.vscode-pgsql",
+        "Gruntfuggly.todo-tree",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit",
+            "source.fixAll.ruff": "explicit"
+          }
+        },
+        "ruff.nativeServer": true,
+        "ruff.configurationPreference": "filesystemFirst",
+        "mypy-type-checker.args": ["--config-file=pyproject.toml"],
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python"
+      }
+    }
+  },
+  "remoteEnv": {
+    "PROJECT_NAME": "FastAPI & SQLAlchemy & Postgres",
+    "PYTHON_VERSION": "3.12",
+    "UV_INIT_BARE": "false"
+  },
+  "postCreateCommand": "make post-create",
+  "mounts": []
+}
