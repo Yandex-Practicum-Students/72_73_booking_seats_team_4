@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from models.user import UserRole
 
@@ -10,20 +10,25 @@ from models.user import UserRole
 class UserLogin(BaseModel):
     """Схема для аутентификации по email/phone + пароль."""
 
-    login: str = Field(..., description='Email или телефон')
-    password: str = Field(..., min_length=8, max_length=255, description='Пароль')
+    model_config = ConfigDict(extra='forbid')
+
+    login: str = Field(..., max_length=255)
+    password: str = Field(..., min_length=8, max_length=255)
 
 
 class UserCreate(BaseModel):
     """Схема создания пользователя."""
 
-    username: str = Field(..., min_length=3, max_length=64, description='Имя пользователя')
-    email: Optional[EmailStr] = Field(None, max_length=255, description='Email')
-    phone: Optional[str] = Field(None, max_length=20, description='Телефон')
-    password: str = Field(..., min_length=8, max_length=255, description='Пароль')
-    tg_id: Optional[str] = Field(None, max_length=64, description='Telegram ID')
-    cafe_id: Optional[uuid.UUID] = Field(None, description='ID кафе')
-    role: Optional[UserRole] = Field(UserRole.USER, description='Роль')
+    model_config = ConfigDict(extra='forbid')
+
+    username: str = Field(..., min_length=3, max_length=64)
+    email: Optional[EmailStr] = Field(None, max_length=255)
+    phone: Optional[str] = Field(None, max_length=20)
+    password: str = Field(..., min_length=8, max_length=255)
+    tg_id: Optional[str] = Field(None, max_length=64)
+    is_active: Optional[bool] = Field(True)
+    role: Optional[UserRole] = Field(UserRole.USER)
+    cafe_id: Optional[uuid.UUID] = Field(None)
 
     @model_validator(mode='after')
     def check_email_or_phone(self) -> 'UserCreate':
@@ -36,6 +41,8 @@ class UserCreate(BaseModel):
 class UserShortInfo(BaseModel):
     """Краткая информация о пользователе."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
     username: str
     email: Optional[str]
@@ -46,8 +53,11 @@ class UserShortInfo(BaseModel):
 class UserInfo(UserShortInfo):
     """Схема полных данных о пользователе."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     role: UserRole
     is_active: bool
+    cafe_id: Optional[uuid.UUID]
     created_at: datetime
     updated_at: datetime
 
@@ -55,17 +65,12 @@ class UserInfo(UserShortInfo):
 class UserUpdate(BaseModel):
     """Схема редактирования пользователя."""
 
-    username: Optional[str] = Field(None, min_length=3, max_length=64, description='Имя пользователя')
-    email: Optional[EmailStr] = Field(None, max_length=255, description='Email')
-    phone: Optional[str] = Field(None, max_length=20, description='Телефон')
-    tg_id: Optional[str] = Field(None, max_length=64, description='Telegram ID')
-    role: Optional[UserRole] = Field(None, description='Роль')
-    is_active: Optional[bool] = Field(None, description='Активен ли пользователь')
-    cafe_id: Optional[uuid.UUID] = Field(None, description='ID кафе')
+    model_config = ConfigDict(extra='forbid')
 
-    @model_validator(mode='after')
-    def check_at_least_one_field(self) -> 'UserUpdate':
-        """Проверяет, что хотя бы одно поле заполнено."""
-        if all(getattr(self, field) is None for field in self.__class__.model_fields):
-            raise ValueError('Хотя бы одно поле должно быть заполнено')
-        return self
+    username: Optional[str] = Field(None, min_length=3, max_length=64)
+    email: Optional[EmailStr] = Field(None, max_length=255)
+    phone: Optional[str] = Field(None, max_length=20)
+    tg_id: Optional[str] = Field(None, max_length=64)
+    role: Optional[UserRole] = Field(UserRole.USER)
+    is_active: Optional[bool] = Field(None)
+    cafe_id: Optional[uuid.UUID] = Field(None)
