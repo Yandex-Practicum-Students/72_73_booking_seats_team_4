@@ -23,11 +23,7 @@ class User(Base):
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, unique=True)
     phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, unique=True)
     password: Mapped[str] = mapped_column(String(255))
-    role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name='user_role_enum'),
-        server_default=UserRole.USER.value,
-        default=UserRole.USER,
-    )
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole, name='user_role_enum'), default=UserRole.USER)
     tg_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True)
     cafe_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID,
