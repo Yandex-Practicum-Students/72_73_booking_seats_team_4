@@ -38,15 +38,6 @@ class AuthToken(BaseModel):
     token_type: str
 
 
-class UserLogin(BaseModel):
-    """Схема для аутентификации по email/phone + пароль."""
-
-    model_config = ConfigDict(extra='forbid')
-
-    login: Login = Field(..., max_length=255)
-    password: str = Field(..., min_length=8, max_length=255)
-
-
 class UserCreate(BaseModel):
     """Схема создания пользователя."""
 
