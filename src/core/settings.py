@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,6 +20,10 @@ class Settings(BaseSettings):
     postgres_db: str
     postgres_server: str = 'localhost'
     postgres_port: int = 5432
+
+    # Настройки авторизации
+    jwt_secret: SecretStr = Field(min_length=32)
+    jwt_lifetime_seconds: int = Field(default=3600, gt=0)
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / '../infra/.env',
