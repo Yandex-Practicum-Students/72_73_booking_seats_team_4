@@ -30,11 +30,11 @@ class BaseSchemaDB(BaseSchema):
 
     id: uuid.UUID
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class FullBaseSchemaDB(BaseSchemaDB, IsActiveSchema):
     """Схема для возвращения полной таблицы."""
 
     create_date: datetime
     updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
