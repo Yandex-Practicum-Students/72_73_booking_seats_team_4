@@ -96,6 +96,20 @@ def _ensure_contact_remains(user: User, update_data: dict[str, object]) -> None:
         )
 
 
+def _reject_null_required_fields(update_data: dict[str, object]) -> None:
+    """Не позволяет обнулить обязательные поля через PATCH."""
+    null_fields = {
+        field_name
+        for field_name in ('username', 'role', 'is_active')
+        if field_name in update_data and update_data[field_name] is None
+    }
+    if null_fields:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f'Поля {", ".join(sorted(null_fields))} не могут быть null.',
+        )
+
+
 def _user_conflict_error() -> HTTPException:
     """Формирует единый ответ при конфликте уникальных полей."""
     return HTTPException(
@@ -192,6 +206,7 @@ async def update_me(
         exclude_unset=True,
         exclude={'is_active', 'role'},
     )
+    _reject_null_required_fields(update_data)
     _ensure_contact_remains(user, update_data)
     try:
         return await UserCRUD(session).update(user, update_data)
@@ -228,15 +243,18 @@ async def update_user_by_id(
     crud = UserCRUD(session)
     target_user = await _get_user_or_404(user_id, crud)
     update_data = user_update.model_dump(exclude_unset=True)
+    _reject_null_required_fields(update_data)
     requested_role = update_data.get('role')
-    if not _is_admin(actor) and (
-        _is_admin(target_user)
-        or str(getattr(requested_role, 'value', requested_role) or '').upper() == 'ADMIN'
-    ):
+    requested_role_name = str(
+        getattr(requested_role, 'value', requested_role) or '',
+    ).upper()
+    if not _is_admin(actor) and (_is_admin(target_user) or requested_role_name == 'ADMIN'):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Менеджер не может изменять администратора или назначать эту роль.',
         )
+    if requested_role is not None and requested_role_name != 'MANAGER':
+        target_user.cafe_id = None
 
     _ensure_contact_remains(target_user, update_data)
     try:
