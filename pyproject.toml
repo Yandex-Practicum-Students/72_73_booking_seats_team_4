@@ -9,6 +9,7 @@ dependencies = [
     "asyncpg>=0.31.0",
     "email-validator>=2.3.0",
     "fastapi>=0.136.1",
+    "phonenumbers>=9.0.36",
     "pydantic>=2.13.3",
     "pydantic-settings>=2.14.0",
     "pwdlib[argon2]>=0.3.0",

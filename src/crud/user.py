@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.user import User
 from schemas.user import UserCreate
+from schemas.validators import normalize_login, normalize_phone
 
 from core.user import hash_password
 
@@ -18,13 +19,17 @@ class UserAlreadyExistsError(ValueError):
     """Пользователь с одним из уникальных полей уже существует."""
 
 
+class UserNotFoundError(LookupError):
+    """Пользователь с переданным идентификатором не найден."""
+
+
 def _normalize_identity(data: Mapping[str, Any]) -> dict[str, Any]:
     """Нормализует идентификаторы пользователя перед записью."""
     normalized = dict(data)
     if normalized.get('email') is not None:
         normalized['email'] = str(normalized['email']).strip().lower()
     if normalized.get('phone') is not None:
-        normalized['phone'] = normalized['phone'].strip()
+        normalized['phone'] = normalize_phone(normalized['phone'])
     if normalized.get('username') is not None:
         normalized['username'] = normalized['username'].strip()
     return normalized
@@ -41,9 +46,16 @@ class UserCRUD:
         """Возвращает пользователя по идентификатору."""
         return await self.session.get(User, user_id)
 
+    async def get_or_raise(self, user_id: uuid.UUID) -> User:
+        """Возвращает пользователя или сообщает, что он не найден."""
+        user = await self.get(user_id)
+        if user is None:
+            raise UserNotFoundError
+        return user
+
     async def get_by_login(self, login: str) -> User | None:
         """Ищет пользователя по email или телефону."""
-        login = login.strip()
+        login = normalize_login(login)
         statement = select(User).where(
             or_(
                 func.lower(User.email) == login.lower(),

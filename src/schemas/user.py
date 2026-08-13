@@ -1,16 +1,29 @@
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Annotated, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, model_validator
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    EmailStr,
+    Field,
+    SecretStr,
+    model_validator,
+)
 
 from models.user import UserRole
+from schemas.validators import normalize_login, normalize_phone, normalize_username
+
+Username = Annotated[str, BeforeValidator(normalize_username)]
+Phone = Annotated[str, BeforeValidator(normalize_phone)]
+Login = Annotated[str, BeforeValidator(normalize_login)]
 
 
 class AuthData(BaseModel):
     """Данные для входа по электронной почте или телефону."""
 
-    login: str = Field(
+    login: Login = Field(
         min_length=1,
         max_length=320,
         description='Логин пользователя (email или телефон)',
@@ -30,7 +43,7 @@ class UserLogin(BaseModel):
 
     model_config = ConfigDict(extra='forbid')
 
-    login: str = Field(..., max_length=255)
+    login: Login = Field(..., max_length=255)
     password: str = Field(..., min_length=8, max_length=255)
 
 
@@ -39,9 +52,9 @@ class UserCreate(BaseModel):
 
     model_config = ConfigDict(extra='forbid')
 
-    username: str = Field(..., min_length=3, max_length=64)
+    username: Username = Field(..., min_length=3, max_length=64)
     email: Optional[EmailStr] = Field(None, max_length=255)
-    phone: Optional[str] = Field(None, max_length=20)
+    phone: Optional[Phone] = Field(None, max_length=20)
     password: str = Field(..., min_length=8, max_length=255)
     tg_id: Optional[str] = Field(None, max_length=64)
 
@@ -81,9 +94,9 @@ class UserUpdate(BaseModel):
 
     model_config = ConfigDict(extra='forbid')
 
-    username: Optional[str] = Field(None, min_length=3, max_length=64)
+    username: Optional[Username] = Field(None, min_length=3, max_length=64)
     email: Optional[EmailStr] = Field(None, max_length=255)
-    phone: Optional[str] = Field(None, max_length=20)
+    phone: Optional[Phone] = Field(None, max_length=20)
     password: Optional[str] = Field(None, min_length=8, max_length=255)
     tg_id: Optional[str] = Field(None, max_length=64)
     role: Optional[UserRole] = Field(None)
