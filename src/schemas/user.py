@@ -2,9 +2,27 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, SecretStr, Field, model_validator
 
 from models.user import UserRole
+
+
+class AuthData(BaseModel):
+    """Данные для входа по электронной почте или телефону."""
+
+    login: str = Field(
+        min_length=1,
+        max_length=320,
+        description='Логин пользователя (email или телефон)',
+    )
+    password: SecretStr
+
+
+class AuthToken(BaseModel):
+    """JWT-токен для последующей авторизации пользователя."""
+
+    access_token: str
+    token_type: str
 
 
 class UserLogin(BaseModel):

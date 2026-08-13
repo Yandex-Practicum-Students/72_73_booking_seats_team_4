@@ -2,12 +2,11 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field, SecretStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crud.user import UserAlreadyExistsError, UserCRUD
 from models.user import User
-from schemas.user import UserCreate, UserInfo, UserUpdate
+from schemas.user import AuthData, AuthToken, UserCreate, UserInfo, UserUpdate
 
 from core.db import get_session
 from core.user import (
@@ -16,24 +15,6 @@ from core.user import (
     get_current_user,
     verify_password,
 )
-
-
-class AuthData(BaseModel):
-    """Данные для входа по электронной почте или телефону."""
-
-    login: str = Field(
-        min_length=1,
-        max_length=320,
-        description='Логин пользователя (email или телефон)',
-    )
-    password: SecretStr
-
-
-class AuthToken(BaseModel):
-    """JWT-токен для последующей авторизации пользователя."""
-
-    access_token: str
-    token_type: str
 
 
 router = APIRouter()
