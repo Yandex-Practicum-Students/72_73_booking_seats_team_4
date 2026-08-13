@@ -5,9 +5,9 @@ from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
 
 
-
 class TableBase(BaseModel):
     """Базовая схема стола."""
+
     seat_number: int = Field(..., description="Количество мест", ge=1)
     description: Optional[str] = Field(None, description="Описание стола")
 
@@ -26,6 +26,7 @@ class TableUpdate(BaseModel):
 
 class TableInfo(BaseModel):
     """Полная информация о столе."""
+
     id: UUID
 
     cafe_id: UUID
@@ -40,8 +41,10 @@ class TableInfo(BaseModel):
     class Config:
         from_attributes = True
 
+
 class TableShort(BaseModel):
     """Краткая информация о столе."""
+
     id: UUID
     seat_number: int
 
@@ -51,6 +54,7 @@ class TableShort(BaseModel):
 
 class TableFilter(BaseModel):
     """Фильтрация столов по количеству мест и кафе."""
+
     # показываем только столы с is_active=True
     cafe_id: Optional[UUID] = None
     min_seat_number: Optional[int] = Field(None, ge=1, description="Мин. кол-во мест")
