@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING
 from sqlalchemy import UUID, ForeignKey, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.core.base_model import Base
+from core.base_model import Base
 
 if TYPE_CHECKING:
-    from src.models.booking import Booking
+    from src.models.booking_tables_slots import BookingTablesSlots
     from src.models.cafe import Cafe
 
 
@@ -33,8 +33,8 @@ class Table(Base):
         back_populates="tables",
         lazy="selectin",
     )
-    bookings: Mapped[list["Booking"]] = relationship(
-        "Booking",
+    booking_tables_slots: Mapped[list["BookingTablesSlots"]] = relationship(
+        "BookingTablesSlots",
         back_populates="table",
         lazy="selectin",
     )
