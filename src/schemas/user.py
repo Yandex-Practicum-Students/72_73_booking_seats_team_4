@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, SecretStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, model_validator
 
 from models.user import UserRole
 

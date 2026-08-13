@@ -16,7 +16,6 @@ from core.user import (
     verify_password,
 )
 
-
 router = APIRouter()
 auth_router = APIRouter(prefix='/auth', tags=['Аутентификация'])
 users_router = APIRouter(prefix='/users', tags=['Пользователи'])
