@@ -6,9 +6,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.base_model import Base
 
-if TYPE_CHECKING:
-    from src.models.booking_tables_slots import BookingTablesSlots
-    from src.models.cafe import Cafe
+from src.models.booking import BookingTablesSlots
+from src.models.cafe import Cafe
 
 
 class Table(Base):
@@ -28,15 +27,16 @@ class Table(Base):
         nullable=True,
     )
 
-    cafe: Mapped['Cafe'] = relationship(
-        'Cafe',
-        back_populates='tables',
-        lazy='selectin',
+
+    cafe: Mapped["Cafe"] = relationship(
+        "Cafe",
+        back_populates="tables",
+        lazy="selectin",
     )
-    booking_tables_slots: Mapped[list['BookingTablesSlots']] = relationship(
-        'BookingTablesSlots',
-        back_populates='table',
-        lazy='selectin',
+    bookings: Mapped[list["BookingTablesSlots"]] = relationship(
+        "Booking",
+        back_populates="table",
+        lazy="selectin",
     )
 
     def __repr__(self) -> str:
