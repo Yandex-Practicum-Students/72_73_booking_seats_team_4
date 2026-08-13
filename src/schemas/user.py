@@ -26,9 +26,6 @@ class UserCreate(BaseModel):
     phone: Optional[str] = Field(None, max_length=20)
     password: str = Field(..., min_length=8, max_length=255)
     tg_id: Optional[str] = Field(None, max_length=64)
-    is_active: Optional[bool] = Field(True)
-    role: Optional[UserRole] = Field(UserRole.USER)
-    cafe_id: Optional[uuid.UUID] = Field(None)
 
     @model_validator(mode='after')
     def check_email_or_phone(self) -> 'UserCreate':
@@ -57,7 +54,6 @@ class UserInfo(UserShortInfo):
 
     role: UserRole
     is_active: bool
-    cafe_id: Optional[uuid.UUID]
     created_at: datetime
     updated_at: datetime
 
@@ -70,7 +66,7 @@ class UserUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=64)
     email: Optional[EmailStr] = Field(None, max_length=255)
     phone: Optional[str] = Field(None, max_length=20)
+    password: Optional[str] = Field(None, min_length=8, max_length=255)
     tg_id: Optional[str] = Field(None, max_length=64)
-    role: Optional[UserRole] = Field(UserRole.USER)
+    role: Optional[UserRole] = Field(None)
     is_active: Optional[bool] = Field(None)
-    cafe_id: Optional[uuid.UUID] = Field(None)
