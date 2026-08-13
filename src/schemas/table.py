@@ -20,7 +20,7 @@ class TableUpdate(BaseModel):
     """Схема для обновления стола."""
 
     seat_number: Optional[int] = Field(
-        None, description="Количество мест", ge=1
+        None, description="Количество мест", ge=1,
     )
     description: Optional[str] = Field(None, description="Описание стола")
     is_active: Optional[bool] = Field(None, description="Активность стола")
@@ -62,10 +62,10 @@ class TableFilter(BaseModel):
     # показываем только столы с is_active=True
     cafe_id: Optional[UUID] = None
     min_seat_number: Optional[int] = Field(
-        None, ge=1, description="Мин. кол-во мест"
+        None, ge=1, description="Мин. кол-во мест",
     )
     max_seat_number: Optional[int] = Field(
-        None, ge=1, description="Макс. кол-во мест"
+        None, ge=1, description="Макс. кол-во мест",
     )
 
     @model_validator(mode="after")
@@ -77,6 +77,6 @@ class TableFilter(BaseModel):
         ):
             if self.max_seat_number < self.min_seat_number:
                 raise ValueError(
-                    "Макс. кол-во мест должно быть >= мин. кол-во мест."
+                    "Макс. кол-во мест должно быть >= мин. кол-во мест.",
                 )
         return self
