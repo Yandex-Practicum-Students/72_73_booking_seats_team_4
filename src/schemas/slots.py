@@ -17,7 +17,7 @@ class TimeValidatorMixin:
         if self.start_time is not None and self.end_time is not None:
             if self.start_time >= self.end_time:
                 raise ValueError(
-                    "Время начала меньше должно быть меньше времени окончания",
+                    "Время начала должно быть меньше времени окончания",
                 )
         return self
 

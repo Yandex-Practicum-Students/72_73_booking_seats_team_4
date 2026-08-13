@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 from sqlalchemy import UUID, ForeignKey, Text, Time
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.core.base_model import Base
+from core.base_model import Base
 
 if TYPE_CHECKING:
-    from src.models.booking import Booking
+    from src.models.booking_tables_slots import BookingTablesSlots
     from src.models.cafe import Cafe
 
 
@@ -24,16 +24,22 @@ class Slot(Base):
         Time(timezone=True),
         nullable=False,
     )
-    end_time: Mapped[time] = mapped_column(Time(timezone=True), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    end_time: Mapped[time] = mapped_column(
+        Time(timezone=True),
+        nullable=False,
+    )
+    description: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
 
     cafe: Mapped["Cafe"] = relationship(
         "Cafe",
         back_populates="slots",
         lazy="selectin",
     )
-    bookings: Mapped[list["Booking"]] = relationship(
-        "Booking",
+    booking_tables_slots: Mapped[list["BookingTablesSlots"]] = relationship(
+        "BookingTablesSlots",
         back_populates="slot",
         lazy="selectin",
     )
