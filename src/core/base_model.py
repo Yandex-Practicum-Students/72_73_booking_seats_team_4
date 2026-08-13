@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import BOOLEAN, UUID, DateTime, func
+from sqlalchemy import BOOLEAN, UUID, DateTime, Text, func
 from sqlalchemy.orm import Mapped, declarative_base, declared_attr, mapped_column
 
 
@@ -31,6 +31,12 @@ class PreBase:
         onupdate=get_utc_now,
         server_onupdate=func.now(),
     )
+
+
+class DescriptionMixin:
+    """Миксин, добавляет поле discription."""
+
+    description: Mapped[str] = mapped_column(Text, nullable=True)
 
 
 Base = declarative_base(cls=PreBase)
