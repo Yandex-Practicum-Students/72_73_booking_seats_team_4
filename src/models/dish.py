@@ -8,8 +8,8 @@ from core.base_model import Base
 
 
 class CafeDish(Base):
-    """
-    Промежуточная таблица связи кафе и блюда (меню кафе).
+    """Промежуточная таблица связи кафе и блюда (меню кафе).
+
     Одно блюдо может входить в меню нескольких кафе, а в одном кафе
     может быть несколько блюд.
     """
@@ -32,13 +32,12 @@ class CafeDish(Base):
 
 
 class Dish(Base):
-    """
-    Модель блюда.
+    """Модель блюда.
+
     Блюдо может входить в меню нескольких кафе (связь через CafeDish).
     """
 
     __tablename__ = 'dishes'
-
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     photo_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)

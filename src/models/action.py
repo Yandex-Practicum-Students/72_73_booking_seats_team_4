@@ -8,8 +8,8 @@ from core.base_model import Base
 
 
 class CafeAction(Base):
-    """
-    Промежуточная таблица связи кафе и акции.
+    """Промежуточная таблица связи кафе и акции.
+
     Одна акция может действовать в нескольких кафе, а в одном кафе
     может быть несколько акций.
     """
@@ -18,7 +18,6 @@ class CafeAction(Base):
     __table_args__ = (
         UniqueConstraint('cafe_id', 'action_id', name='uq_cafe_action'),
     )
-
     cafe_id: Mapped[uuid.UUID] = mapped_column(
         Uuid,
         ForeignKey('cafes.id', name='fk_cafe_actions_cafe_id'),
@@ -32,8 +31,8 @@ class CafeAction(Base):
 
 
 class Action(Base):
-    """
-    Модель акции.
+    """Модель акции.
+
     Акция может действовать в нескольких кафе (связь через CafeAction).
     """
 
