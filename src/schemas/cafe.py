@@ -23,7 +23,7 @@ class CafeCreate(DescriptionSchema, BaseCafe):
     managers_id: List[uuid.UUID]
 
 
-class CafeInfo(FullBaseSchemaDB, BaseCafe, IsActiveSchema, DescriptionSchema):
+class CafeInfo(FullBaseSchemaDB, BaseCafe, DescriptionSchema):
     """Схема полной инфо об объекте."""
 
     managers: List[User]  # noqa

@@ -22,7 +22,7 @@ class DescriptionSchema(BaseSchema):
 class IsActiveSchema(BaseSchema):
     """Схема для добавления поля is_active."""
 
-    is_active: bool
+    is_active: Optional[bool] = None
 
 
 class BaseSchemaDB(BaseSchema):
