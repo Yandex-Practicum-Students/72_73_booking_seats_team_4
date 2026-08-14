@@ -1,18 +1,27 @@
-from datetime import date, time
+from datetime import time
 from typing import Any, Optional
 
 from pydantic import model_validator
 
 
 def normalize_time(value: Any) -> Any:
-    """Нормализация времени из строки в time."""
+    """Нормализация времени из строки в time.
+
+    Поддерживает форматы:
+    - HH:MM:SS (полный формат)
+    - HH:MM (добавляет :00 автоматически)
+    - time (убирает микросекунды)
+    """
     if isinstance(value, time):
         return value.replace(microsecond=0) if value.microsecond else value
+
     if isinstance(value, str):
+        if len(value.split(':')) == 2:
+            value = f'{value}:00'
         try:
             return time.fromisoformat(value)
         except ValueError as exc:
-            raise ValueError('Некорректный формат времени. Используйте HH:MM:SS') from exc
+            raise ValueError('Некорректный формат времени. Используйте HH:MM или HH:MM:SS') from exc
     return value
 
 
@@ -30,13 +39,4 @@ class TimeValidatorMixin:
                 raise ValueError(
                     'Время начала должно быть меньше времени окончания',
                 )
-        return self
-
-    @model_validator(mode='after')
-    def validate_booking_date(self) -> 'TimeValidatorMixin':
-        """Проверка: дата бронирования не в прошлом."""
-        if self.booking_date is not None:
-            today = date.today()
-            if self.booking_date < today:
-                raise ValueError('Дата бронирования не может быть в прошлом')
         return self
