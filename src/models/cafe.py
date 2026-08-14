@@ -1,20 +1,27 @@
 import uuid
+from typing import List, Optional
 
-from sqlalchemy import UUID, ForeignKey, String
+from sqlalchemy import UUID, ForeignKey, String, and_
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from models.user import User  # noqa
 
 from core import base_model
 
 
-class Cafes(base_model.Base, base_model.DescriptionMixin):
-    """Модель Cafe."""
+class Cafe(base_model.Base, base_model.DescriptionMixin):
+    """Модель Cafes."""
 
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    address: Mapped[str] = mapped_column(String, nullable=False)
-    phone: Mapped[str] = mapped_column(String, nullable=False)
-    photo_id: Mapped[uuid.UUID] = mapped_column(UUID, ForeignKey('media.id'), nullable=True)
-    managers_id: Mapped[uuid.UUID] = mapped_column(
+    name: Mapped[str] = mapped_column(String, unique=True)
+    address: Mapped[str] = mapped_column(String, unique=True)
+    phone: Mapped[str] = mapped_column(String, unique=True)
+    photo_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID,
-        relationship(back_populates='users.id'),
-        nullable=False,
+        ForeignKey('medias.id', name='fk_cafe_photo'),
+        nullable=True,
     )
+    managers: Mapped[List[User]] = relationship(
+        'Users',
+        primaryjoin=lambda: and_(Cafe.id == User.cafe_id, User.role == 'MANAGER'),
+        name='fk_cafe_managers',
+    )  # noqa
