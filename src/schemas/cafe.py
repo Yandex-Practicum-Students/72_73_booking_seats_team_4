@@ -8,12 +8,6 @@ from models.user import User  # noqa
 from src.schemas.base import BaseSchemaDB, DescriptionSchema, FullBaseSchemaDB, IsActiveSchema
 
 
-class ManagersCafe(BaseModel):
-    """Схема для создания и обновления кафе."""
-
-    managers_id: List[uuid.UUID]
-
-
 class BaseCafe(BaseModel):
     """Базовая схема объекта кафе."""
 
@@ -23,8 +17,10 @@ class BaseCafe(BaseModel):
     photo_id: Optional[uuid.UUID] = None
 
 
-class CafeCreate(DescriptionSchema, ManagersCafe, BaseCafe):
+class CafeCreate(DescriptionSchema, BaseCafe):
     """Схема создания объекта."""
+
+    managers_id: List[uuid.UUID]
 
 
 class CafeInfo(FullBaseSchemaDB, BaseCafe, IsActiveSchema, DescriptionSchema):
