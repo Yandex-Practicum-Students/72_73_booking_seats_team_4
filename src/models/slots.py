@@ -18,19 +18,15 @@ class Slot(Base):
     cafe_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
         ForeignKey("cafes.id", ondelete="NO ACTION"),
-        nullable=False,
     )
     start_time: Mapped[time] = mapped_column(
         Time(timezone=True),
-        nullable=False,
     )
     end_time: Mapped[time] = mapped_column(
         Time(timezone=True),
-        nullable=False,
     )
     description: Mapped[str | None] = mapped_column(
         Text,
-        nullable=True,
     )
 
     cafe: Mapped["Cafe"] = relationship(
@@ -45,4 +41,4 @@ class Slot(Base):
     )
 
     def __repr__(self) -> str:
-        return f"Слот {self.id} (кафе={self.cafe_id}, {self.start_time}-{self.end_time})"
+        return f'Слот {self.id} (кафе={self.cafe_id}, {self.start_time}-{self.end_time})'
