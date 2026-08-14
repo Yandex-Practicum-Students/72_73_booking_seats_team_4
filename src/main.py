@@ -4,6 +4,10 @@ from typing import AsyncGenerator
 import uvicorn
 from fastapi import FastAPI
 
+from api.endpoints.user import router as user_router
+from api.exceptions import user_already_exists_handler, user_not_found_handler
+from crud.user import UserAlreadyExistsError, UserNotFoundError
+
 from core.settings import settings
 
 
@@ -20,6 +24,9 @@ app = FastAPI(
     version=settings.version,
     description=settings.description,
 )
+app.add_exception_handler(UserAlreadyExistsError, user_already_exists_handler)
+app.add_exception_handler(UserNotFoundError, user_not_found_handler)
+app.include_router(user_router)
 
 
 @app.get(
