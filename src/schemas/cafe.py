@@ -3,13 +3,13 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
-from src.schemas.base import BaseSchemaDB, DescriptionSchema, FullBaseSchemaDB, IsActiveSchema
+from models.user import User  # noqa
 
-# from models.user import Users
+from src.schemas.base import BaseSchemaDB, DescriptionSchema, FullBaseSchemaDB, IsActiveSchema
 
 
 class ManagersCafe(BaseModel):
-    """Схема менеджеров кафе."""
+    """Схема для создания и обновления кафе."""
 
     managers_id: List[uuid.UUID]
 
@@ -26,20 +26,15 @@ class BaseCafe(BaseModel):
 class CafeCreate(DescriptionSchema, ManagersCafe, BaseCafe):
     """Схема создания объекта."""
 
-    pass
-
 
 class CafeInfo(FullBaseSchemaDB, BaseCafe, IsActiveSchema, DescriptionSchema):
     """Схема полной инфо об объекте."""
 
-    pass
-    # managers: List[Users]
+    managers: List[User]  # noqa
 
 
 class CafeShortInfo(BaseSchemaDB, BaseCafe, DescriptionSchema):
     """Схема для получения короткой инфо о объекте."""
-
-    pass
 
 
 class CafeUpdate(DescriptionSchema, IsActiveSchema):
