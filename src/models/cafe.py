@@ -4,7 +4,7 @@ from typing import List, Optional
 from sqlalchemy import UUID, ForeignKey, String, and_
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from models.user import User  # noqa
+from models.user import User
 
 from core import base_model
 
@@ -21,7 +21,7 @@ class Cafe(base_model.Base, base_model.DescriptionMixin):
         nullable=True,
     )
     managers: Mapped[List[User]] = relationship(
-        'Users',
+        User,
         primaryjoin=lambda: and_(Cafe.id == User.cafe_id, User.role == 'MANAGER'),
         name='fk_cafe_managers',
-    )  # noqa
+    )
