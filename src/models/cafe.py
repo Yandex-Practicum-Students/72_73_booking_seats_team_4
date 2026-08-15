@@ -21,7 +21,6 @@ class Cafe(base_model.Base, base_model.DescriptionMixin):
         nullable=True,
     )
     managers: Mapped[List[User]] = relationship(
-        User,
+        'User',
         primaryjoin=lambda: and_(Cafe.id == User.cafe_id, User.role == 'MANAGER'),
-        name='fk_cafe_managers',
     )
