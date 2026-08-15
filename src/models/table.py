@@ -20,12 +20,12 @@ class Table(Base, DescriptionMixin):
         Integer,
         nullable=False,
     )
-    cafe: Mapped["Cafe"] = relationship(
+    cafe: Mapped['Cafe'] = relationship(
         'Cafe',
         back_populates='tables',
         lazy='selectin',
     )
-    bookings: Mapped[list["BookingTablesSlots"]] = relationship(
+    bookings: Mapped[list['BookingTablesSlots']] = relationship(
         'BookingTablesSlots',
         back_populates='table',
         lazy='selectin',
