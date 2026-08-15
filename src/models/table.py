@@ -13,7 +13,7 @@ class Table(Base, DescriptionMixin):
 
     cafe_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
-        ForeignKey("cafes.id", ondelete="NO ACTION"),
+        ForeignKey('cafes.id', ondelete='NO ACTION'),
         nullable=False,
     )
     seat_number: Mapped[int] = mapped_column(
@@ -21,15 +21,15 @@ class Table(Base, DescriptionMixin):
         nullable=False,
     )
     cafe: Mapped["Cafe"] = relationship(
-        "Cafe",
-        back_populates="tables",
-        lazy="selectin",
+        'Cafe',
+        back_populates='tables',
+        lazy='selectin',
     )
     bookings: Mapped[list["BookingTablesSlots"]] = relationship(
-        "BookingTablesSlots",
-        back_populates="table",
-        lazy="selectin",
+        'BookingTablesSlots',
+        back_populates='table',
+        lazy='selectin',
     )
 
     def __repr__(self) -> str:
-        return f"Стол {self.id} (кафе={self.cafe_id}, мест={self.seat_number})"
+        return f'Стол {self.id} (кафе={self.cafe_id}, мест={self.seat_number})'

@@ -9,7 +9,7 @@ from src.schemas.base import BaseModel, BaseSchemaDB, DescriptionSchema, FullBas
 class TableBase(BaseModel):
     """Базовая схема стола."""
 
-    seat_number: int = Field(description="Количество мест", ge=1)
+    seat_number: int = Field(description='Количество мест', ge=1)
 
 
 class TableCreate(DescriptionSchema, TableBase):
@@ -21,7 +21,7 @@ class TableUpdate(DescriptionSchema, IsActiveSchema):
 
     seat_number: Optional[int] = Field(
         None,
-        description="Количество мест",
+        description='Количество мест',
         ge=1,
     )
 
