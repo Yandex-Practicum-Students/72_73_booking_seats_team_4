@@ -1,0 +1,175 @@
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from api.dependencies.permissions import (
+    AdminUser,
+    CurrentUser,
+    StaffUser,
+    ensure_user_update_allowed,
+)
+from api.validators import ensure_contact_remains, reject_null_required_fields
+from crud.user import UserCRUD
+from models.user import User, UserRole
+from schemas.user import AuthData, AuthToken, UserCreate, UserInfo, UserUpdate
+
+from core.db import get_session
+from core.user import (
+    DUMMY_PASSWORD_HASH,
+    create_access_token,
+    verify_password,
+)
+
+router = APIRouter()
+auth_router = APIRouter(prefix='/auth', tags=['Аутентификация'])
+users_router = APIRouter(prefix='/users', tags=['Пользователи'])
+
+
+@auth_router.post(
+    '/login',
+    response_model=AuthToken,
+    summary='Получение токена авторизации',
+)
+async def login(
+    credentials: AuthData,
+    session: AsyncSession = Depends(get_session),
+) -> AuthToken:
+    """Аутентифицирует пользователя по email или телефону."""
+    crud = UserCRUD(session)
+    user = await crud.get_by_login(credentials.login)
+    password = credentials.password.get_secret_value()
+
+    if user is None:
+        verify_password(password, DUMMY_PASSWORD_HASH)
+    else:
+        verified, updated_hash = verify_password(password, user.hashed_password)
+        if verified and user.is_active:
+            if updated_hash is not None:
+                user.hashed_password = updated_hash
+                await session.flush()
+            return AuthToken(
+                access_token=create_access_token(user.id),
+                token_type='bearer',
+            )
+
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        detail='Неверные имя пользователя или пароль.',
+    )
+
+
+@users_router.post(
+    '',
+    response_model=UserInfo,
+    status_code=status.HTTP_201_CREATED,
+    summary='Регистрация нового пользователя',
+)
+async def create_user(
+    user_create: UserCreate,
+    session: AsyncSession = Depends(get_session),
+) -> User:
+    """Регистрирует пользователя с безопасным набором полномочий."""
+    return await UserCRUD(session).create(user_create)
+
+
+@users_router.get(
+    '',
+    response_model=list[UserInfo],
+    summary='Получение списка пользователей',
+)
+async def get_all_users(
+    _: StaffUser,
+    session: AsyncSession = Depends(get_session),
+) -> list[User]:
+    """Возвращает пользователей администратору или менеджеру."""
+    return await UserCRUD(session).get_all()
+
+
+@users_router.get(
+    '/me',
+    response_model=UserInfo,
+    summary='Получение информации о текущем пользователе',
+)
+async def get_me(user: CurrentUser) -> User:
+    """Возвращает данные текущего активного пользователя."""
+    return user
+
+
+@users_router.patch(
+    '/me',
+    response_model=UserInfo,
+    summary='Обновление информации о текущем пользователе',
+)
+async def update_me(
+    user_update: UserUpdate,
+    user: CurrentUser,
+    session: AsyncSession = Depends(get_session),
+) -> User:
+    """Изменяет доступные пользователю поля собственной записи."""
+    update_data = user_update.model_dump(
+        exclude_unset=True,
+        exclude={'is_active', 'role'},
+    )
+    reject_null_required_fields(update_data)
+    ensure_contact_remains(user, update_data)
+    return await UserCRUD(session).update(user, update_data)
+
+
+@users_router.get(
+    '/{user_id}',
+    response_model=UserInfo,
+    summary='Получение информации о пользователе по его ID',
+)
+async def get_user_by_id(
+    user_id: uuid.UUID,
+    _: StaffUser,
+    session: AsyncSession = Depends(get_session),
+) -> User:
+    """Возвращает пользователя администратору или менеджеру."""
+    return await UserCRUD(session).get_or_raise(user_id)
+
+
+@users_router.patch(
+    '/{user_id}',
+    response_model=UserInfo,
+    summary='Обновление информации о пользователе по его ID',
+)
+async def update_user_by_id(
+    user_id: uuid.UUID,
+    user_update: UserUpdate,
+    actor: StaffUser,
+    session: AsyncSession = Depends(get_session),
+) -> User:
+    """Изменяет пользователя с учётом полномочий менеджера."""
+    crud = UserCRUD(session)
+    target_user = await crud.get_or_raise(user_id)
+    update_data = user_update.model_dump(exclude_unset=True)
+    reject_null_required_fields(update_data)
+    requested_role = update_data.get('role')
+    ensure_user_update_allowed(actor, target_user, requested_role)
+    if requested_role is not None and requested_role != UserRole.MANAGER:
+        target_user.cafe_id = None
+
+    ensure_contact_remains(target_user, update_data)
+    return await crud.update(target_user, update_data)
+
+
+@users_router.delete(
+    '/{user_id}',
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary='Удаление пользователя по его ID',
+)
+async def delete_user_by_id(
+    user_id: uuid.UUID,
+    _: AdminUser,
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Блокирует пользователя; операция доступна только администратору."""
+    crud = UserCRUD(session)
+    user = await crud.get_or_raise(user_id)
+    await crud.soft_delete(user)
+
+
+router.include_router(auth_router)
+router.include_router(users_router)
