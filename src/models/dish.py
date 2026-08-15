@@ -40,7 +40,11 @@ class Dish(Base):
     __tablename__ = 'dishes'
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    photo_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
+    photo_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid,
+        ForeignKey('medias.id', name='fk_dish_photo'),
+        nullable=True,
+    )
     # Уточни плиз (price): цена хранится у блюда (как в OpenAPI).
     # В диаграмме БД (db_diagram_13_08_2026.json) цена была в таблице cafe_dishes.
     # Сделала у блюда. Возможно поменяем.
