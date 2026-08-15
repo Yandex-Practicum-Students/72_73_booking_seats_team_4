@@ -1,5 +1,6 @@
 from models.action import Action, CafeAction
 from models.dish import CafeDish, Dish
+from models.media import Media
 
 from core.base_model import Base
 
@@ -9,4 +10,5 @@ __all__ = [
     CafeAction,
     CafeDish,
     Dish,
+    Media,
 ]
