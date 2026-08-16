@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 import uvicorn
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
+from loguru import logger
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.endpoints.user import router as user_router
@@ -15,22 +16,26 @@ from api.exceptions import (
 )
 from crud.user import UserAlreadyExistsError, UserNotFoundError
 
+from core.logging import configure_loguru
 from core.settings import settings
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator:
     """Жизненный цикл приложения FastAPI."""
-    # TODO: Добавить код, выполняемый при старте приложения
+    configure_loguru()
+    logger.info('Запускаем приложение...')
     yield
-    # TODO: Добавить код, выполняемый при остановке приложения
+    logger.info('Завершаем работу приложения.')
 
 
 app = FastAPI(
     title=settings.title,
     version=settings.version,
     description=settings.description,
+    lifespan=lifespan,
 )
+
 app.add_exception_handler(UserAlreadyExistsError, user_already_exists_handler)
 app.add_exception_handler(UserNotFoundError, user_not_found_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
