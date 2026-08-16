@@ -15,7 +15,7 @@ class TableCreate(DescriptionScheme, BaseModel):
     seat_number: int = Field(description='Количество мест', ge=1)
 
 
-class TableUpdate(BaseModel):
+class TableUpdate(DescriptionSchema, IsActiveSchema):
     """Схема для обновления стола."""
 
     model_config = ConfigDict(extra='forbid')
@@ -25,8 +25,6 @@ class TableUpdate(BaseModel):
         description='Количество мест',
         ge=1,
     )
-    description: Optional[str] = Field(None, description='Описание стола')
-    is_active: Optional[bool] = Field(None, description='Активность стола')
 
 
 class TableShortInfo(TableCreate):

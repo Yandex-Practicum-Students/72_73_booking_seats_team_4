@@ -40,4 +40,8 @@ class Action(Base):
     # DescriptionMixin делает description nullable=True - для Action не подходит.
     # Поэтому объявила отдельно, а не через миксин.
     description: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
-    photo_id: Mapped[Optional[uuid.UUID]] = mapped_column(Uuid, nullable=True)
+    photo_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid,
+        ForeignKey('medias.id', name='fk_action_photo'),
+        nullable=True,
+    )
