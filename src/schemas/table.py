@@ -1,12 +1,12 @@
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 from schemas.base import BaseInfoScheme, DescriptionScheme, IdScheme
 from schemas.cafe import CafeShortInfo
 
 
-class TableCreate(DescriptionScheme, BaseModel):
+class TableCreate(DescriptionScheme):
     """Схема для создания стола."""
 
     model_config = ConfigDict(extra='forbid')

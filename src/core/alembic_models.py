@@ -1,4 +1,4 @@
-from models.stots import Stots
+# from models.slots import Slot
 
 from models.action import Action, CafeAction
 from models.dish import CafeDish, Dish
@@ -12,6 +12,6 @@ __all__ = [
     CafeAction,
     CafeDish,
     Dish,
-    Stots,
+    # Slot,
     Table,
 ]

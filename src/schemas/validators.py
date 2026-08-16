@@ -3,7 +3,8 @@ from typing import Any, Optional
 
 import phonenumbers
 from phonenumbers.phonenumberutil import NumberParseException
-from pydantic import model_validator
+
+# from pydantic import model_validator
 
 
 def normalize_username(value: Any) -> Any:
@@ -66,18 +67,27 @@ def normalize_time(value: Any) -> Any:
     return value
 
 
-class TimeValidatorMixin:
-    """Миксин для кросс-полевой валидации временных интервалов."""
+# class TimeValidatorMixin:
+#     """Миксин для кросс-полевой валидации временных интервалов."""
 
-    start_time: Optional[time] = None
-    end_time: Optional[time] = None
+#     start_time: Optional[time] = None
+#     end_time: Optional[time] = None
 
-    @model_validator(mode='after')
-    def validate_times(self) -> 'TimeValidatorMixin':
-        """Проверка: время начала меньше времени окончания."""
-        if self.start_time is not None and self.end_time is not None:
-            if self.start_time >= self.end_time:
-                raise ValueError(
-                    'Время начала должно быть меньше времени окончания',
-                )
-        return self
+#     @model_validator(mode='after')
+#     def validate_times(self) -> 'TimeValidatorMixin':
+#         """Проверка: время начала меньше времени окончания."""
+#         if self.start_time is not None and self.end_time is not None:
+#             if self.start_time >= self.end_time:
+#                 raise ValueError(
+#                     'Время начала должно быть меньше времени окончания',
+#                 )
+#         return self
+
+
+def validate_time_range(start: Optional[time], end: Optional[time]) -> None:
+    """Проверка: start_time < end_time."""
+    if start is not None and end is not None:
+        if start >= end:
+            raise ValueError(
+                'Время начала должно быть меньше времени окончания',
+            )

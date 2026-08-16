@@ -1,14 +1,11 @@
 from datetime import time
 from typing import Annotated, Optional
-from uuid import UUID
 
-from pydantic import BaseModel, BeforeValidator, Field
+from pydantic import BeforeValidator, ConfigDict, Field, model_validator
 
 from schemas.base import BaseInfoScheme, DescriptionScheme, IdScheme
-from schemas.slots_validators import (
-    # TimeValidatorMixin,
-    normalize_time,
-)
+from schemas.cafe import CafeShortInfo
+from schemas.validators import normalize_time, validate_time_range
 
 StartTime = Annotated[time, BeforeValidator(normalize_time)]
 EndTime = Annotated[time, BeforeValidator(normalize_time)]
@@ -24,15 +21,29 @@ class TimeSlotBase(DescriptionScheme):
 class TimeSlotCreate(TimeSlotBase):
     """Схема для создания слота."""
 
-    cafe_id: UUID = Field(description='ID кафе')
+    model_config = ConfigDict(extra='forbid')
+
+    @model_validator(mode='after')
+    def validate_times(self) -> 'TimeSlotCreate':
+        """Проверка: время начала меньше времени окончания."""
+        validate_time_range(self.start_time, self.end_time)
+        return self
 
 
-class TimeSlotUpdate(DescriptionScheme, BaseModel):
+class TimeSlotUpdate(DescriptionScheme):
     """Схема для обновления слота."""
+
+    model_config = ConfigDict(extra='forbid')
 
     start_time: Optional[StartTime] = Field(None, description='Время начала')
     end_time: Optional[EndTime] = Field(None, description='Время окончания')
     is_active: Optional[bool] = Field(None, description='Активность слота')
+
+    @model_validator(mode='after')
+    def validate_times(self) -> 'TimeSlotUpdate':
+        """Проверка: время начала меньше времени окончания."""
+        validate_time_range(self.start_time, self.end_time)
+        return self
 
 
 class TimeSlotShortInfo(IdScheme, TimeSlotBase):
@@ -42,8 +53,4 @@ class TimeSlotShortInfo(IdScheme, TimeSlotBase):
 class TimeSlotInfo(TimeSlotShortInfo, BaseInfoScheme):
     """Полная информация о слоте."""
 
-    cafe_id: UUID
-    cafe_name: Optional[str] = None
-    start_time: time
-    end_time: time
-    description: Optional[str] = None
+    cafe: CafeShortInfo
