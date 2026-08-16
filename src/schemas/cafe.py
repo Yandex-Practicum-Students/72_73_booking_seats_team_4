@@ -1,19 +1,29 @@
 import uuid
 from typing import Any, List, Optional
 
-from pydantic import BaseModel, ValidationInfo, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
+from constants import MAX_ADDRESS_LNGH, MAX_CAFE_NAME_LNGH, MAX_PHONE_LNGH, MIN_STR_LNGH
 from models.user import User
 
 from src.schemas.base import BaseSchemaDB, DescriptionSchema, FullBaseSchemaDB, IsActiveSchema
+from src.schemas.user import Phone
 
 
 class BaseCafe(BaseModel):
     """Базовая схема объекта кафе."""
 
-    name: str
-    address: str
-    phone: str
+    name: str = Field(
+        min_length=MIN_STR_LNGH,
+        max_length=MAX_CAFE_NAME_LNGH,
+        description='Название кафе',
+    )
+    address: str = Field(
+        min_length=MIN_STR_LNGH,
+        max_length=MAX_ADDRESS_LNGH,
+        description='Описание кафе',
+    )
+    phone: Phone = Field(max_length=MAX_PHONE_LNGH, description='Телефон кафе')
     photo_id: Optional[uuid.UUID] = None
 
 
@@ -48,9 +58,19 @@ class CafeShortInfo(BaseSchemaDB, BaseCafe, DescriptionSchema):
 class CafeUpdate(DescriptionSchema, IsActiveSchema):
     """Схема обновления."""
 
-    name: Optional[str] = None
-    address: Optional[str] = None
-    phone: Optional[str] = None
+    name: Optional[str] = Field(
+        None,
+        min_length=MIN_STR_LNGH,
+        max_length=MAX_CAFE_NAME_LNGH,
+        description='Название кафе',
+    )
+    address: Optional[str] = Field(
+        None,
+        min_length=MIN_STR_LNGH,
+        max_length=MAX_ADDRESS_LNGH,
+        description='Описание кафе',
+    )
+    phone: Optional[str] = Field(None, max_length=MAX_PHONE_LNGH, description='Телефон кафе')
     photo_id: Optional[uuid.UUID] = None
     managers_id: Optional[List[uuid.UUID]] = None
 
@@ -66,6 +86,6 @@ class CafeUpdate(DescriptionSchema, IsActiveSchema):
             return value
         if isinstance(value, str) and not value.strip():
             raise ValueError(f'Поле {info.field_name} не может быть пустой строкой.')
-        if isinstance(value, list) and len(value) == 0:
+        if isinstance(value, list) and not value:
             raise ValueError(f'Список {info.field_name} не может быть пустым.')
         return value
