@@ -1,12 +1,17 @@
+from models.stots import Stots
+
 from models.action import Action, CafeAction
 from models.dish import CafeDish, Dish
+from models.table import Table
 
 from core.base_model import Base
 
 __all__ = [
-    Base,
     Action,
+    Base,
     CafeAction,
     CafeDish,
     Dish,
+    Stots,
+    Table,
 ]
