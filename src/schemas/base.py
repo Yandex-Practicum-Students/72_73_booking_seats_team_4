@@ -1,7 +1,8 @@
+import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 import constants
 
@@ -12,6 +13,14 @@ class BaseInfoScheme(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+
+class IdScheme(BaseModel):
+    """Добавляет поле id."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
 
 
 class DescriptionScheme(BaseModel):

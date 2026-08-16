@@ -6,9 +6,10 @@ from typing import List, Optional
 from sqlalchemy import UUID, Date, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from models.slots import Slot
+from models.table import Table
+
 from core.base_model import Base
-from src.models.slots import Slot
-from src.models.table import Table
 
 
 class StatusBooking(StrEnum):

@@ -7,7 +7,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PositiveInt
 from src.models.booking import StatusBooking
 from src.schemas.base import FullBaseSchemeDB, IsActiveScheme
 from src.schemas.cafe import CafeShortInfo
-from src.schemas.slots import SlotShort
+from src.schemas.slots import TimeSlotShortInfo
 from src.schemas.table import TableShort
 from src.schemas.user import UserShortInfo
 
@@ -41,7 +41,7 @@ class BookingTableSlotShortInfo(BaseModel):
     """
 
     table: TableShort
-    slot: SlotShort
+    slot: TimeSlotShortInfo
     model_config = ConfigDict(from_attributes=True)
 
 

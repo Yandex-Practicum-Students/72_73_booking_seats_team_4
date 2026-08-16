@@ -4,27 +4,30 @@ from uuid import UUID
 
 from pydantic import BaseModel, BeforeValidator, Field
 
-from src.schemas.base import BaseSchemaDB, DescriptionSchema, FullBaseSchemaDB
-from src.schemas.validators import TimeValidatorMixin, normalize_time
+from schemas.base import BaseInfoScheme, DescriptionScheme, IdScheme
+from schemas.slots_validators import (
+    # TimeValidatorMixin,
+    normalize_time,
+)
 
 StartTime = Annotated[time, BeforeValidator(normalize_time)]
 EndTime = Annotated[time, BeforeValidator(normalize_time)]
 
 
-class SlotBase(TimeValidatorMixin, BaseModel , DescriptionSchema):
+class TimeSlotBase(DescriptionScheme):
     """Базовая схема слота."""
 
     start_time: StartTime = Field(description='Время начала')
     end_time: EndTime = Field(description='Время окончания')
 
 
-class SlotCreate(SlotBase):
+class TimeSlotCreate(TimeSlotBase):
     """Схема для создания слота."""
 
     cafe_id: UUID = Field(description='ID кафе')
 
 
-class SlotUpdate(SlotBase):
+class TimeSlotUpdate(DescriptionScheme, BaseModel):
     """Схема для обновления слота."""
 
     start_time: Optional[StartTime] = Field(None, description='Время начала')
@@ -32,12 +35,15 @@ class SlotUpdate(SlotBase):
     is_active: Optional[bool] = Field(None, description='Активность слота')
 
 
-class SlotShort(BaseSchemaDB, SlotBase):
+class TimeSlotShortInfo(IdScheme, TimeSlotBase):
     """Краткая информация о слоте."""
 
 
-class SlotInfo(FullBaseSchemaDB, SlotBase):
+class TimeSlotInfo(TimeSlotShortInfo, BaseInfoScheme):
     """Полная информация о слоте."""
 
-    cafe_id: UUID = Field(description='ID кафе')
-    cafe_name: Optional[str] = Field(None, description='Название кафе')
+    cafe_id: UUID
+    cafe_name: Optional[str] = None
+    start_time: time
+    end_time: time
+    description: Optional[str] = None

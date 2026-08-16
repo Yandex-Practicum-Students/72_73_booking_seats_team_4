@@ -3,11 +3,11 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
 
-from schemas.base import BaseInfoScheme, DescriptionScheme
+from schemas.base import BaseInfoScheme, DescriptionScheme, IdScheme
 from schemas.user import UserShortInfo
 
 
-class BaseCafe(DescriptionScheme, BaseModel):
+class BaseCafe(DescriptionScheme):
     """Базовая схема объекта кафе."""
 
     name: str
@@ -24,12 +24,8 @@ class CafeCreate(BaseCafe):
     managers_id: List[int]
 
 
-class CafeShortInfo(BaseCafe):
+class CafeShortInfo(IdScheme, BaseCafe):
     """Схема для получения короткой инфо об объекте."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
 
 
 class CafeInfo(CafeShortInfo, BaseInfoScheme):

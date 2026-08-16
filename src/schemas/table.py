@@ -1,9 +1,8 @@
 from typing import Optional
-from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from schemas.base import BaseInfoScheme, DescriptionScheme
+from schemas.base import BaseInfoScheme, DescriptionScheme, IdScheme
 from schemas.cafe import CafeShortInfo
 
 
@@ -15,7 +14,7 @@ class TableCreate(DescriptionScheme, BaseModel):
     seat_number: int = Field(description='Количество мест', ge=1)
 
 
-class TableUpdate(DescriptionSchema, IsActiveSchema):
+class TableUpdate(DescriptionScheme):
     """Схема для обновления стола."""
 
     model_config = ConfigDict(extra='forbid')
@@ -25,14 +24,11 @@ class TableUpdate(DescriptionSchema, IsActiveSchema):
         description='Количество мест',
         ge=1,
     )
+    is_active: Optional[bool] = Field(None, description='Активность стола')
 
 
-class TableShortInfo(TableCreate):
+class TableShortInfo(IdScheme, TableCreate):
     """Краткая информация о столе."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
 
 
 class TableInfo(TableShortInfo, BaseInfoScheme):
