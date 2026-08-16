@@ -30,7 +30,7 @@ class CafeCreate(DescriptionSchema, BaseCafe):
         info: ValidationInfo,
     ) -> str | List[uuid.UUID]:
         """Валидирует пустые поля."""
-        if len(value) == 0:
+        if isinstance(value, str) and len(value.strip()) == 0 or isinstance(value, list) and not value:
             raise ValueError(f'Обязательное поле {info.field_name} не должны быть пустым.')
         return value
 
