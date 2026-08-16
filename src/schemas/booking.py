@@ -5,7 +5,7 @@ from typing import Annotated, List, Optional
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PositiveInt
 
 from src.models.booking import StatusBooking
-from src.schemas.base import FullBaseSchemaDB, IsActiveSchema
+from src.schemas.base import FullBaseSchemeDB, IsActiveScheme
 from src.schemas.cafe import CafeShortInfo
 from src.schemas.slots import SlotShort
 from src.schemas.table import TableShort
@@ -67,7 +67,7 @@ class BookingCreate(BookingBase):
     model_config = ConfigDict(extra='forbid')
 
 
-class BookingUpdate(IsActiveSchema):
+class BookingUpdate(IsActiveScheme):
     """Класс схемы, описывающей изменение бронирования."""
 
     tables_slots: Optional[List[BookingTableSlot]] = Field(None)
@@ -77,7 +77,7 @@ class BookingUpdate(IsActiveSchema):
     status: Optional[StatusBooking] = Field(None)
 
 
-class BookingInfo(BookingBase, FullBaseSchemaDB):
+class BookingInfo(BookingBase, FullBaseSchemeDB):
     """Класс схемы, описывающий полные данные о бронировании."""
 
     user: UserShortInfo
