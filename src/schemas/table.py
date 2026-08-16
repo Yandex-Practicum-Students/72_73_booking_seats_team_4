@@ -1,54 +1,43 @@
-from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+from schemas.base import BaseInfoScheme, DescriptionScheme
+from schemas.cafe import CafeShortInfo
 
 
-class TableBase(BaseModel):
-    """Базовая схема стола."""
+class TableCreate(DescriptionScheme, BaseModel):
+    """Схема для создания стола."""
+
+    model_config = ConfigDict(extra='forbid')
 
     seat_number: int = Field(description='Количество мест', ge=1)
-    description: Optional[str] = Field(None, description='Описание стола')
-
-
-class TableCreate(TableBase):
-    """Схема для создания стола."""
 
 
 class TableUpdate(BaseModel):
     """Схема для обновления стола."""
 
+    model_config = ConfigDict(extra='forbid')
+
     seat_number: Optional[int] = Field(
-        None, description='Количество мест', ge=1,
+        None,
+        description='Количество мест',
+        ge=1,
     )
     description: Optional[str] = Field(None, description='Описание стола')
     is_active: Optional[bool] = Field(None, description='Активность стола')
 
 
-class TableShort(BaseModel):
+class TableShortInfo(TableCreate):
     """Краткая информация о столе."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
-    seat_number: int
-
-    class Config:
-        """Конфигурация Pydantic модели."""
-
-        from_attributes = True
 
 
-class TableInfo(TableShort):
+class TableInfo(TableShortInfo, BaseInfoScheme):
     """Полная информация о столе."""
 
-    cafe_id: UUID
-    cafe_name: Optional[str] = None
-    description: Optional[str] = None
-    is_active: bool
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        """Конфигурация Pydantic модели."""
-
-        from_attributes = True
+    cafe: CafeShortInfo

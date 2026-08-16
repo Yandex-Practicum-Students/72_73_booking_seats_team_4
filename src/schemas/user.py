@@ -1,5 +1,4 @@
 import uuid
-from datetime import datetime
 from typing import Annotated, Optional
 
 from pydantic import (
@@ -13,6 +12,7 @@ from pydantic import (
 )
 
 from models.user import UserRole
+from schemas.base import BaseInfoScheme
 from schemas.validators import normalize_login, normalize_phone, normalize_username
 
 Username = Annotated[str, BeforeValidator(normalize_username)]
@@ -69,15 +69,10 @@ class UserShortInfo(BaseModel):
     tg_id: Optional[str]
 
 
-class UserInfo(UserShortInfo):
+class UserInfo(UserShortInfo, BaseInfoScheme):
     """Схема полных данных о пользователе."""
 
-    model_config = ConfigDict(from_attributes=True)
-
     role: UserRole
-    is_active: bool
-    created_at: datetime
-    updated_at: datetime
 
 
 class UserUpdate(BaseModel):

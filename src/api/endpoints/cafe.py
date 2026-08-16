@@ -14,7 +14,7 @@ cafe_router = APIRouter(prefix='/cafes', tags=['Кафе'])
 @cafe_router.get(
     '',
     response_model=list[CafeInfo],
-    summary='Получение списка кафе.',
+    summary='Получение списка кафе',
 )
 async def get_cafes(
     session: AsyncSession = Depends(get_session),
@@ -30,7 +30,7 @@ async def get_cafes(
 @cafe_router.post(
     '',
     response_model=CafeInfo,
-    summary='Создание нового кафе.',
+    summary='Создание нового кафе',
 )
 async def create_cafe(
     cafe_create: CafeCreate,

@@ -1,25 +1,25 @@
 import uuid
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
 
-import constants
-from schemas.base import BaseInfoScheme
+from schemas.base import BaseInfoScheme, DescriptionScheme
 from schemas.user import UserShortInfo
 
 
-class BaseCafe(BaseModel):
+class BaseCafe(DescriptionScheme, BaseModel):
     """Базовая схема объекта кафе."""
 
     name: str
     address: str
     phone: str
-    description: Optional[str] = Field(None, min_length=constants.DESCRIPTION_MIN_LNGH)
     photo_id: Optional[uuid.UUID] = None
 
 
 class CafeCreate(BaseCafe):
     """Схема создания объекта."""
+
+    model_config = ConfigDict(extra='forbid')
 
     managers_id: List[int]
 
@@ -27,17 +27,21 @@ class CafeCreate(BaseCafe):
 class CafeShortInfo(BaseCafe):
     """Схема для получения короткой инфо об объекте."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
 
 
-class CafeInfo(BaseCafe, BaseInfoScheme):
+class CafeInfo(CafeShortInfo, BaseInfoScheme):
     """Схема полной инфо об объекте."""
 
     managers: List[UserShortInfo]
 
 
 class CafeUpdate(BaseModel):
-    """Схема обновления."""
+    """Схема обновления данных о кафе."""
+
+    model_config = ConfigDict(extra='forbid')
 
     name: Optional[str] = None
     address: Optional[str] = None

@@ -5,6 +5,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from api.endpoints.cafe import cafe_router
+from api.endpoints.tables import table_router
 from api.endpoints.user import router as user_router
 from api.exceptions import user_already_exists_handler, user_not_found_handler
 from crud.user import UserAlreadyExistsError, UserNotFoundError
@@ -30,6 +31,7 @@ app.add_exception_handler(UserNotFoundError, user_not_found_handler)
 
 app.include_router(user_router)
 app.include_router(cafe_router)
+app.include_router(table_router)
 
 
 @app.get(
