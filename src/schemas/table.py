@@ -1,40 +1,34 @@
 from typing import Optional
-from uuid import UUID
 
-from pydantic import Field
+from pydantic import ConfigDict, Field, PositiveInt
 
-from src.schemas.base import BaseModel, BaseSchemaDB, DescriptionSchema, FullBaseSchemaDB, IsActiveSchema
-
-
-class TableBase(BaseModel):
-    """Базовая схема стола."""
-
-    seat_number: int = Field(description='Количество мест', ge=1)
+from schemas.base import BaseInfoScheme, DescriptionScheme, IdScheme
+from schemas.cafe import CafeShortInfo
 
 
-class TableCreate(DescriptionSchema, TableBase):
+class TableCreate(DescriptionScheme):
     """Схема для создания стола."""
 
+    model_config = ConfigDict(extra='forbid')
 
-class TableUpdate(DescriptionSchema, IsActiveSchema):
+    seat_number: PositiveInt = Field(description='Количество мест')
+
+
+class TableUpdate(TableCreate):
     """Схема для обновления стола."""
 
-    seat_number: Optional[int] = Field(
+    seat_number: Optional[PositiveInt] = Field(
         None,
         description='Количество мест',
-        ge=1,
     )
+    is_active: Optional[bool] = Field(None, description='Активность стола')
 
 
-class TableShort(BaseSchemaDB):
+class TableShortInfo(IdScheme, TableCreate):
     """Краткая информация о столе."""
 
-    seat_number: int
 
-
-class TableInfo(FullBaseSchemaDB, DescriptionSchema):
+class TableInfo(TableShortInfo, BaseInfoScheme):
     """Полная информация о столе."""
 
-    cafe_id: UUID
-    cafe_name: Optional[str] = None
-    seat_number: int
+    cafe: CafeShortInfo

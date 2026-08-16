@@ -1,43 +1,46 @@
 import uuid
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import ConfigDict, Field
 
-from models.user import User  # noqa
+from schemas.base import BaseInfoScheme, DescriptionScheme, IdScheme
+from schemas.user import UserShortInfo
 
-from src.schemas.base import BaseSchemaDB, DescriptionSchema, FullBaseSchemaDB, IsActiveSchema
+from core.constants import CAFE_ADDRESS_MAX_LENGTH, CAFE_NAME_MAX_LENGTH, PHONE_NUMBER_MAX_LENGTH
 
 
-class BaseCafe(BaseModel):
+class BaseCafe(DescriptionScheme):
     """Базовая схема объекта кафе."""
 
-    name: str
-    address: str
-    phone: str
+    model_config = ConfigDict(extra='forbid')
+
+    name: str = Field(..., max_length=CAFE_NAME_MAX_LENGTH)
+    address: str = Field(..., max_length=CAFE_ADDRESS_MAX_LENGTH)
+    phone: str = Field(..., max_length=PHONE_NUMBER_MAX_LENGTH)
     photo_id: Optional[uuid.UUID] = None
 
 
-class CafeCreate(DescriptionSchema, BaseCafe):
+class CafeCreate(BaseCafe):
     """Схема создания объекта."""
 
-    managers_id: List[uuid.UUID]
+    managers_id: List[int]
 
 
-class CafeInfo(FullBaseSchemaDB, BaseCafe, DescriptionSchema):
+class CafeShortInfo(IdScheme, BaseCafe):
+    """Схема для получения короткой инфо об объекте."""
+
+
+class CafeInfo(CafeShortInfo, BaseInfoScheme):
     """Схема полной инфо об объекте."""
 
-    managers: List[User]  # noqa
+    managers: List[UserShortInfo]
 
 
-class CafeShortInfo(BaseSchemaDB, BaseCafe, DescriptionSchema):
-    """Схема для получения короткой инфо о объекте."""
+class CafeUpdate(BaseCafe):
+    """Схема обновления данных о кафе."""
 
-
-class CafeUpdate(DescriptionSchema, IsActiveSchema):
-    """Схема обновления."""
-
-    name: Optional[str] = None
-    address: Optional[str] = None
-    phone: Optional[str] = None
-    photo_id: Optional[uuid.UUID] = None
-    managers_id: Optional[List[uuid.UUID]] = None
+    name: Optional[str] = Field(None, max_length=CAFE_NAME_MAX_LENGTH)
+    address: Optional[str] = Field(None, max_length=CAFE_ADDRESS_MAX_LENGTH)
+    phone: Optional[str] = Field(None, max_length=PHONE_NUMBER_MAX_LENGTH)
+    managers_id: Optional[List[int]] = None
+    is_active: Optional[bool] = None
