@@ -4,7 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-import constants
+from core.constants import COMMON_DESCRIPTION_MAX_LENGTH
 
 
 class BaseInfoScheme(BaseModel):
@@ -26,4 +26,4 @@ class IdScheme(BaseModel):
 class DescriptionScheme(BaseModel):
     """Добавляет поле description."""
 
-    description: Optional[str] = Field(None, min_length=constants.DESCRIPTION_MIN_LNGH)
+    description: Optional[str] = Field(None, max_length=COMMON_DESCRIPTION_MAX_LENGTH)

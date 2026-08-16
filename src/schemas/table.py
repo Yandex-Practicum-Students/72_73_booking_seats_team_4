@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, PositiveInt
 
 from schemas.base import BaseInfoScheme, DescriptionScheme, IdScheme
 from schemas.cafe import CafeShortInfo
@@ -11,18 +11,15 @@ class TableCreate(DescriptionScheme):
 
     model_config = ConfigDict(extra='forbid')
 
-    seat_number: int = Field(description='Количество мест', ge=1)
+    seat_number: PositiveInt = Field(description='Количество мест')
 
 
-class TableUpdate(DescriptionScheme):
+class TableUpdate(TableCreate):
     """Схема для обновления стола."""
 
-    model_config = ConfigDict(extra='forbid')
-
-    seat_number: Optional[int] = Field(
+    seat_number: Optional[PositiveInt] = Field(
         None,
         description='Количество мест',
-        ge=1,
     )
     is_active: Optional[bool] = Field(None, description='Активность стола')
 

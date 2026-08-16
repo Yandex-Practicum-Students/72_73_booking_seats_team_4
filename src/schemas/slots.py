@@ -16,12 +16,11 @@ class TimeSlotBase(DescriptionScheme):
 
     start_time: StartTime = Field(description='Время начала')
     end_time: EndTime = Field(description='Время окончания')
+    model_config = ConfigDict(extra='forbid')
 
 
 class TimeSlotCreate(TimeSlotBase):
     """Схема для создания слота."""
-
-    model_config = ConfigDict(extra='forbid')
 
     @model_validator(mode='after')
     def validate_times(self) -> 'TimeSlotCreate':
@@ -30,10 +29,8 @@ class TimeSlotCreate(TimeSlotBase):
         return self
 
 
-class TimeSlotUpdate(DescriptionScheme):
+class TimeSlotUpdate(TimeSlotBase):
     """Схема для обновления слота."""
-
-    model_config = ConfigDict(extra='forbid')
 
     start_time: Optional[StartTime] = Field(None, description='Время начала')
     end_time: Optional[EndTime] = Field(None, description='Время окончания')

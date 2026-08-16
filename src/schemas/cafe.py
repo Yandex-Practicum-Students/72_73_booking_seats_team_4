@@ -1,25 +1,27 @@
 import uuid
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict, Field
 
 from schemas.base import BaseInfoScheme, DescriptionScheme, IdScheme
 from schemas.user import UserShortInfo
+
+from core.constants import CAFE_ADDRESS_MAX_LENGTH, CAFE_NAME_MAX_LENGTH, PHONE_NUMBER_MAX_LENGTH
 
 
 class BaseCafe(DescriptionScheme):
     """Базовая схема объекта кафе."""
 
-    name: str
-    address: str
-    phone: str
+    model_config = ConfigDict(extra='forbid')
+
+    name: str = Field(..., max_length=CAFE_NAME_MAX_LENGTH)
+    address: str = Field(..., max_length=CAFE_ADDRESS_MAX_LENGTH)
+    phone: str = Field(..., max_length=PHONE_NUMBER_MAX_LENGTH)
     photo_id: Optional[uuid.UUID] = None
 
 
 class CafeCreate(BaseCafe):
     """Схема создания объекта."""
-
-    model_config = ConfigDict(extra='forbid')
 
     managers_id: List[int]
 
@@ -34,15 +36,11 @@ class CafeInfo(CafeShortInfo, BaseInfoScheme):
     managers: List[UserShortInfo]
 
 
-class CafeUpdate(BaseModel):
+class CafeUpdate(BaseCafe):
     """Схема обновления данных о кафе."""
 
-    model_config = ConfigDict(extra='forbid')
-
-    name: Optional[str] = None
-    address: Optional[str] = None
-    phone: Optional[str] = None
-    description: Optional[str] = None
-    photo_id: Optional[uuid.UUID] = None
+    name: Optional[str] = Field(None, max_length=CAFE_NAME_MAX_LENGTH)
+    address: Optional[str] = Field(None, max_length=CAFE_ADDRESS_MAX_LENGTH)
+    phone: Optional[str] = Field(None, max_length=PHONE_NUMBER_MAX_LENGTH)
     managers_id: Optional[List[int]] = None
     is_active: Optional[bool] = None
