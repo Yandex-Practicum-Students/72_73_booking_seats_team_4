@@ -1,8 +1,12 @@
 import uuid
-from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
+
+from schemas.base import BaseInfoScheme, IdScheme
+from schemas.cafe import CafeShortInfo
+
+from core.constants import COMMON_DESCRIPTION_MAX_LENGTH, DISH_NAME_MAX_LENGTH
 
 
 class DishCreate(BaseModel):
@@ -10,44 +14,23 @@ class DishCreate(BaseModel):
 
     model_config = ConfigDict(extra='forbid')
 
-    name: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = Field(None)
+    name: str = Field(..., max_length=DISH_NAME_MAX_LENGTH)
+    description: Optional[str] = Field(None, max_length=COMMON_DESCRIPTION_MAX_LENGTH)
     photo_id: Optional[uuid.UUID] = Field(None)
-    price: int = Field(..., ge=0)
+    price: NonNegativeInt
     cafes_id: list[uuid.UUID] = Field(default_factory=list)
 
 
-class DishShortInfo(BaseModel):
-    """Краткая информация о блюде."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
-    name: str
-    description: Optional[str]
-    photo_id: Optional[uuid.UUID]
-
-
-class DishInfo(DishShortInfo):
+class DishInfo(IdScheme, DishCreate, BaseInfoScheme):
     """Схема полных данных о блюде."""
 
-    price: int
-    is_active: bool
-    # В FullBaseSchemaDB Андрея поле называется create_date,
-    # в OpenAPI и здесь - created_at.
-    # Нужно уточнить какой имя оставим.
-    created_at: datetime
-    updated_at: datetime
+    cafes_id: list[CafeShortInfo]
 
 
-class DishUpdate(BaseModel):
+class DishUpdate(DishCreate):
     """Схема редактирования блюда."""
 
-    model_config = ConfigDict(extra='forbid')
-
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = Field(None)
-    photo_id: Optional[uuid.UUID] = Field(None)
-    price: Optional[int] = Field(None, ge=0)
+    name: Optional[str] = Field(None, max_length=DISH_NAME_MAX_LENGTH)
+    price: Optional[NonNegativeInt] = Field(None)
     cafes_id: Optional[list[uuid.UUID]] = Field(None)
     is_active: Optional[bool] = Field(None)

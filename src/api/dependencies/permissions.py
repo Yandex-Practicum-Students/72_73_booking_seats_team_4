@@ -4,9 +4,10 @@ from fastapi import Depends, HTTPException, status
 
 from models.user import User, UserRole
 
-from core.user import get_current_user
+from core.user import get_current_user, get_current_user_or_forbidden
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+MeUser = Annotated[User, Depends(get_current_user_or_forbidden)]
 
 
 def is_admin(user: User) -> bool:

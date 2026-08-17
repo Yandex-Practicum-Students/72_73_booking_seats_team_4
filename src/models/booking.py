@@ -6,9 +6,11 @@ from typing import List, Optional
 from sqlalchemy import UUID, Date, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from models.slots import Slot
+from models.table import Table
+
 from core.base_model import Base
-from src.models.slots import Slot
-from src.models.table import Table
+from core.constants import BOOKING_NOTE_MAX_LENGTH
 
 
 class StatusBooking(StrEnum):
@@ -51,7 +53,7 @@ class Booking(Base):
     cafe_id: Mapped[uuid.UUID] = mapped_column(UUID, ForeignKey('cafes.id', name='fk_booking_cafe_id_cafes'))
     booking_date: Mapped[date] = mapped_column(Date)
     guest_number: Mapped[int] = mapped_column(Integer)
-    note: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    note: Mapped[Optional[str]] = mapped_column(String(BOOKING_NOTE_MAX_LENGTH), nullable=True)
     status: Mapped[StatusBooking] = mapped_column(
         Enum(StatusBooking, name='status_booking_enum'),
         default=StatusBooking.BOOKING,

@@ -87,3 +87,22 @@ async def get_current_user(
     if user is None or not user.is_active:
         raise _unauthorized_error()
     return user
+
+
+async def get_current_user_or_forbidden(
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None,
+        Depends(bearer_scheme),
+    ],
+    session: AsyncSession = Depends(get_session),
+) -> User:
+    """Возвращает пользователя или ошибку 403 для ручек /users/me."""
+    try:
+        return await get_current_user(credentials, session)
+    except HTTPException as error:
+        if error.status_code != status.HTTP_401_UNAUTHORIZED:
+            raise
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Доступ запрещён.',
+        ) from error
