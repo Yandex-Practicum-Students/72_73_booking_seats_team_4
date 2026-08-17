@@ -4,9 +4,10 @@ from datetime import time
 from sqlalchemy import UUID, ForeignKey, Time
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from models.booking import BookingTablesSlots
+from models.cafe import Cafe
+
 from core.base_model import Base, DescriptionMixin
-from src.models.booking import BookingTablesSlots
-from src.models.cafe import Cafe
 
 
 class Slot(Base, DescriptionMixin):

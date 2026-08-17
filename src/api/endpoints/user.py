@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.dependencies.permissions import (
     AdminUser,
-    CurrentUser,
+    MeUser,
     StaffUser,
     ensure_user_update_allowed,
 )
@@ -104,10 +104,10 @@ async def get_all_users(
 @users_router.get(
     '/me',
     response_model=UserInfo,
-    responses=error_responses(status.HTTP_401_UNAUTHORIZED),
+    responses=error_responses(status.HTTP_403_FORBIDDEN),
     summary='Получение информации о текущем пользователе',
 )
-async def get_me(user: CurrentUser) -> User:
+async def get_me(user: MeUser) -> User:
     """Возвращает данные текущего активного пользователя."""
     return user
 
@@ -117,14 +117,14 @@ async def get_me(user: CurrentUser) -> User:
     response_model=UserInfo,
     responses=error_responses(
         status.HTTP_400_BAD_REQUEST,
-        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
         status.HTTP_422_UNPROCESSABLE_CONTENT,
     ),
     summary='Обновление информации о текущем пользователе',
 )
 async def update_me(
     user_update: UserUpdate,
-    user: CurrentUser,
+    user: MeUser,
     session: AsyncSession = Depends(get_session),
 ) -> User:
     """Изменяет доступные пользователю поля собственной записи."""
