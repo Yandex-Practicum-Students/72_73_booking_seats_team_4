@@ -1,5 +1,3 @@
-# scr/crud/media.py
-
 import uuid
 from pathlib import Path
 
@@ -47,7 +45,7 @@ class MediaCRUD:
             file_path=str(file_path),
             original_name=upload.filename,
         )
-        # Добавляем объект   в сессию (пока не сохранён окончательно)
+        # Добавляем объект в сессию (пока не сохранён окончательно)
         self.session.add(media)
         # Отправляем изменения в БД (получаем ID и другие значения по умолчанию)
         await self.session.flush()
@@ -61,5 +59,5 @@ class MediaCRUD:
         result = await self.session.execute(
             select(Media).where(Media.id == media_id, Media.is_active.is_(True)),
         )
-        # Возвращаем найденный объект или  None, если ничего не нашлос
+        # Возвращаем найденный объект или None, если ничего не нашлось
         return result.scalar_one_or_none()
