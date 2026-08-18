@@ -1,9 +1,28 @@
+from enum import StrEnum
 from pathlib import Path
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+class Environment(StrEnum):
+    """Форматы окружений для разработки."""
+
+    DEVELOPMENT = 'development'
+    PRODUCTION = 'production'
+
+
+class LogLevel(StrEnum):
+    """Уровни логирования, поддерживаемые приложением."""
+
+    DEBUG = 'DEBUG'
+    INFO = 'INFO'
+    SUCCESS = 'SUCCESS'
+    WARNING = 'WARNING'
+    ERROR = 'ERROR'
+    CRITICAL = 'CRITICAL'
 
 
 class Settings(BaseSettings):
@@ -13,6 +32,7 @@ class Settings(BaseSettings):
     title: str = 'Базовый набор FastAPI+SQLAlchemy+Postgres'
     version: str = '0.0.1'
     description: str = 'Основа для приложения'
+    environment: Environment = Environment.DEVELOPMENT
 
     # Настройки подключения к БД
     postgres_user: str
@@ -25,9 +45,16 @@ class Settings(BaseSettings):
     jwt_secret: SecretStr = Field(min_length=32)
     jwt_lifetime_seconds: int = Field(default=3600, gt=0)
 
+    # Настройки логирования
+    log_level: LogLevel = LogLevel.DEBUG
+    log_file_path: Path = BASE_DIR / '..' / 'logs' / 'app.log'
+    log_rotation_size_mb: int = Field(default=10, ge=1, le=1024)
+    log_retention_count: int = Field(default=4, ge=1, le=10)
+
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / '../infra/.env',
         env_file_encoding='utf-8',
+        env_ignore_empty=True,
         extra='ignore',
     )
 

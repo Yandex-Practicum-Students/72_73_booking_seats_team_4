@@ -6,7 +6,7 @@ from typing import List, Optional
 from sqlalchemy import UUID, Date, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from models.slots import Slot
+# from models.slots import Slot
 from models.table import Table
 
 from core.base_model import Base
@@ -43,7 +43,7 @@ class BookingTablesSlots(Base):
         UUID,
         ForeignKey('slots.id', name='fk_slots_id_booking_tables_slots'),
     )
-    slot: Mapped['Slot'] = relationship('Slot', back_populates='booking_tables_slots', lazy='selectin')
+    # slot: Mapped['Slot'] = relationship('Slot', back_populates='booking_tables_slots', lazy='selectin')
 
 
 class Booking(Base):

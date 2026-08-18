@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import UUID, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from models.booking import BookingTablesSlots
+# from models.booking import BookingTablesSlots
 from models.cafe import Cafe
 
 from core.base_model import Base, DescriptionMixin
@@ -26,11 +26,11 @@ class Table(Base, DescriptionMixin):
         back_populates='tables',
         lazy='selectin',
     )
-    bookings: Mapped[list['BookingTablesSlots']] = relationship(
-        'BookingTablesSlots',
-        back_populates='table',
-        lazy='selectin',
-    )
+    # bookings: Mapped[list['BookingTablesSlots']] = relationship(
+    #     'BookingTablesSlots',
+    #     back_populates='table',
+    #     lazy='selectin',
+    # )
 
     def __repr__(self) -> str:
         return f'Стол {self.id} (кафе={self.cafe_id}, мест={self.seat_number})'

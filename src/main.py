@@ -17,6 +17,7 @@ from api.exceptions import (
     user_already_exists_handler,
     user_not_found_handler,
 )
+from api.middlewares import LoggingContextMiddleware
 from crud.user import UserAlreadyExistsError, UserNotFoundError
 
 from core.logging import configure_loguru
@@ -26,11 +27,12 @@ from core.settings import settings
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator:
     """Жизненный цикл приложения FastAPI."""
-    configure_loguru()
     logger.info('Запускаем приложение...')
     yield
     logger.info('Завершаем работу приложения.')
 
+
+configure_loguru()
 
 app = FastAPI(
     title=settings.title,
@@ -38,6 +40,8 @@ app = FastAPI(
     description=settings.description,
     lifespan=lifespan,
 )
+
+app.add_middleware(LoggingContextMiddleware)
 
 app.add_exception_handler(UserAlreadyExistsError, user_already_exists_handler)
 app.add_exception_handler(UserNotFoundError, user_not_found_handler)
@@ -64,4 +68,4 @@ async def index() -> dict:
 
 
 if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=8000)
+    uvicorn.run(app, host='0.0.0.0', port=8000, log_config=None)
