@@ -10,6 +10,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from api.endpoints.cafe import cafe_router
 from api.endpoints.slots import slots_router
 from api.endpoints.tables import table_router
+from api.endpoints.test_users import test_router
 from api.endpoints.user import router as user_router
 from api.exceptions import (
     http_exception_handler,
@@ -17,7 +18,6 @@ from api.exceptions import (
     user_already_exists_handler,
     user_not_found_handler,
 )
-from api.middlewares import LoggingContextMiddleware
 from crud.user import UserAlreadyExistsError, UserNotFoundError
 
 from core.logging import configure_loguru
@@ -27,9 +27,9 @@ from core.settings import settings
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator:
     """Жизненный цикл приложения FastAPI."""
-    logger.info('Запускаем приложение...')
+    logger.info('Привет! Запускаем приложение...')
     yield
-    logger.info('Завершаем работу приложения.')
+    logger.info('Завершаем работу приложения. До скорых встреч!')
 
 
 configure_loguru()
@@ -41,8 +41,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.add_middleware(LoggingContextMiddleware)
-
 app.add_exception_handler(UserAlreadyExistsError, user_already_exists_handler)
 app.add_exception_handler(UserNotFoundError, user_not_found_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
@@ -52,6 +50,7 @@ app.include_router(user_router)
 app.include_router(cafe_router)
 app.include_router(table_router)
 app.include_router(slots_router)
+app.include_router(test_router)
 
 
 @app.get(

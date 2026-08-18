@@ -10,8 +10,6 @@ PROD_LOG_FORMAT = (
     '{level: <8} | '
     'user_id={extra[user_id]} | '
     'username={extra[username]} | '
-    'request_id={extra[request_id]} | '
-    '{extra[method]} {extra[path]} | '
     '{name}:{function}:{line} | '
     '{message}'
 )
@@ -21,8 +19,6 @@ DEV_LOG_FORMAT = (
     '<level>{level: <8} | </>'
     'user_id={extra[user_id]} | '
     'username={extra[username]} | '
-    'request_id={extra[request_id]} | '
-    '<cyan>{extra[method]} {extra[path]} | </>'
     '<cyan>{name}.</>'
     '{function}:'
     '<blue>{line} | </>'
@@ -53,7 +49,7 @@ class InterceptHandler(logging.Handler):
           чтобы loguru корректно указал файл, строку и функцию источника лога.
         - Передаёт в loguru текст сообщения и информацию об исключении (если есть).
 
-        Примечания
+        Примечания:
         ----------
         - Если уровень из record.levelname неизвестен loguru, используется
           числовое значение record.levelno.
@@ -87,7 +83,7 @@ def configure_stdlib_logging() -> None:
     Функция настраивает интеграцию между модулем logging из стандартной
     библиотеки Python и loguru:
 
-    - Создаёт единый InterceptHandler, который пересылает записи logging
+    - Создаёт единый экземляр InterceptHandler, который пересылает записи logging
       в loguru.logger.
     - Для корневого логгера ('') и логгеров Uvicorn ('uvicorn',
       'uvicorn.access', 'uvicorn.error'):
@@ -101,10 +97,12 @@ def configure_stdlib_logging() -> None:
     встроенные логи Uvicorn, выводятся через loguru с корректными уровнями,
     именами модулей, номерами строк и трейсбэком.
 
-    Примечания
+    Примечания:
     ----------
     - Функция должна вызываться один раз при старте приложения, до начала
       активной работы с логированием.
+    - При запуске приложения через uvicorn деактивируем конфигурацию из коробки:
+      uvicorn.run(app, host=..., port=..., log_config=None).
     """
     intercept_handler = InterceptHandler()
 
