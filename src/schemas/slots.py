@@ -1,60 +1,53 @@
 from datetime import time
 from typing import Annotated, Optional
-from uuid import UUID
 
-from pydantic import BeforeValidator, Field
+from pydantic import BeforeValidator, ConfigDict, Field, model_validator
 
-from core.base_model import Base
-from src.schemas.slots_validators import TimeValidatorMixin, normalize_time
+from schemas.base import BaseInfoScheme, DescriptionScheme, IdScheme
+from schemas.cafe import CafeShortInfo
+from schemas.validators import normalize_time, validate_time_range
 
 StartTime = Annotated[time, BeforeValidator(normalize_time)]
 EndTime = Annotated[time, BeforeValidator(normalize_time)]
 
 
-class SlotBase(TimeValidatorMixin, Base):
+class TimeSlotBase(DescriptionScheme):
     """Базовая схема слота."""
 
-    start_time: StartTime = Field(description="Время начала")
-    end_time: EndTime = Field(description="Время окончания")
-    description: Optional[str] = Field(None, description="Описание слота")
+    start_time: StartTime = Field(description='Время начала')
+    end_time: EndTime = Field(description='Время окончания')
+    model_config = ConfigDict(extra='forbid')
 
 
-class SlotCreate(SlotBase):
+class TimeSlotCreate(TimeSlotBase):
     """Схема для создания слота."""
 
-    cafe_id: UUID = Field(description="ID кафе")
+    @model_validator(mode='after')
+    def validate_times(self) -> 'TimeSlotCreate':
+        """Проверка: время начала меньше времени окончания."""
+        validate_time_range(self.start_time, self.end_time)
+        return self
 
 
-class SlotUpdate(SlotBase):
+class TimeSlotUpdate(TimeSlotBase):
     """Схема для обновления слота."""
 
-    start_time: Optional[StartTime] = Field(None, description="Время начала")
-    end_time: Optional[EndTime] = Field(None, description="Время окончания")
-    is_active: Optional[bool] = Field(None, description="Активность слота")
+    start_time: Optional[StartTime] = Field(None, description='Время начала')
+    end_time: Optional[EndTime] = Field(None, description='Время окончания')
+    is_active: Optional[bool] = Field(None, description='Активность слота')
+
+    @model_validator(mode='after')
+    def validate_times(self) -> 'TimeSlotUpdate':
+        """Проверка: время начала меньше времени окончания."""
+        validate_time_range(self.start_time, self.end_time)
+        return self
 
 
-class SlotInfo(Base):
-    """Полная информация о слоте."""
-
-    cafe_id: UUID
-    cafe_name: Optional[str] = None
-    start_time: time
-    end_time: time
-    description: Optional[str] = None
-
-    class Config:
-        """Конфигурация Pydantic модели."""
-
-        from_attributes = True
-
-
-class SlotShort(Base):
+class TimeSlotShortInfo(IdScheme, TimeSlotBase):
     """Краткая информация о слоте."""
 
-    start_time: time
-    end_time: time
 
-    class Config:
-        """Конфигурация Pydantic модели."""
+class TimeSlotInfo(TimeSlotShortInfo, BaseInfoScheme):
+    """Полная информация о слоте."""
 
-        from_attributes = True
+    cafe: CafeShortInfo

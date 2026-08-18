@@ -4,12 +4,14 @@ from typing import Annotated, List, Optional
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PositiveInt
 
-from src.models.booking import StatusBooking
-from src.schemas.base import FullBaseSchemaDB, IsActiveSchema
-from src.schemas.cafe import CafeShortInfo
-from src.schemas.slots import SlotShort
-from src.schemas.table import TableShort
-from src.schemas.user import UserShortInfo
+from models.booking import StatusBooking
+from schemas.base import BaseInfoScheme, IdScheme
+from schemas.cafe import CafeShortInfo
+from schemas.slots import TimeSlotShortInfo
+from schemas.table import TableShortInfo
+from schemas.user import UserShortInfo
+
+from core.constants import BOOKING_NOTE_MAX_LENGTH
 
 
 def check_booking_date_not_past(value: date) -> date:
@@ -40,8 +42,8 @@ class BookingTableSlotShortInfo(BaseModel):
     Используется в качестве вложеной схемы в схему BookingInfo.
     """
 
-    table: TableShort
-    slot: SlotShort
+    table: TableShortInfo
+    slot: TimeSlotShortInfo
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -52,10 +54,9 @@ class BookingBase(BaseModel):
     """
 
     guest_number: PositiveInt
-    note: Optional[str] = Field(
-        None,
-    )
+    note: Optional[str] = Field(None, max_length=BOOKING_NOTE_MAX_LENGTH)
     booking_date: date
+    model_config = ConfigDict(extra='forbid')
 
 
 class BookingCreate(BookingBase):
@@ -64,20 +65,18 @@ class BookingCreate(BookingBase):
     cafe_id: uuid.UUID
     tables_slots: List[BookingTableSlot]
     booking_date: BookinDateNotPast
-    model_config = ConfigDict(extra='forbid')
 
 
-class BookingUpdate(IsActiveSchema):
+class BookingUpdate(BookingBase):
     """Класс схемы, описывающей изменение бронирования."""
 
     tables_slots: Optional[List[BookingTableSlot]] = Field(None)
     guest_number: Optional[PositiveInt] = Field(None)
-    note: Optional[str] = Field(None)
     booking_date: Optional[BookinDateNotPast] = Field(None)
     status: Optional[StatusBooking] = Field(None)
 
 
-class BookingInfo(BookingBase, FullBaseSchemaDB):
+class BookingInfo(IdScheme, BookingBase, BaseInfoScheme):
     """Класс схемы, описывающий полные данные о бронировании."""
 
     user: UserShortInfo
