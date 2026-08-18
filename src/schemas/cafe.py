@@ -37,7 +37,7 @@ class BaseCafe(DescriptionScheme):
 class CafeCreate(BaseCafe):
     """Схема создания объекта."""
 
-    managers_id: List[int]
+    managers_id: List[uuid.UUID]
 
     @field_validator('name', 'address', 'phone', 'managers_id')
     @classmethod
@@ -77,7 +77,7 @@ class CafeUpdate(BaseCafe):
         description='Адрес кафе',
     )
     phone: Optional[Phone] = Field(None, max_length=PHONE_NUMBER_MAX_LENGTH, description='Телефон кафе')
-    managers_id: Optional[List[int]] = None
+    managers_id: Optional[List[uuid.UUID]] = None
     is_active: Optional[bool] = None
 
     @field_validator('name', 'address', 'description', 'phone', 'photo_id', 'managers_id', mode='before')
