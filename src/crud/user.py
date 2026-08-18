@@ -6,8 +6,9 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from crud.base import CRUDBase
 from models.user import User
-from schemas.user import UserCreate
+from schemas.user import UserCreate, UserUpdate
 from schemas.validators import normalize_login, normalize_phone
 
 from core.user import hash_password
@@ -35,25 +36,21 @@ def _normalize_identity(data: Mapping[str, Any]) -> dict[str, Any]:
     return normalized
 
 
-class UserCRUD:
+class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
     """Операции с пользователями в базе данных."""
 
-    def __init__(self, session: AsyncSession) -> None:
-        """Сохраняет сессию базы данных."""
-        self.session = session
+    def __init__(self) -> None:
+        """Инициализирует CRUD для модели пользователя."""
+        super().__init__(User)
 
-    async def get(self, user_id: uuid.UUID) -> User | None:
-        """Возвращает пользователя по идентификатору."""
-        return await self.session.get(User, user_id)
-
-    async def get_or_raise(self, user_id: uuid.UUID) -> User:
+    async def get_or_raise(self, user_id: uuid.UUID, session: AsyncSession) -> User:
         """Возвращает пользователя или сообщает, что он не найден."""
-        user = await self.get(user_id)
+        user = await self.get(user_id, session)
         if user is None:
             raise UserNotFoundError
         return user
 
-    async def get_by_login(self, login: str) -> User | None:
+    async def get_by_login(self, login: str, session: AsyncSession) -> User | None:
         """Ищет пользователя по email или телефону."""
         login = normalize_login(login)
         statement = select(User).where(
@@ -62,48 +59,56 @@ class UserCRUD:
                 User.phone == login,
             ),
         )
-        return await self.session.scalar(statement)
+        return await session.scalar(statement)
 
-    async def get_all(self) -> list[User]:
+    async def get_all(self, session: AsyncSession) -> list[User]:
         """Возвращает всех пользователей."""
-        users = await self.session.scalars(select(User).order_by(User.created_at))
+        users = await session.scalars(select(User).order_by(User.created_at))
         return list(users.all())
 
-    async def create(self, user_create: UserCreate) -> User:
+    async def create(self, user_create: UserCreate, session: AsyncSession) -> User:
         """Создаёт пользователя и сохраняет только хеш пароля."""
         data = _normalize_identity(user_create.model_dump())
         password = data.pop('password')
-        await self._ensure_unique_identity(data)
+        await self._ensure_unique_identity(data, session)
 
         user = User(**data, hashed_password=hash_password(password))
-        self.session.add(user)
-        await self._flush_or_raise_conflict()
-        await self.session.refresh(user)
+        session.add(user)
+        await self._commit_or_raise_conflict(session)
+        await session.refresh(user)
         return user
 
-    async def update(self, user: User, update_data: Mapping[str, Any]) -> User:
+    async def update(
+        self,
+        user: User,
+        update_data: UserUpdate | Mapping[str, Any],
+        session: AsyncSession,
+    ) -> User:
         """Обновляет переданные поля пользователя."""
-        data = _normalize_identity(update_data)
+        raw_data = (
+            update_data.model_dump(exclude_unset=True) if isinstance(update_data, UserUpdate) else update_data
+        )
+        data = _normalize_identity(raw_data)
         password = data.pop('password', None)
-        await self._ensure_unique_identity(data, exclude_user_id=user.id)
+        await self._ensure_unique_identity(
+            data,
+            session,
+            exclude_user_id=user.id,
+        )
 
         for field_name, field_value in data.items():
             setattr(user, field_name, field_value)
         if password is not None:
             user.hashed_password = hash_password(password)
 
-        await self._flush_or_raise_conflict()
-        await self.session.refresh(user)
+        await self._commit_or_raise_conflict(session)
+        await session.refresh(user)
         return user
-
-    async def soft_delete(self, user: User) -> None:
-        """Деактивирует пользователя без удаления записи из базы."""
-        user.is_active = False
-        await self.session.flush()
 
     async def _ensure_unique_identity(
         self,
         data: Mapping[str, Any],
+        session: AsyncSession,
         *,
         exclude_user_id: uuid.UUID | None = None,
     ) -> None:
@@ -119,13 +124,17 @@ class UserCRUD:
         statement = select(User.id).where(or_(*conditions))
         if exclude_user_id is not None:
             statement = statement.where(User.id != exclude_user_id)
-        if await self.session.scalar(statement) is not None:
+        if await session.scalar(statement) is not None:
             raise UserAlreadyExistsError
 
-    async def _flush_or_raise_conflict(self) -> None:
+    @staticmethod
+    async def _commit_or_raise_conflict(session: AsyncSession) -> None:
         """Сохраняет изменения и преобразует конфликт уникальности."""
         try:
-            await self.session.flush()
+            await session.commit()
         except IntegrityError as error:
-            await self.session.rollback()
+            await session.rollback()
             raise UserAlreadyExistsError from error
+
+
+user_crud = UserCRUD()

@@ -10,7 +10,9 @@ from api.endpoints.cafe import cafe_router
 from api.endpoints.slots import slots_router
 from api.endpoints.tables import table_router
 from api.endpoints.user import router as user_router
+from api.errors import APIError
 from api.exceptions import (
+    api_error_handler,
     http_exception_handler,
     request_validation_error_handler,
     user_already_exists_handler,
@@ -34,6 +36,7 @@ app = FastAPI(
     version=settings.version,
     description=settings.description,
 )
+app.add_exception_handler(APIError, api_error_handler)
 app.add_exception_handler(UserAlreadyExistsError, user_already_exists_handler)
 app.add_exception_handler(UserNotFoundError, user_not_found_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)

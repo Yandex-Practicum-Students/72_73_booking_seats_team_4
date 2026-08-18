@@ -5,6 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from api.errors import APIError
 from crud.user import UserAlreadyExistsError, UserNotFoundError
 from schemas.error import CustomError
 
@@ -41,6 +42,18 @@ async def http_exception_handler(
     return custom_error_response(
         exception.status_code,
         str(exception.detail),
+        exception.headers,
+    )
+
+
+async def api_error_handler(
+    _: Request,
+    exception: APIError,
+) -> JSONResponse:
+    """Возвращает прикладную ошибку в формате CustomError."""
+    return custom_error_response(
+        exception.status_code,
+        exception.message,
         exception.headers,
     )
 

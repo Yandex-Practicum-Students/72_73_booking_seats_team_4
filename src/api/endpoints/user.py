@@ -11,7 +11,7 @@ from api.dependencies.permissions import (
 )
 from api.responses import error_responses
 from api.validators import ensure_contact_remains, reject_null_required_fields
-from crud.user import UserCRUD
+from crud.user import user_crud
 from models.user import User, UserRole
 from schemas.user import AuthData, AuthToken, UserCreate, UserInfo, UserUpdate
 
@@ -43,8 +43,7 @@ async def login(
     session: AsyncSession = Depends(get_session),
 ) -> AuthToken:
     """Аутентифицирует пользователя по email или телефону."""
-    crud = UserCRUD(session)
-    user = await crud.get_by_login(credentials.login)
+    user = await user_crud.get_by_login(credentials.login, session)
     password = credentials.password.get_secret_value()
 
     if user is None:
@@ -54,7 +53,7 @@ async def login(
         if verified and user.is_active:
             if updated_hash is not None:
                 user.hashed_password = updated_hash
-                await session.flush()
+                await session.commit()
             return AuthToken(
                 access_token=create_access_token(user.id),
                 token_type='bearer',
@@ -81,7 +80,7 @@ async def create_user(
     session: AsyncSession = Depends(get_session),
 ) -> User:
     """Регистрирует пользователя с безопасным набором полномочий."""
-    return await UserCRUD(session).create(user_create)
+    return await user_crud.create(user_create, session)
 
 
 @users_router.get(
@@ -98,7 +97,7 @@ async def get_all_users(
     session: AsyncSession = Depends(get_session),
 ) -> list[User]:
     """Возвращает пользователей администратору или менеджеру."""
-    return await UserCRUD(session).get_all()
+    return await user_crud.get_all(session)
 
 
 @users_router.get(
@@ -134,7 +133,7 @@ async def update_me(
     )
     reject_null_required_fields(update_data)
     ensure_contact_remains(user, update_data)
-    return await UserCRUD(session).update(user, update_data)
+    return await user_crud.update(user, update_data, session)
 
 
 @users_router.get(
@@ -154,7 +153,7 @@ async def get_user_by_id(
     session: AsyncSession = Depends(get_session),
 ) -> User:
     """Возвращает пользователя администратору или менеджеру."""
-    return await UserCRUD(session).get_or_raise(user_id)
+    return await user_crud.get_or_raise(user_id, session)
 
 
 @users_router.patch(
@@ -176,8 +175,7 @@ async def update_user_by_id(
     session: AsyncSession = Depends(get_session),
 ) -> User:
     """Изменяет пользователя с учётом полномочий менеджера."""
-    crud = UserCRUD(session)
-    target_user = await crud.get_or_raise(user_id)
+    target_user = await user_crud.get_or_raise(user_id, session)
     update_data = user_update.model_dump(exclude_unset=True)
     reject_null_required_fields(update_data)
     requested_role = update_data.get('role')
@@ -186,7 +184,7 @@ async def update_user_by_id(
         target_user.cafe_id = None
 
     ensure_contact_remains(target_user, update_data)
-    return await crud.update(target_user, update_data)
+    return await user_crud.update(target_user, update_data, session)
 
 
 @users_router.delete(
@@ -206,9 +204,8 @@ async def delete_user_by_id(
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Блокирует пользователя; операция доступна только администратору."""
-    crud = UserCRUD(session)
-    user = await crud.get_or_raise(user_id)
-    await crud.soft_delete(user)
+    user = await user_crud.get_or_raise(user_id, session)
+    await user_crud.soft_delete(user, session)
 
 
 router.include_router(auth_router)

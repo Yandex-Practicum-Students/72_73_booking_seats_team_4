@@ -1,16 +1,18 @@
 import uuid
 from datetime import date
 from enum import StrEnum
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import UUID, Date, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from models.slots import Slot
 from models.table import Table
 
 from core.base_model import Base
 from core.constants import BOOKING_NOTE_MAX_LENGTH
+
+if TYPE_CHECKING:
+    from models.slots import Slot
 
 
 class StatusBooking(StrEnum):
