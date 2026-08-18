@@ -103,7 +103,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db_obj
 
     async def update(self, db_obj: ModelType, obj_in: UpdateSchemaType, session: AsyncSession) -> ModelType:
-        """Обновление объекта с поддержкой PATCH-запросов и карты rel_map."""
+        """Обновление объекта с поддержкой карты rel_map."""
         update_data = obj_in.model_dump(exclude_unset=True)
 
         for field, value in update_data.items():
