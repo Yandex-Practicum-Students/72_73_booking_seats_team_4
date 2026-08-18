@@ -3,9 +3,19 @@ from typing import AsyncGenerator
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from api.endpoints.cafe import cafe_router
+from api.endpoints.slots import slots_router
+from api.endpoints.tables import table_router
 from api.endpoints.user import router as user_router
-from api.exceptions import user_already_exists_handler, user_not_found_handler
+from api.exceptions import (
+    http_exception_handler,
+    request_validation_error_handler,
+    user_already_exists_handler,
+    user_not_found_handler,
+)
 from crud.user import UserAlreadyExistsError, UserNotFoundError
 
 from core.settings import settings
@@ -26,7 +36,13 @@ app = FastAPI(
 )
 app.add_exception_handler(UserAlreadyExistsError, user_already_exists_handler)
 app.add_exception_handler(UserNotFoundError, user_not_found_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, request_validation_error_handler)
+
 app.include_router(user_router)
+app.include_router(cafe_router)
+app.include_router(table_router)
+app.include_router(slots_router)
 
 
 @app.get(

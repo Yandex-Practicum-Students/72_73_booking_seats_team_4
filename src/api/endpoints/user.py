@@ -5,10 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.dependencies.permissions import (
     AdminUser,
-    CurrentUser,
+    MeUser,
     StaffUser,
     ensure_user_update_allowed,
 )
+from api.responses import error_responses
 from api.validators import ensure_contact_remains, reject_null_required_fields
 from crud.user import UserCRUD
 from models.user import User, UserRole
@@ -29,6 +30,12 @@ users_router = APIRouter(prefix='/users', tags=['Пользователи'])
 @auth_router.post(
     '/login',
     response_model=AuthToken,
+    responses=error_responses(
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+        descriptions={
+            status.HTTP_422_UNPROCESSABLE_CONTENT: 'Неверные имя пользователя или пароль',
+        },
+    ),
     summary='Получение токена авторизации',
 )
 async def login(
@@ -63,6 +70,10 @@ async def login(
     '',
     response_model=UserInfo,
     status_code=status.HTTP_201_CREATED,
+    responses=error_responses(
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ),
     summary='Регистрация нового пользователя',
 )
 async def create_user(
@@ -76,6 +87,10 @@ async def create_user(
 @users_router.get(
     '',
     response_model=list[UserInfo],
+    responses=error_responses(
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+    ),
     summary='Получение списка пользователей',
 )
 async def get_all_users(
@@ -89,9 +104,10 @@ async def get_all_users(
 @users_router.get(
     '/me',
     response_model=UserInfo,
+    responses=error_responses(status.HTTP_403_FORBIDDEN),
     summary='Получение информации о текущем пользователе',
 )
-async def get_me(user: CurrentUser) -> User:
+async def get_me(user: MeUser) -> User:
     """Возвращает данные текущего активного пользователя."""
     return user
 
@@ -99,11 +115,16 @@ async def get_me(user: CurrentUser) -> User:
 @users_router.patch(
     '/me',
     response_model=UserInfo,
+    responses=error_responses(
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ),
     summary='Обновление информации о текущем пользователе',
 )
 async def update_me(
     user_update: UserUpdate,
-    user: CurrentUser,
+    user: MeUser,
     session: AsyncSession = Depends(get_session),
 ) -> User:
     """Изменяет доступные пользователю поля собственной записи."""
@@ -119,6 +140,12 @@ async def update_me(
 @users_router.get(
     '/{user_id}',
     response_model=UserInfo,
+    responses=error_responses(
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ),
     summary='Получение информации о пользователе по его ID',
 )
 async def get_user_by_id(
@@ -133,6 +160,13 @@ async def get_user_by_id(
 @users_router.patch(
     '/{user_id}',
     response_model=UserInfo,
+    responses=error_responses(
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ),
     summary='Обновление информации о пользователе по его ID',
 )
 async def update_user_by_id(
@@ -158,6 +192,12 @@ async def update_user_by_id(
 @users_router.delete(
     '/{user_id}',
     status_code=status.HTTP_204_NO_CONTENT,
+    responses=error_responses(
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ),
     summary='Удаление пользователя по его ID',
 )
 async def delete_user_by_id(

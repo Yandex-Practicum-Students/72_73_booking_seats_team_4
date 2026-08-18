@@ -4,37 +4,26 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src import constants
+from core.constants import COMMON_DESCRIPTION_MAX_LENGTH
 
 
-class BaseSchema(BaseModel):
-    """Базовая схема с запретом на редактирование недоступных полей."""
+class BaseInfoScheme(BaseModel):
+    """Схема общих полей для всех подробных инфо-схем."""
 
-    model_config = ConfigDict(extra='forbid')
-
-
-class DescriptionSchema(BaseSchema):
-    """Добавляет поле description."""
-
-    description: Optional[str] = Field(min_length=constants.DESCRIPTION_MIN_LNGH)
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
 
-class IsActiveSchema(BaseSchema):
-    """Схема для добавления поля is_active."""
-
-    is_active: Optional[bool] = None
-
-
-class BaseSchemaDB(BaseSchema):
+class IdScheme(BaseModel):
     """Добавляет поле id."""
-
-    id: uuid.UUID
 
     model_config = ConfigDict(from_attributes=True)
 
+    id: uuid.UUID
 
-class FullBaseSchemaDB(BaseSchemaDB, IsActiveSchema):
-    """Схема для возвращения полной таблицы."""
 
-    create_date: datetime
-    updated_at: datetime
+class DescriptionScheme(BaseModel):
+    """Добавляет поле description."""
+
+    description: Optional[str] = Field(None, max_length=COMMON_DESCRIPTION_MAX_LENGTH)
