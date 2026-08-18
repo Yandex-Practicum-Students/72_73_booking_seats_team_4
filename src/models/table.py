@@ -1,12 +1,15 @@
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import UUID, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from models.booking import BookingTablesSlots
 from models.cafe import Cafe
 
 from core.base_model import Base, DescriptionMixin
+
+if TYPE_CHECKING:
+    from models.booking import BookingTablesSlots
 
 
 class Table(Base, DescriptionMixin):
@@ -26,7 +29,7 @@ class Table(Base, DescriptionMixin):
         back_populates='tables',
         lazy='selectin',
     )
-    bookings: Mapped[list['BookingTablesSlots']] = relationship(
+    booking_tables_slots: Mapped[list['BookingTablesSlots']] = relationship(
         'BookingTablesSlots',
         back_populates='table',
         lazy='selectin',

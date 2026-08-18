@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import interfaces
 
-from src.core.base_model import Base
+from core.base_model import Base
 
 ModelType = TypeVar('ModelType', bound=Base)
 CreateSchemaType = TypeVar('CreateSchemaType', bound=BaseModel)
@@ -121,6 +121,14 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             elif hasattr(db_obj, field):
                 setattr(db_obj, field, value)
 
+        session.add(db_obj)
+        await session.commit()
+        await session.refresh(db_obj)
+        return db_obj
+
+    async def soft_delete(self, db_obj: ModelType, session: AsyncSession) -> ModelType:
+        """Деактивирует объект без удаления записи из базы данных."""
+        db_obj.is_active = False
         session.add(db_obj)
         await session.commit()
         await session.refresh(db_obj)
