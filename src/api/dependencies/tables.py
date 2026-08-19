@@ -2,14 +2,14 @@ import uuid
 
 from fastapi import HTTPException, status
 
-from api.dependencies.db import DBSession
 from crud.cafe import cafe_crud
 from crud.table import table_crud
 from models.cafe import Cafe
 from models.table import Table
 
-from src.api.dependencies.permissions import StaffUser
-from src.models.user import UserRole
+from api.dependencies import DBSession
+from api.dependencies.permissions import StaffUser
+from models.user import UserRole
 
 
 async def get_cafe_or_404(
