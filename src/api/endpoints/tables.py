@@ -5,15 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from api.dependencies.db import DBSession
 from api.dependencies.permissions import CurrentUser, StaffUser
-from api.dependencies.tables import get_cafe_or_404, get_table_in_cafe
+from api.dependencies.tables import get_cafe_or_404, get_table_in_cafe, require_manager_cafe_access
 from api.responses import error_responses
 from crud.table import table_crud
 from models.cafe import Cafe
 from models.table import Table
 from models.user import UserRole
 from schemas.table import TableCreate, TableInfo, TableUpdate
-
-from src.api.dependencies.tables import require_manager_cafe_access
 
 _COMMON_404 = (status.HTTP_404_NOT_FOUND,)
 _COMMON_AUTH = (
