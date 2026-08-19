@@ -2,13 +2,12 @@ from typing import Annotated
 
 from fastapi import Depends, status
 
+from api.dependencies.logging import set_me_user_logging_context, set_user_logging_context
 from api.errors import APIError
 from models.user import User, UserRole
 
-from core.user import get_current_user, get_current_user_or_forbidden
-
-CurrentUser = Annotated[User, Depends(get_current_user)]
-MeUser = Annotated[User, Depends(get_current_user_or_forbidden)]
+CurrentUser = Annotated[User, Depends(set_user_logging_context)]
+MeUser = Annotated[User, Depends(set_me_user_logging_context)]
 
 
 def is_admin(user: User) -> bool:
