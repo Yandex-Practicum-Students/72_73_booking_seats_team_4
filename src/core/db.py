@@ -19,15 +19,13 @@ session_maker: async_sessionmaker[AsyncSession] = async_sessionmaker(
 
 async def get_session() -> AsyncIterator[AsyncSession]:
     """Получение асинхронной сессии для FastAPI Depends."""
-    session = session_maker()
-    try:
-        yield session
-        await session.commit()
-    except SQLAlchemyError as error:
-        await session.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail='Ошибка при работе с БД',
-        ) from error
-    finally:
-        await session.close()
+    async with session_maker() as session:
+        try:
+            yield session
+            await session.commit()
+        except SQLAlchemyError as error:
+            await session.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail='Ошибка при работе с БД',
+            ) from error
