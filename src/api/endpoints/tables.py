@@ -1,12 +1,32 @@
 import uuid
+from typing import Optional
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from api.dependencies.db import DBSession
+from api.dependencies.permissions import CurrentUser, StaffUser
+from api.dependencies.tables import get_cafe_or_404, get_table_in_cafe
+from api.responses import error_responses
+from crud.table import table_crud
+from models.cafe import Cafe
 from models.table import Table
+from models.user import UserRole
 from schemas.table import TableCreate, TableInfo, TableUpdate
 
-from core.db import get_session
+from src.api.dependencies.tables import require_manager_cafe_access
+
+_COMMON_404 = (status.HTTP_404_NOT_FOUND,)
+_COMMON_AUTH = (
+    status.HTTP_401_UNAUTHORIZED,
+    status.HTTP_403_FORBIDDEN,
+)
+_COMMON_VALIDATION = (status.HTTP_422_UNPROCESSABLE_CONTENT,)
+
+
+GET_RESPONSES = _COMMON_AUTH + _COMMON_404 + _COMMON_VALIDATION
+POST_RESPONSES = (status.HTTP_400_BAD_REQUEST,) + GET_RESPONSES
+PATCH_RESPONSES = (status.HTTP_400_BAD_REQUEST,) + GET_RESPONSES
+DELETE_RESPONSES = GET_RESPONSES
 
 table_router = APIRouter(prefix='/cafes/{cafe_id}/tables', tags=['Столы'])
 
@@ -14,44 +34,129 @@ table_router = APIRouter(prefix='/cafes/{cafe_id}/tables', tags=['Столы'])
 @table_router.get(
     '',
     response_model=list[TableInfo],
+    responses=error_responses(*GET_RESPONSES),
     summary='Список столов в кафе',
 )
 async def get_tables_by_cafe(
-    session: AsyncSession = Depends(get_session),
+    cafe_id: uuid.UUID,
+    current_user: CurrentUser,  # все авторизованные
+    session: DBSession,
+    show_active: Optional[bool] = Query(None),
+    _cafe: Cafe = Depends(get_cafe_or_404), # проверка существования кафе
 ) -> list[Table]:
     """Получение списка доступных для бронирования столов в кафе.
 
-    Для администраторов и менеджеров - все столы (с возможностью выбора),
-    для пользователей - только активные.
+    Для администраторов - все столы (учитываем параметр show_active),
+    для менеджеров и пользователей - только активные.
     """
+    if current_user.role == UserRole.ADMIN:
+        return await table_crud.get_by_cafe(
+            cafe_id=cafe_id,
+            session=session,
+            show_active=show_active,
+        )
+
+    return await table_crud.get_by_cafe(
+        cafe_id=cafe_id,
+        session=session,
+        show_active=True,
+    )
 
 
 @table_router.post(
     '',
     response_model=TableInfo,
+    status_code=status.HTTP_201_CREATED,
+    responses=error_responses(*POST_RESPONSES),
     summary='Новый стол в кафе',
 )
-async def create_cafe(
+async def create_table(
+    cafe_id: uuid.UUID,
     table_create: TableCreate,
-    session: AsyncSession = Depends(get_session),
+    current_user: StaffUser,  # Только админ или менеджер
+    session: DBSession,
+    _cafe: Cafe = Depends(get_cafe_or_404), # проверка существования кафе
 ) -> Table:
-    """Создает новый стол кафе.
+    """Создание нового стола в кафе.
 
-    Только для администраторов и менеджеров.
+    Менеджер создает столы только в своём кафе.
+    Администратор создает в любом кафе.
     """
+    require_manager_cafe_access(current_user, cafe_id)
+    return await table_crud.create_with_cafe(cafe_id, table_create, session)
+
+
+@table_router.get(
+    '/{table_id}',
+    response_model=TableInfo,
+    responses=error_responses(*GET_RESPONSES),
+    summary='Информация о столе в кафе по его ID',
+)
+async def get_table_by_id(
+    cafe_id: uuid.UUID,
+    table_id: uuid.UUID,
+    current_user: CurrentUser,  # все авторизованные
+    session: DBSession,
+    table: Table = Depends(get_table_in_cafe), # проверка существования кафе + стола + принадлежности
+) -> Table:
+    """Получение информации о столе в кафе по его ID.
+
+    Для администраторов и менеджеров - все столы,
+    для пользователей - только активные.
+    """
+    if current_user.role == UserRole.MANAGER:
+        require_manager_cafe_access(current_user, cafe_id)
+
+    if current_user.role == UserRole.USER and not table.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Стол не найден',
+        )
+
+    return table
 
 
 @table_router.patch(
     '/{table_id}',
     response_model=TableInfo,
+    responses=error_responses(*PATCH_RESPONSES),
     summary='Обновление информации о столе в кафе по его ID',
 )
 async def update_table(
+    cafe_id: uuid.UUID,
     table_id: uuid.UUID,
     table_update: TableUpdate,
-    session: AsyncSession = Depends(get_session),
+    current_user: StaffUser,  # Только админ или менеджер
+    session: DBSession,
+    table: Table = Depends(get_table_in_cafe), # проверка существования кафе + стола + принадлежности
 ) -> Table:
     """Обновление информации о столе в кафе по его ID.
 
     Только для администраторов и менеджеров.
     """
+    require_manager_cafe_access(current_user, cafe_id)
+    return await table_crud.update(table, table_update, session)
+
+
+@table_router.delete(
+    '/{table_id}',
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=error_responses(*DELETE_RESPONSES),
+    summary='Удаление стола по его ID (мягкое удаление)',
+)
+async def delete_table(
+    cafe_id: uuid.UUID,
+    table_id: uuid.UUID,
+     current_user: StaffUser,  # Только админ или менеджер
+    session: DBSession,
+    table: Table = Depends(get_table_in_cafe), # проверка существования кафе + стола + принадлежности
+) -> None:
+    """Мягкое удаление стола в кафе (установка is_active=False).
+
+    Только для администраторов и менеджеров.
+    """
+    require_manager_cafe_access(current_user, cafe_id)
+
+    table.is_active = False
+    session.add(table)
+    await session.commit()
