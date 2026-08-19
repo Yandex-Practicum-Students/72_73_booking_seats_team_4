@@ -2,13 +2,12 @@ import uuid
 
 from fastapi import HTTPException, status
 
+from api.dependencies import DBSession
+from api.dependencies.permissions import StaffUser
 from crud.cafe import cafe_crud
 from crud.table import table_crud
 from models.cafe import Cafe
 from models.table import Table
-
-from api.dependencies import DBSession
-from api.dependencies.permissions import StaffUser
 from models.user import UserRole
 
 
