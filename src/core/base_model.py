@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import BOOLEAN, UUID, DateTime, Text, func
-from sqlalchemy.orm import Mapped, declarative_base, declared_attr, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
 
 
 def get_utc_now() -> datetime:
@@ -11,8 +11,17 @@ def get_utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class PreBase:
-    """Базовый класс для всех таблиц."""
+class PreBase(DeclarativeBase):
+    """Базовый класс для всех моделей."""
+
+
+class Base(PreBase):
+    """Абстрактный класс.
+
+    С общими полями для моделей: id, is_active, created_at, updated_at.
+    """
+
+    __abstract__ = True
 
     @declared_attr
     def __tablename__(cls) -> str:  # noqa: N805
@@ -38,6 +47,3 @@ class DescriptionMixin:
     """Миксин, добавляет поле discription."""
 
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-
-
-Base = declarative_base(cls=PreBase)

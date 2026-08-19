@@ -61,4 +61,5 @@ class User(Base):
         UUID,
         ForeignKey('cafes.id', name='fk_user_cafe_id_cafe'),
         nullable=True,
+        index=True,
     )

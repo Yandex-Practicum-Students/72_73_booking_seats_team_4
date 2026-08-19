@@ -4,9 +4,6 @@ from datetime import time
 from sqlalchemy import UUID, ForeignKey, Time
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from models.booking import BookingTablesSlots
-from models.cafe import Cafe
-
 from core.base_model import Base, DescriptionMixin
 
 
@@ -15,7 +12,8 @@ class Slot(Base, DescriptionMixin):
 
     cafe_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
-        ForeignKey('cafes.id', ondelete='NO ACTION'),
+        ForeignKey('cafes.id', name='fk_cafe_id_slot', ondelete='NO ACTION'),
+        index=True,
     )
     start_time: Mapped[time] = mapped_column(
         Time(timezone=True),
@@ -23,12 +21,12 @@ class Slot(Base, DescriptionMixin):
     end_time: Mapped[time] = mapped_column(
         Time(timezone=True),
     )
-    cafe: Mapped['Cafe'] = relationship(
+    cafe: Mapped['Cafe'] = relationship(  # noqa: F821
         'Cafe',
         back_populates='slots',
         lazy='selectin',
     )
-    booking_tables_slots: Mapped[list['BookingTablesSlots']] = relationship(
+    booking_tables_slots: Mapped[list['BookingTablesSlots']] = relationship(  # noqa: F821
         'BookingTablesSlots',
         back_populates='slot',
         lazy='selectin',
