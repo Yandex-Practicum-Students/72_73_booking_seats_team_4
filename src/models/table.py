@@ -26,7 +26,7 @@ class Table(Base, DescriptionMixin):
         back_populates='tables',
         lazy='selectin',
     )
-    bookings: Mapped[list['BookingTablesSlots']] = relationship(
+    booking_tables_slots: Mapped[list['BookingTablesSlots']] = relationship(
         'BookingTablesSlots',
         back_populates='table',
         lazy='selectin',

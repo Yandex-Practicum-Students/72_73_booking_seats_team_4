@@ -4,6 +4,8 @@ from typing import List, Optional
 from sqlalchemy import UUID, ForeignKey, String, and_
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from models.slots import Slot
+from models.table import Table
 from models.user import User
 
 from core import base_model
@@ -24,4 +26,14 @@ class Cafe(base_model.Base, base_model.DescriptionMixin):
     managers: Mapped[List[User]] = relationship(
         'User',
         primaryjoin=lambda: and_(Cafe.id == User.cafe_id, User.role == 'MANAGER'),
+    )
+    tables: Mapped[List['Table']] = relationship(
+        'Table',
+        back_populates='cafe',
+        lazy='selectin',
+    )
+    slots: Mapped[List['Slot']] = relationship(
+        'Slot',
+        back_populates='cafe',
+        lazy='selectin',
     )
