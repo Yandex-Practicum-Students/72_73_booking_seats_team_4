@@ -8,10 +8,10 @@ from schemas.cafe import CafeCreate, CafeInfo, CafeUpdate
 
 from core.db import get_session
 
-cafe_router = APIRouter(prefix='/cafes', tags=['Кафе'])
+router = APIRouter()
 
 
-@cafe_router.get(
+@router.get(
     '',
     response_model=list[CafeInfo],
     summary='Получение списка кафе',
@@ -27,7 +27,7 @@ async def get_cafes(
     pass
 
 
-@cafe_router.post(
+@router.post(
     '',
     response_model=CafeInfo,
     summary='Создание нового кафе',
@@ -43,7 +43,7 @@ async def create_cafe(
     pass
 
 
-@cafe_router.patch(
+@router.patch(
     '/{cafe_id}',
     response_model=CafeInfo,
     summary='Обновление информации о кафе по его ID',
