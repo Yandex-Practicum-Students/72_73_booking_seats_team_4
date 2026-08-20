@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Annotated
 
 from pydantic import BeforeValidator, Field, SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -33,7 +33,7 @@ def parse_space_separated(row: str | list[str]) -> list[str]:
     return [item.strip() for item in row.split() if item.strip()]
 
 
-SpaceSeparatedList = Annotated[list[str], BeforeValidator(parse_space_separated)]
+SpaceSeparatedList = Annotated[list[str], NoDecode, BeforeValidator(parse_space_separated)]
 
 
 class Settings(BaseSettings):
