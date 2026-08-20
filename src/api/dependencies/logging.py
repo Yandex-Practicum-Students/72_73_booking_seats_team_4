@@ -23,7 +23,7 @@ def user_log_context(user: User) -> Generator[User, Any, None]:
         yield user
 
 
-async def set_user_logging_context(
+async def get_current_user_with_logging(
     user: Annotated[User, Depends(get_current_user)],
 ) -> AsyncGenerator[User, None]:
     """Обёртка над get_current_user."""
@@ -31,7 +31,7 @@ async def set_user_logging_context(
         yield user
 
 
-async def set_me_user_logging_context(
+async def get_me_user_with_logging(
     user: Annotated[User, Depends(get_current_user_or_forbidden)],
 ) -> AsyncGenerator[User, None]:
     """Обёртка над get_current_user_or_forbidden."""

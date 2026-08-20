@@ -8,10 +8,10 @@ from schemas.slots import TimeSlotCreate, TimeSlotInfo, TimeSlotUpdate
 
 from core.db import get_session
 
-slots_router = APIRouter(prefix='/cafes/{cafe_id}/time_slots', tags=['Временные слоты'])
+router = APIRouter()
 
 
-@slots_router.get(
+@router.get(
     '',
     response_model=list[TimeSlotInfo],
     summary='Список временных слотов в кафе',
@@ -26,7 +26,7 @@ async def get_tables_by_cafe(
     """
 
 
-@slots_router.post(
+@router.post(
     '',
     response_model=TimeSlotInfo,
     summary='овый временной слот в кафе',
@@ -41,7 +41,7 @@ async def create_cafe(
     """
 
 
-@slots_router.patch(
+@router.patch(
     '/{slot_id}',
     response_model=TimeSlotInfo,
     summary='Обновление информации о временом слоте в кафе по его ID',
