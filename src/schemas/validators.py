@@ -79,7 +79,6 @@ def validate_time_range(
 
 
 def validate_empty_field(
-    cls: type,
     value: str | List[uuid.UUID],
     info: ValidationInfo,
 ) -> str | List[uuid.UUID]:
@@ -90,7 +89,6 @@ def validate_empty_field(
 
 
 def field_cannot_be_null(
-    cls: type,
     value: str | List[uuid.UUID],
     info: ValidationInfo,
 ) -> str | List[uuid.UUID]:

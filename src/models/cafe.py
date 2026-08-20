@@ -1,7 +1,7 @@
 import uuid
 from typing import List, Optional
 
-from sqlalchemy import UUID, ForeignKey, String, and_
+from sqlalchemy import UUID, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from models.user import User
@@ -23,7 +23,7 @@ class Cafe(base_model.Base, base_model.DescriptionMixin):
     )
     managers: Mapped[List[User]] = relationship(
         'User',
-        primaryjoin=lambda: and_(Cafe.id == User.cafe_id, User.role == 'MANAGER'),
+        primaryjoin='and_(Cafe.id == User.cafe_id, User.role == "MANAGER")',
     )
     tables: Mapped[List['Table']] = relationship(  # noqa: F821
         'Table',

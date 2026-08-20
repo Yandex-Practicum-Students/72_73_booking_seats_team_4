@@ -1,17 +1,22 @@
-from .action import Action
-from .booking import Booking
+from .action import Action, CafeAction
+from .booking import Booking, BookingTablesSlots
 from .cafe import Cafe
-from .dish import Dish
+from .dish import CafeDish, Dish
+from .media import Media
 from .slots import Slot
 from .table import Table
 from .user import User
 
 __all__ = [
-    Action,
-    Booking,
-    Cafe,
-    Dish,
-    Slot,
-    Table,
-    User,
+    'Action',
+    'CafeAction',
+    'Booking',
+    'BookingTablesSlots',
+    'Cafe',
+    'CafeDish',
+    'Dish',
+    'Media',
+    'Slot',
+    'Table',
+    'User',
 ]
