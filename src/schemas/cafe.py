@@ -2,7 +2,6 @@ import uuid
 from typing import List, Optional
 
 from pydantic import ConfigDict, Field, field_validator
-from user import Phone
 
 from schemas.base import BaseInfoScheme, DescriptionScheme, IdScheme
 from schemas.user import Phone, UserShortInfo

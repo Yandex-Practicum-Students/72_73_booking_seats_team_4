@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 import uvicorn
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -38,6 +39,15 @@ app = FastAPI(
     description=settings.description,
     lifespan=lifespan,
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_hosts,
+    allow_credentials=settings.allow_credentials,
+    allow_methods=settings.allowed_methods,
+    allow_headers=settings.allowed_headers,
+)
+
 app.add_exception_handler(APIError, api_error_handler)
 app.add_exception_handler(UserAlreadyExistsError, user_already_exists_handler)
 app.add_exception_handler(UserNotFoundError, user_not_found_handler)
