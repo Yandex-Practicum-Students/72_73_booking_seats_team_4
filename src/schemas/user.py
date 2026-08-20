@@ -7,12 +7,13 @@ from pydantic import (
     EmailStr,
     Field,
     SecretStr,
+    field_validator,
     model_validator,
 )
 
 from models.user import UserRole
 from schemas.base import BaseInfoScheme, IdScheme
-from schemas.validators import normalize_login, normalize_phone, normalize_username
+from schemas.validators import field_cannot_be_null, normalize_login, normalize_phone, normalize_username
 
 from core.constants import (
     AUTH_DATA_LOGIN_MAX_LENGTH,
@@ -97,3 +98,4 @@ class UserUpdate(UserBase):
     )
     role: Optional[UserRole] = Field(None)
     is_active: Optional[bool] = Field(None)
+    check_not_null_fields = field_validator('username', 'password')(field_cannot_be_null)
