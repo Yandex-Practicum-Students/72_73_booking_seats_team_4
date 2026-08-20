@@ -2,13 +2,14 @@ import uuid
 
 from fastapi import HTTPException, status
 
-from api.dependencies import DBSession
 from api.dependencies.permissions import StaffUser
 from crud.cafe import cafe_crud
 from crud.table import table_crud
 from models.cafe import Cafe
 from models.table import Table
 from models.user import UserRole
+
+from core.db import DBSession
 
 
 async def get_cafe_or_404(
@@ -63,21 +64,13 @@ async def get_table_in_cafe(
     return table
 
 
-async def check_manager_cafe_access(
-    current_user: StaffUser,
-    cafe_id: uuid.UUID,
-) -> None:
-    """Проверяет, что менеджер имеет доступ к указанному кафе."""
-    if current_user.role == UserRole.MANAGER and current_user.cafe_id != cafe_id:
+def require_manager_cafe_access(user: StaffUser, cafe_id: uuid.UUID) -> None:
+    """Проверяет, что менеджер имеет доступ к указанному кафе.
+
+    Для администратора проверка не выполняется.
+    """
+    if user.role == UserRole.MANAGER and user.cafe_id != cafe_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Менеджер может управлять только своим кафе',
         )
-
-
-def require_manager_cafe_access(
-    current_user: StaffUser,
-    cafe_id: uuid.UUID,
-) -> None:
-    """Декоратор-зависимость для проверки доступа менеджера к кафе."""
-    check_manager_cafe_access(current_user, cafe_id)
