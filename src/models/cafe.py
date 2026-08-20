@@ -27,7 +27,7 @@ class Cafe(base_model.Base, base_model.DescriptionMixin):
     )
     managers: Mapped[List[User]] = relationship(
         'User',
-        primaryjoin=lambda: and_(Cafe.id == User.cafe_id, User.role == 'MANAGER'),
+        primaryjoin="and_(Cafe.id == User.cafe_id, User.role == 'MANAGER')",
     )
     tables: Mapped[List['Table']] = relationship(
         'Table',
