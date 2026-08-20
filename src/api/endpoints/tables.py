@@ -26,10 +26,10 @@ POST_RESPONSES = (status.HTTP_400_BAD_REQUEST,) + GET_RESPONSES
 PATCH_RESPONSES = (status.HTTP_400_BAD_REQUEST,) + GET_RESPONSES
 DELETE_RESPONSES = GET_RESPONSES
 
-table_router = APIRouter(prefix='/cafes/{cafe_id}/tables', tags=['Столы'])
+router = APIRouter()
 
 
-@table_router.get(
+@router.get(
     '',
     response_model=list[TableInfo],
     responses=error_responses(*GET_RESPONSES),
@@ -61,7 +61,7 @@ async def get_tables_by_cafe(
     )
 
 
-@table_router.post(
+@router.post(
     '',
     response_model=TableInfo,
     status_code=status.HTTP_201_CREATED,
@@ -114,7 +114,7 @@ async def get_table_by_id(
     return table
 
 
-@table_router.patch(
+@router.patch(
     '/{table_id}',
     response_model=TableInfo,
     responses=error_responses(*PATCH_RESPONSES),

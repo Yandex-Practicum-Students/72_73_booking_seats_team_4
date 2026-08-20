@@ -20,17 +20,13 @@ DEV_LOG_FORMAT = (
     'user_id={extra[user_id]} | '
     'username={extra[username]} | '
     '<cyan>{name}.</>'
-    '{function}:'
-    '<blue>{line} | </>'
-    '<level>{message}</>'
+    '{function}:{line}'
 )
 
 logger.configure(
     extra={
         'user_id': 'SYSTEM',
         'username': 'SYSTEM',
-        'method': '-',
-        'path': '-',
     },
 )
 
