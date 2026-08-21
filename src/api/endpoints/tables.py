@@ -7,8 +7,7 @@ from api.dependencies.permissions import CurrentUser, StaffUser
 from api.dependencies.tables import get_cafe_or_404, get_table_in_cafe, require_manager_cafe_access
 from api.responses import error_responses
 from crud.table import table_crud
-from models.cafe import Cafe
-from models.table import Table
+from models import Cafe, Table
 from models.user import UserRole
 from schemas.table import TableCreate, TableInfo, TableUpdate
 
