@@ -1,8 +1,9 @@
 from enum import StrEnum
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import Field, SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import BeforeValidator, Field, SecretStr
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,6 +24,16 @@ class LogLevel(StrEnum):
     WARNING = 'WARNING'
     ERROR = 'ERROR'
     CRITICAL = 'CRITICAL'
+
+
+def parse_space_separated(row: str | list[str]) -> list[str]:
+    """Парсит space-separated списки."""
+    if isinstance(row, list):
+        return row
+    return [item.strip() for item in row.split() if item.strip()]
+
+
+SpaceSeparatedList = Annotated[list[str], NoDecode, BeforeValidator(parse_space_separated)]
 
 
 class Settings(BaseSettings):
@@ -50,6 +61,12 @@ class Settings(BaseSettings):
     log_file_path: Path = BASE_DIR / '..' / 'logs' / 'app.log'
     log_rotation_size_mb: int = Field(default=10, ge=1, le=1024)
     log_retention_count: int = Field(default=4, ge=1, le=10)
+
+    # Настройки CORS
+    allowed_hosts: SpaceSeparatedList = ['http://localhost:5173', 'http://localhost:3000']
+    allow_credentials: bool = True
+    allowed_methods: SpaceSeparatedList = ['OPTIONS', 'GET', 'POST', 'PUT', 'PATCH']
+    allowed_headers: SpaceSeparatedList = ['Authorization', 'Accept', 'Content-Type']
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / '../infra/.env',

@@ -29,18 +29,12 @@ class TimeSlotCreate(TimeSlotBase):
         return self
 
 
-class TimeSlotUpdate(TimeSlotBase):
+class TimeSlotUpdate(TimeSlotCreate):
     """Схема для обновления слота."""
 
     start_time: Optional[StartTime] = Field(None, description='Время начала')
     end_time: Optional[EndTime] = Field(None, description='Время окончания')
     is_active: Optional[bool] = Field(None, description='Активность слота')
-
-    @model_validator(mode='after')
-    def validate_times(self) -> 'TimeSlotUpdate':
-        """Проверка: время начала меньше времени окончания."""
-        validate_time_range(self.start_time, self.end_time)
-        return self
 
 
 class TimeSlotShortInfo(IdScheme, TimeSlotBase):

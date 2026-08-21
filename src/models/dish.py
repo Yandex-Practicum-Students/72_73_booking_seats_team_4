@@ -1,7 +1,8 @@
 import uuid
+from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint, Uuid
+from sqlalchemy import ForeignKey, Numeric, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.base_model import Base
@@ -42,4 +43,4 @@ class Dish(Base):
         ForeignKey('medias.id', name='fk_dish_photo'),
         nullable=True,
     )
-    price: Mapped[int] = mapped_column(Integer)
+    price: Mapped[Decimal] = mapped_column(Numeric(precision=10, scale=2))
