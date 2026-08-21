@@ -197,6 +197,7 @@ async def update_user_by_id(
         status.HTTP_422_UNPROCESSABLE_CONTENT,
     ),
     summary='Удаление пользователя по его ID',
+    include_in_schema=False,
 )
 async def delete_user_by_id(
     user_id: uuid.UUID,

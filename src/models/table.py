@@ -1,15 +1,9 @@
 import uuid
-from typing import TYPE_CHECKING
 
 from sqlalchemy import UUID, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from models.cafe import Cafe
-
 from core.base_model import Base, DescriptionMixin
-
-if TYPE_CHECKING:
-    from models.booking import BookingTablesSlots
 
 
 class Table(Base, DescriptionMixin):
@@ -17,19 +11,20 @@ class Table(Base, DescriptionMixin):
 
     cafe_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
-        ForeignKey('cafes.id', ondelete='NO ACTION'),
+        ForeignKey('cafes.id', name='fk_cafe_id_table', ondelete='NO ACTION'),
         nullable=False,
+        index=True,
     )
     seat_number: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
     )
-    cafe: Mapped['Cafe'] = relationship(
+    cafe: Mapped['Cafe'] = relationship(  # noqa: F821
         'Cafe',
         back_populates='tables',
         lazy='selectin',
     )
-    booking_tables_slots: Mapped[list['BookingTablesSlots']] = relationship(
+    booking_tables_slots: Mapped[list['BookingTablesSlots']] = relationship(  # noqa: F821
         'BookingTablesSlots',
         back_populates='table',
         lazy='selectin',

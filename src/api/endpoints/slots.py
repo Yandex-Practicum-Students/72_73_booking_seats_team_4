@@ -11,7 +11,7 @@ from schemas.slots import TimeSlotCreate, TimeSlotInfo, TimeSlotUpdate
 
 from core.db import get_session
 
-slots_router = APIRouter(prefix='/cafes/{cafe_id}/time_slots', tags=['Временные слоты'])
+router = APIRouter()
 
 
 async def _ensure_cafe_exists(cafe_id: uuid.UUID, session: AsyncSession) -> None:
@@ -39,7 +39,7 @@ async def _get_slot_or_404(
     return slot
 
 
-@slots_router.get(
+@router.get(
     '',
     response_model=list[TimeSlotInfo],
     summary='Список временных слотов в кафе',
@@ -58,7 +58,7 @@ async def get_slots_by_cafe(
     return await slot_crud.get_by_cafe(cafe_id, session, show_active=show_active)
 
 
-@slots_router.post(
+@router.post(
     '',
     response_model=TimeSlotInfo,
     status_code=status.HTTP_201_CREATED,
@@ -78,7 +78,7 @@ async def create_slot(
     return await slot_crud.create(slot_create, session)
 
 
-@slots_router.get(
+@router.get(
     '/{slot_id}',
     response_model=TimeSlotInfo,
     summary='Информация о временном слоте в кафе по его ID',
@@ -92,7 +92,7 @@ async def get_slot_by_id(
     return await _get_slot_or_404(cafe_id, slot_id, session)
 
 
-@slots_router.patch(
+@router.patch(
     '/{slot_id}',
     response_model=TimeSlotInfo,
     summary='Обновление информации о временном слоте в кафе по его ID',

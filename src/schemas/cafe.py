@@ -1,10 +1,11 @@
 import uuid
-from typing import Any, List, Optional
+from typing import List, Optional
 
-from pydantic import ConfigDict, Field, ValidationInfo, field_validator
+from pydantic import ConfigDict, Field, field_validator
 
 from schemas.base import BaseInfoScheme, DescriptionScheme, IdScheme
 from schemas.user import Phone, UserShortInfo
+from schemas.validators import field_cannot_be_null, validate_empty_field
 
 import core.constants as constants
 from core.constants import CAFE_ADDRESS_MAX_LENGTH, CAFE_NAME_MAX_LENGTH, PHONE_NUMBER_MAX_LENGTH
@@ -38,18 +39,7 @@ class CafeCreate(BaseCafe):
     """Схема создания объекта."""
 
     managers_id: List[uuid.UUID]
-
-    @field_validator('name', 'address', 'phone', 'managers_id')
-    @classmethod
-    def validate_empty_field(
-        cls,
-        value: str | List[uuid.UUID],
-        info: ValidationInfo,
-    ) -> str | List[uuid.UUID]:
-        """Валидирует пустые поля."""
-        if (isinstance(value, str) and not value.strip()) or (isinstance(value, list) and not value):
-            raise ValueError(f'Обязательное поле {info.field_name} не должно быть пустым.')
-        return value
+    check_not_empty_fields = field_validator('name', 'address', 'phone', 'managers_id')(validate_empty_field)
 
 
 class CafeShortInfo(IdScheme, BaseCafe):
@@ -62,7 +52,7 @@ class CafeInfo(CafeShortInfo, BaseInfoScheme):
     managers: List[UserShortInfo]
 
 
-class CafeUpdate(BaseCafe):
+class CafeUpdate(CafeCreate):
     """Схема обновления данных о кафе."""
 
     name: Optional[str] = Field(
@@ -80,18 +70,4 @@ class CafeUpdate(BaseCafe):
     managers_id: Optional[List[uuid.UUID]] = None
     is_active: Optional[bool] = None
 
-    @field_validator('name', 'address', 'description', 'phone', 'photo_id', 'managers_id', mode='before')
-    @classmethod
-    def validate_null_field(
-        cls,
-        value: Any,
-        info: ValidationInfo,
-    ) -> Any:
-        """Валидирует пустые, null поля."""
-        if value is None:
-            return value
-        if isinstance(value, str) and not value.strip():
-            raise ValueError(f'Поле {info.field_name} не может быть пустой строкой.')
-        if isinstance(value, list) and not value:
-            raise ValueError(f'Список {info.field_name} не может быть пустым.')
-        return value
+    check_not_null_fields = field_validator('name', 'address', 'phone')(field_cannot_be_null)
