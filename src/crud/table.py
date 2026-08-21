@@ -61,6 +61,27 @@ class TableCRUD(CRUDBase[Table, TableCreate, TableUpdate]):
         logger.info('Найдено {} столов для кафе {}', len(tables), cafe_id)
         return tables
 
+    async def get_by_cafe_and_id(
+            self,
+            cafe_id: uuid.UUID,
+            table_id: uuid.UUID,
+            session: AsyncSession,
+    ) -> Table | None:
+        """Возвращает стол по ID, принадлежащий указанному кафе."""
+        logger.info('Получение стола по cafe_id={} и table_id={}', cafe_id, table_id)
+        query = select(Table).where(
+            Table.id == table_id,
+            Table.cafe_id == cafe_id,
+        ).options(selectinload(Table.cafe))
+        result = await session.execute(query)
+        table = result.scalar_one_or_none()
+
+        if table is None:
+            logger.warning('Стол не найден в кафе: cafe_id={}, table_id={}', cafe_id, table_id)
+        else:
+            logger.info('Стол найден в кафе: cafe_id={}, table_id={}', cafe_id, table_id)
+        return table
+
     async def create_with_cafe(
             self,
             cafe_id: uuid.UUID,

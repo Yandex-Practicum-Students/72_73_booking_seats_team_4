@@ -30,23 +30,6 @@ async def get_cafe_or_404(
     return cafe
 
 
-async def get_table_or_404(
-    table_id: uuid.UUID,
-    session: DBSession,
-) -> Table:
-    """Возвращает стол или выбрасывает 404."""
-    logger.info('Проверка существования стола: table_id={}', table_id)
-    table = await table_crud.get(table_id, session)
-    if table is None:
-        logger.warning('Стол не найден: table_id={}', table_id)
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Стол не найден',
-        )
-    logger.info('Стол найден: table_id={}', table_id)
-    return table
-
-
 async def get_table_in_cafe(
     cafe_id: uuid.UUID,
     table_id: uuid.UUID,
@@ -60,10 +43,9 @@ async def get_table_in_cafe(
     3. Принадлежит ли стол этому кафе
     """
     logger.info('Проверка стола в кафе: cafe_id={}, table_id={}', cafe_id, table_id)
-    await get_cafe_or_404(cafe_id, session)
-    table = await get_table_or_404(table_id, session)
+    table = await table_crud.get_by_cafe_and_id(cafe_id, table_id, session)
 
-    if table.cafe_id != cafe_id:
+    if table is None:
         logger.warning('Стол не принадлежит кафе: cafe_id={}, table_id={}', cafe_id, table_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
