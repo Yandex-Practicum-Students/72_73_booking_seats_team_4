@@ -14,6 +14,8 @@ from tasks.system import healthcheck  # noqa: E402
 
 from core.settings import Settings  # noqa: E402
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 
 class CeleryInfrastructureTests(TestCase):
     """Проверяет базовую конфигурацию очереди задач."""
@@ -49,3 +51,12 @@ class CeleryInfrastructureTests(TestCase):
 
         self.assertIn('booking_seats.system.healthcheck', celery_app.tasks)
         self.assertEqual(healthcheck.run(), {'status': 'ok'})
+
+    def test_postgres_healthcheck_reads_container_environment(self) -> None:
+        """Compose не подставляет переменные Postgres из окружения хоста."""
+        compose = (PROJECT_ROOT / 'infra' / 'docker-compose.yaml').read_text()
+
+        self.assertIn(
+            'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB',
+            compose,
+        )
