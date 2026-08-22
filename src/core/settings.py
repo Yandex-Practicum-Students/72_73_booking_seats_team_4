@@ -1,6 +1,7 @@
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import quote
 
 from pydantic import BeforeValidator, Field, SecretStr
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -52,6 +53,15 @@ class Settings(BaseSettings):
     postgres_server: str = 'localhost'
     postgres_port: int = 5432
 
+    # Настройки RabbitMQ и Celery
+    rabbitmq_user: str = 'guest'
+    rabbitmq_password: SecretStr = SecretStr('guest')
+    rabbitmq_server: str = 'localhost'
+    rabbitmq_port: int = Field(default=5672, ge=1, le=65535)
+    rabbitmq_vhost: str = '/'
+    celery_task_default_queue: str = Field(default='booking_notifications', min_length=1)
+    celery_broker_heartbeat: int = Field(default=30, gt=0)
+
     # Настройки авторизации
     jwt_secret: SecretStr = Field(min_length=32)
     jwt_lifetime_seconds: int = Field(default=3600, gt=0)
@@ -82,6 +92,14 @@ class Settings(BaseSettings):
             f'postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}@'
             f'{self.postgres_server}:{self.postgres_port}/{self.postgres_db}'
         )
+
+    @property
+    def celery_broker_url(self) -> str:
+        """Строка подключения Celery к RabbitMQ."""
+        user = quote(self.rabbitmq_user, safe='')
+        password = quote(self.rabbitmq_password.get_secret_value(), safe='')
+        vhost = quote(self.rabbitmq_vhost, safe='')
+        return f'amqp://{user}:{password}@{self.rabbitmq_server}:{self.rabbitmq_port}/{vhost}'
 
 
 settings = Settings()
