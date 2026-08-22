@@ -1,6 +1,6 @@
-from typing import AsyncIterator
+from typing import Annotated, AsyncIterator
 
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -29,3 +29,6 @@ async def get_session() -> AsyncIterator[AsyncSession]:
                 status_code=500,
                 detail='Ошибка при работе с БД',
             ) from error
+
+
+DBSession = Annotated[AsyncSession, Depends(get_session)]
