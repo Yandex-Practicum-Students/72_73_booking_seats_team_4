@@ -1,3 +1,4 @@
+# src/api/endpoints/media.py
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status

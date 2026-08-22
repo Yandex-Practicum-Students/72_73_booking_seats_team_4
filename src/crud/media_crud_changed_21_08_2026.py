@@ -1,4 +1,3 @@
-# src/crud/media.py
 import asyncio
 import uuid
 from pathlib import Path
@@ -26,13 +25,13 @@ class MediaCRUD:
         # Создаём папку для файлов, если её ещё нет (в отдельном потоке)
         await asyncio.to_thread(MEDIA_ROOT.mkdir, parents=True, exist_ok=True)
 
-        # Генерируем уникальный ID — он же станет частью имени файла на диске
+        # Генерируем уникальный ID — он же станет именем файла на диске
         media_id = uuid.uuid4()
         # Берём расширение исходного файла (.jpg, .png и т.д.)
         extension = Path(upload.filename or '').suffix
-        # Формируем новое безопасное имя файла на основе UUID
-        filename = f'{media_id}{extension}'
-        file_path = MEDIA_ROOT / filename
+        # # Формируем новое безопасное имя файла на основе UUID  # УДАЛИТЬ
+        # filename = f'{media_id}{extension}'  # УДАЛИТЬ
+        file_path = MEDIA_ROOT / f'{media_id}{extension}'  # Добавлено — путь строим из media_id напрямую
 
         # Считываем содержимое загруженного файла в память
         content = await upload.read()
@@ -42,7 +41,7 @@ class MediaCRUD:
         # Создаём объект модели с метаданными файла для сохранения в БД
         media = Media(
             id=media_id,
-            filename=filename,
+            # filename=filename,  # УДАЛИТЬ
             content_type=upload.content_type or 'application/octet-stream',
             size=len(content),
             file_path=str(file_path),
@@ -64,3 +63,6 @@ class MediaCRUD:
         )
         # Возвращаем найденный объект или None, если ничего не нашлось
         return result.scalar_one_or_none()
+
+# Удалить: строки 32, 33, 44
+# Добавлено: строка 34
