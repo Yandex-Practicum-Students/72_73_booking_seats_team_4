@@ -68,6 +68,13 @@ class Settings(BaseSettings):
     allowed_methods: SpaceSeparatedList = ['OPTIONS', 'GET', 'POST', 'PUT', 'PATCH']
     allowed_headers: SpaceSeparatedList = ['Authorization', 'Accept', 'Content-Type']
 
+    # Настройка Redis
+    max_connections: int = 10
+    decode_responses: bool = True
+    redis_password: str
+    redis_cache_expire_seconds: int = 3600
+    redis_url: str = 'redis://localhost:6379'
+
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / '../infra/.env',
         env_file_encoding='utf-8',
