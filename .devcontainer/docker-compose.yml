@@ -35,8 +35,6 @@ services:
 
   redis:
     image: redis:8.8.2-alpine3.23
-    environment:
-      - TZ=Europe/Moscow
     env_file:
       - ../infra/.env
     volumes:
