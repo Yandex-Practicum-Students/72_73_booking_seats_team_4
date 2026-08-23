@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from crud.base import CRUDBase
 from models.table import Table
-from schemas.table import TableCreate, TableUpdate
+from schemas.table import TableCreate, TableInfo, TableUpdate
 
 
 class TableCRUD(CRUDBase[Table, TableCreate, TableUpdate]):
@@ -15,7 +15,7 @@ class TableCRUD(CRUDBase[Table, TableCreate, TableUpdate]):
 
     def __init__(self) -> None:
         """Настраивает модель стола."""
-        super().__init__(Table)
+        super().__init__(Table, TableInfo)
 
     async def get(
         self,
