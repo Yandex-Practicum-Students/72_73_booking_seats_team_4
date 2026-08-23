@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from api.dependencies.dish import get_dish_or_404, require_manager_cafe_access_for_dish
+from api.dependencies.dish import check_cafes_exist, get_dish_or_404, require_manager_cafe_access_for_dish
 from api.dependencies.permissions import CurrentUser, StaffUser
 from api.responses import error_responses
 from crud.dish import dish_crud
@@ -65,10 +65,16 @@ async def get_all_dishes(
     """
     if current_user.role != UserRole.ADMIN:
         show_active = True
+
+    # Менеджер видит только блюда своего кафе
+    effective_cafe_id = cafe_id
+    if current_user.role == UserRole.MANAGER:
+        effective_cafe_id = current_user.cafe_id
+
     return await dish_crud.get_all(
         session=session,
         is_active=show_active,
-        cafe_id=cafe_id,
+        cafe_id=effective_cafe_id,
     )
 
 
@@ -89,6 +95,7 @@ async def create_dish(
     Только для администраторов и менеджеров.
     """
     require_manager_cafe_access_for_dish(current_user, dish_create.cafes_id)
+    await check_cafes_exist(dish_create.cafes_id, session)
     return await dish_crud.create(dish_create, session)
 
 
@@ -136,7 +143,9 @@ async def update_dish(
 
     Только для администраторов и менеджеров.
     """
-    require_manager_cafe_access_for_dish(current_user, [cafe.id for cafe in dish.cafes])
+    new_cafes_id = dish_update.cafes_id if dish_update.cafes_id is not None else [cafe.id for cafe in dish.cafes]
+    require_manager_cafe_access_for_dish(current_user, new_cafes_id)
+    await check_cafes_exist(new_cafes_id, session)
     return await dish_crud.update(dish, dish_update, session, redis)
 
 
@@ -150,6 +159,7 @@ async def delete_dish(
     dish_id: uuid.UUID,
     current_user: StaffUser,
     session: DBSession,
+    redis: redis_dep,
     dish: Dish = Depends(get_dish_or_404),
 ) -> None:
     """Мягкое удаление блюда (установка is_active=False).
@@ -157,4 +167,4 @@ async def delete_dish(
     Только для администраторов и менеджеров.
     """
     require_manager_cafe_access_for_dish(current_user, [cafe.id for cafe in dish.cafes])
-    await dish_crud.soft_delete(dish, session)
+    await dish_crud.soft_delete(dish, session, redis)

@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from loguru import logger
 
 from api.dependencies.permissions import StaffUser
+from crud.cafe import cafe_crud
 from crud.dish import dish_crud
 from models.dish import Dish
 from models.user import UserRole
@@ -26,6 +27,23 @@ async def get_dish_or_404(
         )
     logger.info('Блюдо найдено: dish_id={}', dish_id)
     return dish
+
+
+async def check_cafes_exist(
+    cafes_id: list,
+    session: DBSession,
+) -> None:
+    """Проверяет, что все указанные кафе существуют."""
+    if not cafes_id:
+        return
+    for cafe_id in cafes_id:
+        cafe = await cafe_crud.get(cafe_id, session)
+        if cafe is None:
+            logger.warning('Кафе не найдено: cafe_id={}', cafe_id)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail='Кафе не найдено',
+            )
 
 
 def require_manager_cafe_access_for_dish(

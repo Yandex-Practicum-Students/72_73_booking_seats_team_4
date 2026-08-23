@@ -12,12 +12,14 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from api.errors import APIError
 from api.exceptions import (
     api_error_handler,
+    dish_already_exists_handler,
     http_exception_handler,
     request_validation_error_handler,
     user_already_exists_handler,
     user_not_found_handler,
 )
 from api.routers import api_router
+from crud.dish import DishAlreadyExistsError
 from crud.user import UserAlreadyExistsError, UserNotFoundError
 
 from core.logging import configure_loguru
@@ -63,6 +65,7 @@ app.add_middleware(
 )
 
 app.add_exception_handler(APIError, api_error_handler)
+app.add_exception_handler(DishAlreadyExistsError, dish_already_exists_handler)
 app.add_exception_handler(UserAlreadyExistsError, user_already_exists_handler)
 app.add_exception_handler(UserNotFoundError, user_not_found_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
