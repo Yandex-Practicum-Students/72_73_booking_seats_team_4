@@ -1,7 +1,7 @@
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from api.dependencies.permissions import CurrentUser, StaffUser
 from api.dependencies.slots import (
@@ -28,6 +28,7 @@ _COMMON_VALIDATION = (status.HTTP_422_UNPROCESSABLE_CONTENT,)
 GET_RESPONSES = _COMMON_AUTH + _COMMON_404 + _COMMON_VALIDATION
 POST_RESPONSES = (status.HTTP_400_BAD_REQUEST,) + GET_RESPONSES
 PATCH_RESPONSES = (status.HTTP_400_BAD_REQUEST,) + GET_RESPONSES
+DELETE_RESPONSES = _COMMON_AUTH + _COMMON_404 + _COMMON_VALIDATION
 
 router = APIRouter()
 
@@ -78,7 +79,7 @@ async def create_slot(
     Менеджер создает слоты только в своём кафе.
     """
     await check_manager_cafe_access(current_user, cafe_id)
-    return await slot_crud.create(slot_create, session)
+    return await slot_crud.create_with_cafe(cafe_id, slot_create, session)
 
 
 @router.get(
@@ -88,9 +89,25 @@ async def create_slot(
     summary='Информация о временном слоте в кафе по его ID',
 )
 async def get_slot_by_id(
+    cafe_id: uuid.UUID,
+    slot_id: uuid.UUID,
+    current_user: CurrentUser,
+    session: DBSession,
     _slot: Slot = Depends(get_slot_in_cafe),
 ) -> Slot:
-    """Получение информации о временном слоте в кафе по его ID."""
+    """Получение информации о временном слоте в кафе по его ID.
+
+    Для администраторов и менеджеров — все слоты,
+    для пользователей — только активные.
+    """
+    await check_manager_cafe_access(current_user, cafe_id)
+
+    if current_user.role == UserRole.USER and not _slot.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Слот не найден',
+        )
+
     return _slot
 
 
@@ -114,3 +131,24 @@ async def update_slot(
     """
     await check_manager_cafe_access(current_user, cafe_id)
     return await slot_crud.update(_slot, slot_update, session)
+
+
+@router.delete(
+    '/{slot_id}',
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=error_responses(*DELETE_RESPONSES),
+    summary='Удаление временного слота по его ID (мягкое удаление)',
+)
+async def delete_slot(
+    cafe_id: uuid.UUID,
+    slot_id: uuid.UUID,
+    current_user: StaffUser,
+    session: DBSession,
+    _slot: Slot = Depends(get_slot_in_cafe),
+) -> None:
+    """Мягкое удаление временного слота в кафе (установка is_active=False).
+
+    Менеджер удаляет слоты только в своём кафе.
+    """
+    await check_manager_cafe_access(current_user, cafe_id)
+    await slot_crud.soft_delete(_slot, session)

@@ -1,43 +1,15 @@
 import uuid
 
 from fastapi import HTTPException, status
+from loguru import logger
 
 from api.dependencies.permissions import StaffUser
-from crud.cafe import cafe_crud
+from api.dependencies.tables import get_cafe_or_404
 from crud.slot import slot_crud
-from models.cafe import Cafe
 from models.slots import Slot
 from models.user import UserRole
 
 from core.db import DBSession
-
-
-async def get_cafe_or_404(
-    cafe_id: uuid.UUID,
-    session: DBSession,
-) -> Cafe:
-    """Возвращает кафе или выбрасывает 404."""
-    cafe = await cafe_crud.get(cafe_id, session)
-    if cafe is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Кафе не найдено',
-        )
-    return cafe
-
-
-async def get_slot_or_404(
-    slot_id: uuid.UUID,
-    session: DBSession,
-) -> Slot:
-    """Возвращает слот или выбрасывает 404."""
-    slot = await slot_crud.get(slot_id, session)
-    if slot is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Слот не найден',
-        )
-    return slot
 
 
 async def get_slot_in_cafe(
@@ -53,14 +25,16 @@ async def get_slot_in_cafe(
     3. Принадлежит ли слот этому кафе
     """
     await get_cafe_or_404(cafe_id, session)
-    slot = await get_slot_or_404(slot_id, session)
+    logger.info('Проверка слота в кафе: cafe_id={}, slot_id={}', cafe_id, slot_id)
+    slot = await slot_crud.get_by_cafe_and_id(cafe_id, slot_id, session)
 
-    if slot.cafe_id != cafe_id:
+    if slot is None:
+        logger.warning('Слот не принадлежит кафе: cafe_id={}, slot_id={}', cafe_id, slot_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='Слот не найден в этом кафе',
         )
-
+    logger.info('Слот принадлежит кафе: cafe_id={}, slot_id={}', cafe_id, slot_id)
     return slot
 
 
@@ -70,7 +44,13 @@ async def check_manager_cafe_access(
 ) -> None:
     """Проверяет, что менеджер имеет доступ к указанному кафе."""
     if current_user.role == UserRole.MANAGER and current_user.cafe_id != cafe_id:
+        logger.warning(
+            'Доступ запрещён менеджеру: user_id={}, cafe_id={}',
+            current_user.id,
+            cafe_id,
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Менеджер может управлять только своим кафе',
         )
+    logger.info('Доступ разрешён: user_id={}, cafe_id={}', current_user.id, cafe_id)
