@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from crud.base import CRUDBase
 from models.slots import Slot
-from schemas.slots import TimeSlotCreate, TimeSlotUpdate
+from schemas.slots import TimeSlotCreate, TimeSlotInfo, TimeSlotUpdate
 
 
 class SlotCRUD(CRUDBase[Slot, TimeSlotCreate, TimeSlotUpdate]):
@@ -15,7 +15,7 @@ class SlotCRUD(CRUDBase[Slot, TimeSlotCreate, TimeSlotUpdate]):
 
     def __init__(self) -> None:
         """Настраивает модель слота."""
-        super().__init__(Slot)
+        super().__init__(Slot, TimeSlotInfo)
 
     async def get(
         self,

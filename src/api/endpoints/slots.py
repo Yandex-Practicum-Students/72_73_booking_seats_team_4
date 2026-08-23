@@ -16,6 +16,7 @@ from models.slots import Slot
 from models.user import UserRole
 from schemas.slots import TimeSlotCreate, TimeSlotInfo, TimeSlotUpdate
 
+from core.core_dependencies import redis_dep
 from core.db import DBSession
 
 _COMMON_404 = (status.HTTP_404_NOT_FOUND,)
@@ -123,6 +124,7 @@ async def update_slot(
     slot_update: TimeSlotUpdate,
     current_user: StaffUser,
     session: DBSession,
+    redis: redis_dep,
     _slot: Slot = Depends(get_slot_in_cafe),
 ) -> Slot:
     """Обновление информации о временном слоте в кафе по его ID.
@@ -130,7 +132,7 @@ async def update_slot(
     Менеджер обновляет слоты только в своём кафе.
     """
     await check_manager_cafe_access(current_user, cafe_id)
-    return await slot_crud.update(_slot, slot_update, session)
+    return await slot_crud.update(_slot, slot_update, session, redis)
 
 
 @router.delete(
