@@ -118,7 +118,7 @@ class MediaCRUD:
 
     async def get_by_id(self, media_id: uuid.UUID) -> Media | None:
         """Возвращает медиафайл по ID, если он активен (не удалён)."""
-        # Ищем запись в БД по ID, исключая "удалённые" (is_active=False)
+        # Ищем запись в базе данныхпо ID, исключая "удалённые" (is_active=False)
         result = await self.session.execute(
             select(Media).where(Media.id == media_id, Media.is_active.is_(True)),
         )
