@@ -11,8 +11,8 @@ from models import Cafe
 from models.user import UserRole
 from schemas.cafe import CafeCreate, CafeInfo, CafeUpdate
 
-from core.db import DBSession
 from core.core_dependencies import redis_dep
+from core.db import DBSession
 
 router = APIRouter()
 
