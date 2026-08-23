@@ -143,7 +143,11 @@ async def update_dish(
 
     Только для администраторов и менеджеров.
     """
-    new_cafes_id = dish_update.cafes_id if dish_update.cafes_id is not None else [cafe.id for cafe in dish.cafes]
+    new_cafes_id = (
+        dish_update.cafes_id
+        if dish_update.cafes_id is not None
+        else [cafe.id for cafe in dish.cafes]
+    )
     require_manager_cafe_access_for_dish(current_user, new_cafes_id)
     await check_cafes_exist(new_cafes_id, session)
     return await dish_crud.update(dish, dish_update, session, redis)

@@ -11,6 +11,8 @@ from models.cafe import Cafe
 from models.dish import Dish
 from schemas.dish import DishCreate, DishInfo, DishUpdate
 
+from core.core_dependencies import redis_dep
+
 
 class DishAlreadyExistsError(ValueError):
     """Блюдо с таким именем уже существует."""
@@ -36,7 +38,7 @@ class DishCRUD(CRUDBase[Dish, DishCreate, DishUpdate]):
         db_obj: Dish,
         obj_in: DishUpdate,
         session: AsyncSession,
-        redis,
+        redis: redis_dep,
     ) -> Dish:
         """Обновляет блюдо, преобразуя конфликт уникальности имени."""
         try:
@@ -45,7 +47,7 @@ class DishCRUD(CRUDBase[Dish, DishCreate, DishUpdate]):
             await session.rollback()
             raise DishAlreadyExistsError from error
 
-    async def soft_delete(self, db_obj: Dish, session: AsyncSession, redis) -> Dish:
+    async def soft_delete(self, db_obj: Dish, session: AsyncSession, redis: redis_dep) -> Dish:
         """Мягкое удаление блюда с очисткой кэша Redis."""
         db_obj.is_active = False
         session.add(db_obj)
