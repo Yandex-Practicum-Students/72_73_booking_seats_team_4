@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from crud.base import CRUDBase
 from models.table import Table
-from schemas.table import TableCreate,TableInfo, TableUpdate
+from schemas.table import TableCreate, TableInfo, TableUpdate
 
 
 class TableCRUD(CRUDBase[Table, TableCreate, TableUpdate]):
