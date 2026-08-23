@@ -26,7 +26,7 @@ class BookingTablesSlots(Base):
     между моделями Booking, Tables, Slots.
     """
 
-    __tablename__ = 'bookingtableslots'
+    __tablename__ = 'bookingtableslotss' #добавила s
     booking_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
         ForeignKey('bookings.id', name='fk_booking_id_booking_tables_slots'),

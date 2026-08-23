@@ -24,14 +24,15 @@ class Cafe(base_model.Base, base_model.DescriptionMixin):
     managers: Mapped[List[User]] = relationship(
         'User',
         primaryjoin='and_(Cafe.id == User.cafe_id, User.role == "MANAGER")',
+        lazy='selectin',
     )
     tables: Mapped[List['Table']] = relationship(  # noqa: F821
         'Table',
         back_populates='cafe',
-        lazy='selectin',
+        lazy='noload',
     )
     slots: Mapped[List['Slot']] = relationship(  # noqa: F821
         'Slot',
         back_populates='cafe',
-        lazy='selectin',
+        lazy='noload',
     )
