@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from crud.base import CRUDBase
 from models.cafe import Cafe
-from schemas.cafe import CafeCreate, CafeUpdate
+from schemas.cafe import CafeCreate, CafeInfo, CafeUpdate
 
 from models.user import User, UserRole
 
@@ -18,7 +18,7 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
 
     def __init__(self) -> None:
         """Настраивает модель кафе и соответствие поля менеджеров."""
-        super().__init__(Cafe, rel_map={'managers_id': 'managers'})
+        super().__init__(Cafe, CafeInfo, rel_map={'managers_id': 'managers'})
 
     @staticmethod
     def _normalize_managers(cafe: Cafe) -> None:

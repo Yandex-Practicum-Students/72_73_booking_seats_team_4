@@ -6,6 +6,9 @@ services:
     volumes:
       - ..:/workspace:cached
     command: sleep infinity
+    depends_on:
+      redis:
+        condition: service_healthy
 
   db:
     image: postgres:17-alpine
@@ -30,5 +33,22 @@ services:
       retries: 5
     restart: unless-stopped
 
+  redis:
+    image: redis:8.8.2-alpine3.23
+    env_file:
+      - ../infra/.env
+    volumes:
+      - redis_data:/data
+    command: sh -c "redis-server --requirepass \$$REDIS_PASSWORD --maxmemory 268435456 --maxmemory-policy volatile-lru --save '' --loglevel debug --port \$$REDIS_PORT"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 5s
+
+
 volumes:
   pgdata:
+  redis_data:

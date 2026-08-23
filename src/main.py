@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+import redis.asyncio as aioredis
 import uvicorn
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
@@ -27,7 +28,20 @@ from core.settings import settings
 async def lifespan(app: FastAPI) -> AsyncGenerator:
     """Жизненный цикл приложения FastAPI."""
     logger.info('Привет! Запускаем приложение...')
+    app.state.redis = aioredis.from_url(
+        settings.redis_url,
+        decode_responses=settings.decode_responses,
+        max_connections=settings.max_connections,
+        password=settings.redis_password,
+    )
+    try:
+        await app.state.redis.ping()
+        logger.info('Успешное подключение к пулу Redis!')
+    except Exception as e:
+        logger.error(f'Не удалось подключиться к Redis: {e}')
     yield
+    logger.info('Закрываем соединения с Redis...')
+    await app.state.redis.close()
     logger.info('Завершаем работу приложения. До скорых встреч!')
 
 
