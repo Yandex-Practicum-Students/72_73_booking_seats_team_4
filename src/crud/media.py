@@ -59,7 +59,7 @@ class MediaCRUD:
         # здесь же размер считается постепенно, чанк за чанком.
         total_size = 0
 
-        def _open_file():
+        def _open_file()-> object:
             # Открываем файл на диске для побайтовой записи
             return open(file_path, 'wb')  # noqa: SIM115
 
