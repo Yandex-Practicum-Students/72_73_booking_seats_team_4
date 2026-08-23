@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import selectinload
 
 from api.dependencies.cafe import get_cafe_or_404, require_manager_cafe_access
-from api.dependencies.permissions import CurrentUser, StaffUser
+from api.dependencies.permissions import AdminUser, CurrentUser, StaffUser
 from api.responses import error_responses
 from crud.cafe import cafe_crud
 from models.cafe import Cafe
@@ -155,13 +155,12 @@ async def update_cafe(
 )
 async def delete_cafe(
     cafe_id: uuid.UUID,
-    _: StaffUser,
+    _: AdminUser,
     session: DBSession,
     cafe: Cafe = Depends(get_cafe_or_404),
 ) -> None:
     """Мягкое удаление кафе (установка is_active=False).
 
-    Только для администраторов и менеджеров.
+    Только для администраторов.
     """
-    require_manager_cafe_access(_, cafe_id)
     await cafe_crud.soft_delete(cafe, session)
