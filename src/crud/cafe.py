@@ -8,9 +8,10 @@ from sqlalchemy.orm import selectinload
 
 from crud.base import CRUDBase
 from models.cafe import Cafe
+from models.user import User, UserRole
 from schemas.cafe import CafeCreate, CafeInfo, CafeUpdate
 
-from models.user import User, UserRole
+from core.core_dependencies import redis_dep
 
 
 class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
@@ -58,7 +59,6 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
         logger.success('Найдено {} кафе', len(cafes))
         return cafes
 
-
     async def create(self, obj_in: CafeCreate, session: AsyncSession) -> Cafe:
         """Создаёт новое кафе.
 
@@ -79,7 +79,13 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
         logger.success('Кафе успешно создано: cafe_id={}, name={}', cafe.id, cafe.name)
         return cafe
 
-    async def update(self, db_obj: Cafe, obj_in: CafeUpdate, session: AsyncSession) -> Cafe:
+    async def update(
+            self,
+            db_obj: Cafe,
+            obj_in: CafeUpdate,
+            session: AsyncSession,
+            redis: redis_dep,
+    ) -> Cafe:
         """Обновляет кафе.
 
         managers_id обновляем с помощью _set_managers()
@@ -93,21 +99,21 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
             if new_manager_ids:
                 await self._ensure_managers_exist_and_role(new_manager_ids, session)
             await self._set_managers(db_obj, new_manager_ids, session)
+            # убираем managers_id из данных, чтобы super().update() не обновлял менеджеров
             update_data.pop('managers_id', None)
 
-        for field, value in update_data.items():
-            if hasattr(db_obj, field):
-                setattr(db_obj, field, value)
-
-        session.add(db_obj)
-        await session.commit()
-        await session.refresh(db_obj)
-        await session.refresh(db_obj, attribute_names=['managers'])
-        self._normalize_managers(db_obj)
+        if update_data:
+            temp_obj = CafeUpdate(**update_data)
+            db_obj = await super().update(db_obj, temp_obj, session, redis)
+        else:
+            session.add(db_obj)
+            await session.commit()
+            await session.refresh(db_obj)
+            await session.refresh(db_obj, attribute_names=['managers'])
+            self._normalize_managers(db_obj)
 
         logger.success('Кафе обновлено: id={}, name={}', db_obj.id, db_obj.name)
         return db_obj
-
 
     async def _ensure_managers_exist_and_role(
                 self,
@@ -116,12 +122,12 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
         ) -> None:
             """Проверяет, что все пользователи существуют и являются менеджерами."""
             result = await session.execute(
-                select(User).where(User.id.in_(manager_ids))
+                select(User).where(User.id.in_(manager_ids)),
             )
             managers = result.scalars().all()
 
             found_ids = {str(u.id) for u in managers}
-            requested_ids = {str(id) for id in manager_ids}
+            requested_ids = {str(manager_id) for manager_id in manager_ids}
 
             if missing := requested_ids - found_ids:
                 raise ValueError(f'Пользователи не найдены: {missing}')
@@ -129,7 +135,7 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
             for manager in managers:
                 if manager.role != UserRole.MANAGER:
                     raise ValueError(
-                        f'Пользователь {manager.username} не является менеджером'
+                        f'Пользователь {manager.username} не является менеджером',
                     )
 
     async def _set_managers(
@@ -145,14 +151,14 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
         """
         manager_ids = manager_ids or []
         current_ids = {str(m.id) for m in cafe.managers}
-        new_ids = {str(id) for id in manager_ids}
+        new_ids = {str(manager_id) for manager_id in manager_ids}
 
         to_add = new_ids - current_ids
         to_remove = current_ids - new_ids
 
         if to_remove:
             result = await session.execute(
-                select(User).where(User.id.in_(list(to_remove)))
+                select(User).where(User.id.in_(list(to_remove))),
             )
             for manager in result.scalars().all():
                 logger.info('Убираем менеджера {} из кафе {}', manager.username, cafe.id)
@@ -161,7 +167,7 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
 
         if to_add:
             result = await session.execute(
-                select(User).where(User.id.in_(list(to_add)))
+                select(User).where(User.id.in_(list(to_add))),
             )
             managers = result.scalars().all()
             for manager in managers:
@@ -173,10 +179,11 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
 
         if manager_ids:
             result = await session.execute(
-                select(User).where(User.id.in_(manager_ids))
+                select(User).where(User.id.in_(manager_ids)),
             )
             cafe.managers = list(result.scalars().all())
         else:
             cafe.managers = []
+
 
 cafe_crud = CafeCRUD()

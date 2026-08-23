@@ -1,9 +1,7 @@
 import uuid
 from typing import Optional
-from venv import logger
 
-from fastapi import APIRouter, Depends, status, Query, HTTPException
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from api.dependencies.permissions import AdminUser, CurrentUser, StaffUser
 from api.dependencies.tables import get_cafe_or_404, require_manager_cafe_access
@@ -14,6 +12,7 @@ from models.user import UserRole
 from schemas.cafe import CafeCreate, CafeInfo, CafeUpdate
 
 from core.db import DBSession
+from core.core_dependencies import redis_dep
 
 router = APIRouter()
 
@@ -31,7 +30,7 @@ router = APIRouter()
 async def get_cafes(
     current_user: CurrentUser,
     session: DBSession,
-    show_active: Optional[bool] = Query(None,),
+    show_active: Optional[bool] = Query(None),
 ) -> list[Cafe]:
     """Получение списка кафе.
 
@@ -112,6 +111,7 @@ async def create_cafe(
     """
     return await cafe_crud.create(cafe_create, session)
 
+
 @router.patch(
     '/{cafe_id}',
     response_model=CafeInfo,
@@ -129,6 +129,7 @@ async def update_cafe(
     cafe_update: CafeUpdate,
     current_user: StaffUser,
     session: DBSession,
+    redis: redis_dep,
     cafe: Cafe = Depends(get_cafe_or_404),
 ) -> Cafe:
     """Обновление информации о кафе по его ID.
@@ -137,7 +138,8 @@ async def update_cafe(
     менеджер только своё кафе.
     """
     require_manager_cafe_access(current_user, cafe_id)
-    return await cafe_crud.update(cafe, cafe_update, session)
+    return await cafe_crud.update(cafe, cafe_update, session, redis)
+
 
 @router.delete(
     '/{cafe_id}',
