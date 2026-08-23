@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 
 from crud.base import CRUDBase
 from models.cafe import Cafe
-from schemas.cafe import CafeCreate, CafeUpdate
+from schemas.cafe import CafeCreate, CafeInfo, CafeUpdate
 
 
 class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
@@ -13,7 +13,7 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
 
     def __init__(self) -> None:
         """Настраивает модель кафе и соответствие поля менеджеров."""
-        super().__init__(Cafe, rel_map={'managers_id': 'managers'})
+        super().__init__(Cafe, CafeInfo, rel_map={'managers_id': 'managers'})
 
     async def get(self, obj_id: uuid.UUID, session: AsyncSession) -> Cafe | None:
         """Возвращает кафе вместе со списком менеджеров."""
