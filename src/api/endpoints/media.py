@@ -40,10 +40,10 @@ async def get_media(
 ) -> FileResponse:
     """Возвращает файл изображения по его ID."""
     crud = MediaCRUD(session)
-    media = await crud.get_by_id(media_id)
-    if media is None:
+    file_path = await crud.get_file_path(media_id)
+    if file_path is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='Изображение не найдено.',
         )
-    return FileResponse(media.file_path, media_type=media.content_type)
+    return FileResponse(file_path)
