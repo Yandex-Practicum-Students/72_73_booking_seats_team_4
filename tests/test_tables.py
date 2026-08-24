@@ -11,6 +11,7 @@ os.environ.setdefault('POSTGRES_USER', 'test')
 os.environ.setdefault('POSTGRES_PASSWORD', 'test')
 os.environ.setdefault('POSTGRES_DB', 'test')
 os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
+os.environ.setdefault('REDIS_PASSWORD', 'test')
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 
 from api.dependencies.tables import get_cafe_or_404, get_table_in_cafe  # noqa: E402

@@ -23,10 +23,15 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
             options=[selectinload(Cafe.managers)],
         )
 
-    async def get_all(self, session: AsyncSession) -> list[Cafe]:
+    async def get_all(
+        self,
+        session: AsyncSession,
+        is_active: bool | None = None,
+    ) -> list[Cafe]:
         """Возвращает все кафе вместе со списками менеджеров."""
         return await super().get_all(
             session,
+            is_active=is_active,
             options=[selectinload(Cafe.managers)],
         )
 

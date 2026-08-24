@@ -1,6 +1,7 @@
 from typing import Annotated, AsyncIterator
 
 from fastapi import Depends, HTTPException
+from loguru import logger
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -25,9 +26,10 @@ async def get_session() -> AsyncIterator[AsyncSession]:
             await session.commit()
         except SQLAlchemyError as error:
             await session.rollback()
+            logger.exception('Ошибка при работе с БД')
             raise HTTPException(
                 status_code=500,
-                detail=f'Ошибка при работе с БД{error}',
+                detail='Ошибка при работе с БД',
             ) from error
 
 
