@@ -11,6 +11,7 @@ from models import Cafe, Table
 from models.user import UserRole
 from schemas.table import TableCreate, TableInfo, TableUpdate
 
+from core.core_dependencies import redis_dep
 from core.db import DBSession
 
 GET_RESPONSES = (
@@ -57,7 +58,7 @@ async def get_tables_by_cafe(
     current_user: CurrentUser,  # все авторизованные
     session: DBSession,
     show_active: Optional[bool] = Query(None),
-    _cafe: Cafe = Depends(get_cafe_or_404), # проверка существования кафе
+    _cafe: Cafe = Depends(get_cafe_or_404),  # проверка существования кафе
 ) -> list[Table]:
     """Получение списка доступных для бронирования столов в кафе.
 
@@ -90,7 +91,7 @@ async def create_table(
     table_create: TableCreate,
     _: StaffUser,  # Только админ или менеджер
     session: DBSession,
-    _cafe: Cafe = Depends(get_cafe_or_404), # проверка существования кафе
+    _cafe: Cafe = Depends(get_cafe_or_404),  # проверка существования кафе
 ) -> Table:
     """Создание нового стола в кафе.
 
@@ -112,7 +113,7 @@ async def get_table_by_id(
     table_id: uuid.UUID,
     current_user: CurrentUser,  # все авторизованные
     session: DBSession,
-    table: Table = Depends(get_table_in_cafe), # проверка существования кафе + стола + принадлежности
+    table: Table = Depends(get_table_in_cafe),  # проверка существования кафе + стола + принадлежности
 ) -> Table:
     """Получение информации о столе в кафе по его ID.
 
@@ -142,14 +143,15 @@ async def update_table(
     table_update: TableUpdate,
     _: StaffUser,  # Только админ или менеджер
     session: DBSession,
-    table: Table = Depends(get_table_in_cafe), # проверка существования кафе + стола + принадлежности
+    redis: redis_dep,
+    table: Table = Depends(get_table_in_cafe),  # проверка существования кафе + стола + принадлежности
 ) -> Table:
     """Обновление информации о столе в кафе по его ID.
 
     Только для администраторов и менеджеров.
     """
     require_manager_cafe_access(_, cafe_id)
-    return await table_crud.update(table, table_update, session)
+    return await table_crud.update(table, table_update, session, redis)
 
 
 @router.delete(
@@ -164,7 +166,7 @@ async def delete_table(
     table_id: uuid.UUID,
     _: StaffUser,  # Только админ или менеджер
     session: DBSession,
-    table: Table = Depends(get_table_in_cafe), # проверка существования кафе + стола + принадлежности
+    table: Table = Depends(get_table_in_cafe),  # проверка существования кафе + стола + принадлежности
 ) -> None:
     """Мягкое удаление стола в кафе (установка is_active=False).
 
