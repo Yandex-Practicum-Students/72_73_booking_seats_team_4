@@ -15,14 +15,14 @@ CHUNK_SIZE = 1024 * 1024
 
 
 class MediaCRUD:
-    """CRUD operations for media files."""
+    """CRUD-операции для работы с медиафайлами."""
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialize CRUD with a DB session."""
+        """Инициализирует CRUD с сессией БД."""
         self.session = session
 
     async def save_file(self, upload: UploadFile) -> Media:
-        """Save the file to disk in chunks and create a DB record."""
+        """Сохраняет файл на диск чанками и создаёт запись в БД."""
         await asyncio.to_thread(MEDIA_ROOT.mkdir, parents=True, exist_ok=True)
         media_id = uuid.uuid4()
         extension = Path(upload.filename or '').suffix
@@ -54,7 +54,7 @@ class MediaCRUD:
         return media
 
     async def get_file_path(self, media_id: uuid.UUID) -> Path | None:
-        """Return the file path by ID if the record exists."""
+        """Возвращает путь к файлу на диске по ID, если запись существует."""
         result = await self.session.execute(
             select(Media).where(Media.id == media_id),
         )

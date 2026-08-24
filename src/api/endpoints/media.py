@@ -66,6 +66,7 @@ class MediaCRUD:
         await self.session.refresh(media)
         return media
 
+
     async def get_file_path(self, media_id: uuid.UUID) -> Path | None:
         """Возвращает путь к файлу на диске по ID, если запись существует."""
         # Проверяем, что запись с таким id есть в БД
