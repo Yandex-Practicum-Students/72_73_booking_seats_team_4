@@ -41,7 +41,7 @@ class MediaCRUD:
                     await asyncio.to_thread(file_path.unlink, True)
                     raise HTTPException(
                         status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                        detail='File too large.',
+                        detail='Файл превышает допустимый размер.',
                     )
                 await asyncio.to_thread(file_obj.write, chunk)
         finally:
