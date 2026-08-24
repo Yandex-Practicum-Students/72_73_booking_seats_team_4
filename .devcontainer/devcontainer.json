@@ -1,6 +1,9 @@
 {
   "name": "FastAPI & SQLAlchemy & Postgres",
-  "dockerComposeFile": "./docker-compose.yml",
+  "dockerComposeFile": [
+    "../infra/docker-compose.yaml",
+    "./docker-compose.yml"
+  ],
   "service": "app",
   "workspaceFolder": "/workspace",
   "remoteUser": "vscode",
