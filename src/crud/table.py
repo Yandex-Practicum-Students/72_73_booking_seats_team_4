@@ -42,11 +42,11 @@ class TableCRUD(CRUDBase[Table, TableCreate, TableUpdate]):
         )
 
     async def get_by_cafe(
-            self,
-            cafe_id: uuid.UUID,
-            session: AsyncSession,
-            *,
-            show_active: bool | None = None,
+        self,
+        cafe_id: uuid.UUID,
+        session: AsyncSession,
+        *,
+        show_active: bool | None = None,
     ) -> list[Table]:
         """Возвращает столы кафе с фильтрацией по активности."""
         logger.info('Получение столов кафе: cafe_id={}, show_active={}', cafe_id, show_active)
@@ -62,17 +62,21 @@ class TableCRUD(CRUDBase[Table, TableCreate, TableUpdate]):
         return tables
 
     async def get_by_cafe_and_id(
-            self,
-            cafe_id: uuid.UUID,
-            table_id: uuid.UUID,
-            session: AsyncSession,
+        self,
+        cafe_id: uuid.UUID,
+        table_id: uuid.UUID,
+        session: AsyncSession,
     ) -> Table | None:
         """Возвращает стол по ID, принадлежащий указанному кафе."""
         logger.info('Получение стола по cafe_id={} и table_id={}', cafe_id, table_id)
-        query = select(Table).where(
-            Table.id == table_id,
-            Table.cafe_id == cafe_id,
-        ).options(selectinload(Table.cafe))
+        query = (
+            select(Table)
+            .where(
+                Table.id == table_id,
+                Table.cafe_id == cafe_id,
+            )
+            .options(selectinload(Table.cafe))
+        )
         result = await session.execute(query)
         table = result.scalar_one_or_none()
 
@@ -83,10 +87,10 @@ class TableCRUD(CRUDBase[Table, TableCreate, TableUpdate]):
         return table
 
     async def create_with_cafe(
-            self,
-            cafe_id: uuid.UUID,
-            obj_in: TableCreate,
-            session: AsyncSession,
+        self,
+        cafe_id: uuid.UUID,
+        obj_in: TableCreate,
+        session: AsyncSession,
     ) -> Table:
         """Создаёт стол с привязкой к кафе.
 

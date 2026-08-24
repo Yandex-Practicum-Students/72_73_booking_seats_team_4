@@ -15,6 +15,7 @@ from crud.user import user_crud
 from models.user import User, UserRole
 from schemas.user import AuthData, AuthToken, UserCreate, UserInfo, UserUpdate
 
+from core.core_dependencies import redis_dep
 from core.db import get_session
 from core.user import (
     DUMMY_PASSWORD_HASH,
@@ -202,11 +203,12 @@ async def update_user_by_id(
 async def delete_user_by_id(
     user_id: uuid.UUID,
     _: AdminUser,
+    redis: redis_dep,
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Блокирует пользователя; операция доступна только администратору."""
     user = await user_crud.get_or_raise(user_id, session)
-    await user_crud.soft_delete(user, session)
+    await user_crud.soft_delete(user, session, redis)
 
 
 router.include_router(auth_router)
