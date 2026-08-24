@@ -2,10 +2,9 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import selectinload
 
-from api.dependencies.cafe import get_cafe_or_404, require_manager_cafe_access
-from api.dependencies.permissions import CurrentUser, StaffUser
+from api.dependencies.cafe import get_cafe_or_404, get_manager_cafe, require_manager_cafe_access
+from api.dependencies.permissions import AdminUser, CurrentUser, StaffUser
 from api.responses import error_responses
 from crud.cafe import cafe_crud
 from models.cafe import Cafe
@@ -41,14 +40,15 @@ async def get_cafes(
     if current_user.role == UserRole.ADMIN:
         return await cafe_crud.get_all(
             session=session,
-            is_active=show_active,
-            options=[selectinload(Cafe.managers)],
+            show_active=show_active,
         )
+
+    if current_user.role == UserRole.MANAGER:
+        return await get_manager_cafe(current_user, session)
 
     return await cafe_crud.get_all(
         session=session,
-        is_active=True,
-        options=[selectinload(Cafe.managers)],
+        show_active=True,
     )
 
 
@@ -66,14 +66,15 @@ async def get_cafes(
 )
 async def create_cafe(
     cafe_create: CafeCreate,
-    _: StaffUser,
+    _: AdminUser,
     session: DBSession,
+    redis: redis_dep,
 ) -> Cafe:
     """Создание нового кафе.
 
     Только для администраторов и менеджеров.
     """
-    return await cafe_crud.create(cafe_create, session)
+    return await cafe_crud.create(cafe_create, session, redis)
 
 
 @router.get(

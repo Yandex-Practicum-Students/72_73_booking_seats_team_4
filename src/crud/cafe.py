@@ -2,15 +2,13 @@ import uuid
 from typing import Optional
 
 from loguru import logger
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from crud.base import CRUDBase
 from models.cafe import Cafe
-from models.user import User, UserRole
 from schemas.cafe import CafeCreate, CafeInfo, CafeUpdate
-
+from services.cafe import  ensure_managers_exist_and_role, normalize_managers, sync_managers
 from core.core_dependencies import redis_dep
 
 
@@ -21,20 +19,12 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
         """Настраивает модель кафе и соответствие поля менеджеров."""
         super().__init__(Cafe, CafeInfo, rel_map={'managers_id': 'managers'})
 
-    @staticmethod
-    def _normalize_managers(cafe: Cafe) -> None:
-        """Приводит managers к списку."""
-        if cafe.managers is None:
-            cafe.managers = []
-        elif not isinstance(cafe.managers, list):
-            cafe.managers = list(cafe.managers)
-
     async def get(self, obj_id: uuid.UUID, session: AsyncSession) -> Cafe | None:
         """Возвращает кафе вместе со списком менеджеров."""
         logger.info('Получение кафе по ID: {}', obj_id)
         cafe = await super().get(obj_id, session, options=[selectinload(Cafe.managers)])
         if cafe:
-            self._normalize_managers(cafe)
+            normalize_managers(cafe)
             logger.success('Кафе найдено: cafe_id={}, name={}', obj_id, cafe.name)
         else:
             logger.warning('Кафе не найдено: cafe_id={}', obj_id)
@@ -46,35 +36,36 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
         show_active: Optional[bool] = None,
     ) -> list[Cafe]:
         """Возвращает все кафе вместе со списками менеджеров с фильтрацией по активности."""
-        query = select(Cafe)
-        if show_active is not None:
-            query = query.where(Cafe.is_active == show_active)
-        query = query.order_by(Cafe.created_at).options(selectinload(Cafe.managers))
-        result = await session.execute(query)
-        cafes = list(result.scalars().all())
+        logger.info('Получение всех кафе: show_active={}', show_active)
+
+        cafes = await super().get_all(
+            session=session,
+            is_active=show_active,
+            options=[selectinload(Cafe.managers)],
+        )
 
         for cafe in cafes:
-            self._normalize_managers(cafe)
+            normalize_managers(cafe)
 
         logger.success('Найдено {} кафе', len(cafes))
         return cafes
 
-    async def create(self, obj_in: CafeCreate, session: AsyncSession) -> Cafe:
+    async def create(
+            self,
+            obj_in: CafeCreate,
+            session: AsyncSession,
+            redis: redis_dep,
+    ) -> Cafe:
         """Создаёт новое кафе.
 
-        managers_id устанавливаем с помощью _set_managers()
-        остальные поля - через базовый create()
+        Обновляет поле cafe_id менеджера с помощью sync_managers()
         """
         logger.info('Создание нового кафе: name={}, address={}', obj_in.name, obj_in.address)
         if obj_in.managers_id:
-            await self._ensure_managers_exist_and_role(obj_in.managers_id, session)
-
-        cafe = await super().create(obj_in, session)
-
-        if obj_in.managers_id:
-            await self._set_managers(cafe, obj_in.managers_id, session)
-            await session.refresh(cafe, attribute_names=['managers'])
-            self._normalize_managers(cafe)
+            await ensure_managers_exist_and_role(obj_in.managers_id, session)
+        cafe_schema = await super().create(obj_in, session, redis)
+        cafe = await self.get(cafe_schema.id, session) # ORM-объект из бд
+        await sync_managers(cafe, obj_in.managers_id, session)
 
         logger.success('Кафе успешно создано: cafe_id={}, name={}', cafe.id, cafe.name)
         return cafe
@@ -88,102 +79,27 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
     ) -> Cafe:
         """Обновляет кафе.
 
-        managers_id обновляем с помощью _set_managers()
-        остальные поля - через базовый update()
+        Обновляет поле cafe_id менеджера с помощью sync_managers()
         """
         logger.info('Обновление кафе: id={}, name={}', db_obj.id, db_obj.name)
-        update_data = obj_in.model_dump(exclude_unset=True)
 
-        if 'managers_id' in update_data:
-            new_manager_ids = update_data['managers_id'] or []
-            if new_manager_ids:
-                await self._ensure_managers_exist_and_role(new_manager_ids, session)
-            await self._set_managers(db_obj, new_manager_ids, session)
-            # убираем managers_id из данных, чтобы super().update() не обновлял менеджеров
-            update_data.pop('managers_id', None)
+        update_data = obj_in.model_dump(exclude_unset=True)
+        managers_id = update_data.pop('managers_id', None)
+
+        if managers_id:
+            await ensure_managers_exist_and_role(managers_id, session)
 
         if update_data:
             temp_obj = CafeUpdate(**update_data)
-            db_obj = await super().update(db_obj, temp_obj, session, redis)
+            cafe = await super().update(db_obj, temp_obj, session, redis)
         else:
-            session.add(db_obj)
-            await session.commit()
-            await session.refresh(db_obj)
-            await session.refresh(db_obj, attribute_names=['managers'])
-            self._normalize_managers(db_obj)
+            cafe = db_obj
 
-        logger.success('Кафе обновлено: id={}, name={}', db_obj.id, db_obj.name)
-        return db_obj
+        await sync_managers(cafe, managers_id, session)
 
-    async def _ensure_managers_exist_and_role(
-                self,
-                manager_ids: list[uuid.UUID],
-                session: AsyncSession,
-        ) -> None:
-            """Проверяет, что все пользователи существуют и являются менеджерами."""
-            result = await session.execute(
-                select(User).where(User.id.in_(manager_ids)),
-            )
-            managers = result.scalars().all()
+        logger.success('Кафе обновлено: id={}, name={}', cafe.id, cafe.name)
+        return cafe
 
-            found_ids = {str(u.id) for u in managers}
-            requested_ids = {str(manager_id) for manager_id in manager_ids}
-
-            if missing := requested_ids - found_ids:
-                raise ValueError(f'Пользователи не найдены: {missing}')
-
-            for manager in managers:
-                if manager.role != UserRole.MANAGER:
-                    raise ValueError(
-                        f'Пользователь {manager.username} не является менеджером',
-                    )
-
-    async def _set_managers(
-            self,
-            cafe: Cafe,
-            manager_ids: list[uuid.UUID] | None,
-            session: AsyncSession,
-    ) -> None:
-        """Устанавливает список менеджеров кафе.
-
-        - Если менеджер был в другом кафе — переназначает его cafe_id
-        - Если менеджер удалён из списка — убирает cafe_id
-        """
-        manager_ids = manager_ids or []
-        current_ids = {str(m.id) for m in cafe.managers}
-        new_ids = {str(manager_id) for manager_id in manager_ids}
-
-        to_add = new_ids - current_ids
-        to_remove = current_ids - new_ids
-
-        if to_remove:
-            result = await session.execute(
-                select(User).where(User.id.in_(list(to_remove))),
-            )
-            for manager in result.scalars().all():
-                logger.info('Убираем менеджера {} из кафе {}', manager.username, cafe.id)
-                manager.cafe_id = None
-                session.add(manager)
-
-        if to_add:
-            result = await session.execute(
-                select(User).where(User.id.in_(list(to_add))),
-            )
-            managers = result.scalars().all()
-            for manager in managers:
-                if manager.cafe_id is not None and manager.cafe_id != cafe.id:
-                    logger.info('Переназначаем менеджера {} из кафе {} в кафе {}',
-                                manager.username, manager.cafe_id, cafe.id)
-                manager.cafe_id = cafe.id
-                session.add(manager)
-
-        if manager_ids:
-            result = await session.execute(
-                select(User).where(User.id.in_(manager_ids)),
-            )
-            cafe.managers = list(result.scalars().all())
-        else:
-            cafe.managers = []
 
 
 cafe_crud = CafeCRUD()
