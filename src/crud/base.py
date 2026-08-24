@@ -216,8 +216,14 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             logger.error(f'Ошибка при получении объекта "{redis_all_key}":\n {e}')
             raise e
 
-    async def create(self, obj_in: CreateSchemaType, session: AsyncSession) -> ModelType:
+    async def create(
+        self,
+        obj_in: CreateSchemaType,
+        session: AsyncSession,
+        redis: redis_dep,
+    ) -> ResponseSchemaType:
         """Создание объекта с гибким поиском связей по карте rel_map."""
+        redis_all_key = f'{self.model.__tablename__}:all'
         try:
             input_data = obj_in.model_dump()
             db_obj = self.model()
@@ -232,14 +238,18 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                     setattr(db_obj, sqlalchemy_field, list(result.scalars().all()))
 
             for field, value in input_data.items():
-                if field not in self.rel_map and hasattr(db_obj, field):
+                if field in self.rel_map or field in self.rel_map.values():
+                    continue
+
+                if hasattr(db_obj, field):
                     setattr(db_obj, field, value)
 
             session.add(db_obj)
             await session.commit()
             logger.info(f'Объект {self.model.__tablename__} с ID {db_obj.id} успешно сохранен')
-            await session.refresh(db_obj)
-            return db_obj
+            await self._del_redis_key(redis_all_key, redis=redis)
+
+            return self.response_schema.model_validate(db_obj)
         except ConnectionError as e:
             logger.error(f'Ошибка подключения к бд при сохранении объекта: {db_obj}.\n {e}')
         except Exception as e:
@@ -252,7 +262,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         obj_in: UpdateSchemaType,
         session: AsyncSession,
         redis: redis_dep,
-    ) -> ModelType:
+    ) -> ResponseSchemaType:
         """Обновление объекта с поддержкой карты rel_map."""
         redis_all_key = f'{self.model.__tablename__}:all'
         redis_obj_key = f'{self.model.__tablename__}:{db_obj.id}'
@@ -271,7 +281,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                     else:
                         setattr(db_obj, sqlalchemy_field, [])
 
-                elif hasattr(db_obj, field):
+                elif field not in self.rel_map.values() and hasattr(db_obj, field):
                     setattr(db_obj, field, value)
 
             session.add(db_obj)
@@ -280,11 +290,9 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 f'Объект "{redis_obj_key}" успешно зафискирован в бд при'
                 f'обновлении. изменененные атрибуты объекта:\n {update_data}',
             )
-            await session.refresh(db_obj)
-
             await self._del_redis_key(redis_all_key, redis_obj_key, redis=redis)
 
-            return db_obj
+            return self.response_schema.model_validate(db_obj)
 
         except ConnectionError as e:
             logger.error(f'Ошибка подключения к бд при сохранении объекта: {db_obj}.\n {e}')
