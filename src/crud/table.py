@@ -17,7 +17,6 @@ class TableCRUD(CRUDBase[Table, TableCreate, TableUpdate]):
         """Настраивает модель стола."""
         super().__init__(Table, TableInfo, rel_map={})
 
-
     async def get(
         self,
         obj_id: uuid.UUID,

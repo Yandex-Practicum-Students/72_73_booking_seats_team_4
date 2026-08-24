@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import selectinload
 
 from api.dependencies.cafe import get_cafe_or_404, require_manager_cafe_access
-from api.dependencies.permissions import AdminUser, CurrentUser, StaffUser
+from api.dependencies.permissions import CurrentUser, StaffUser
 from api.responses import error_responses
 from crud.cafe import cafe_crud
 from models.cafe import Cafe
