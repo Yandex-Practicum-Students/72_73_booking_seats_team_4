@@ -8,7 +8,8 @@ from sqlalchemy.orm import selectinload
 from crud.base import CRUDBase
 from models.cafe import Cafe
 from schemas.cafe import CafeCreate, CafeInfo, CafeUpdate
-from services.cafe import  ensure_managers_exist_and_role, normalize_managers, sync_managers
+from services.cafe import ensure_managers_exist_and_role, normalize_managers, sync_managers
+
 from core.core_dependencies import redis_dep
 
 
@@ -99,7 +100,6 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
 
         logger.success('Кафе обновлено: id={}, name={}', cafe.id, cafe.name)
         return cafe
-
 
 
 cafe_crud = CafeCRUD()
