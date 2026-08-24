@@ -80,6 +80,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return result
         except Exception as e:
             logger.error(f'Ошибка при получении объекта "{db_obj_key}":\n {e}')
+            raise e
 
     async def get_with_cache(
         self,
@@ -159,6 +160,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return result.scalars().all()
         except Exception as e:
             logger.error(f'Ошибка при получении объектов "{all_key}":\n {e}')
+            raise e
 
     async def get_all_with_cache(
         self,
@@ -286,6 +288,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         except ConnectionError as e:
             logger.error(f'Ошибка подключения к бд при сохранении объекта: {db_obj}.\n {e}')
+            raise e
         except Exception as e:
             logger.error(f'Ошибка при обнвлении объекта "{db_obj}":\n {e}')
             raise e
@@ -293,6 +296,8 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     async def soft_delete(self, db_obj: ModelType, session: AsyncSession, redis: redis_dep) -> ModelType:
         """Деактивирует объект без удаления записи из базы данных."""
         redis_obj_key = f'{self.model.__tablename__}:{db_obj.id}'
+        redis_all_key = f'{self.model.__tablename__}:all'
+
         try:
             db_obj.is_active = False
             session.add(db_obj)
@@ -301,10 +306,11 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 f'Объект "{redis_obj_key}" успешно зафискирован в бд при изменении is_active',
             )
             await session.refresh(db_obj)
-            await self._del_redis_key(redis_obj_key, redis=redis)
+            await self._del_redis_key(redis_obj_key, redis_all_key, redis=redis)
             return db_obj
         except ConnectionError as e:
             logger.error(f'Ошибка подключения к бд при сохранении объекта: {db_obj}:\n {e}')
+            raise e
         except Exception as e:
             logger.error(f'Ошибка при обнвлении объекта "{db_obj}":\n {e}')
             raise e
