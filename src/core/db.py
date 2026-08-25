@@ -27,7 +27,7 @@ async def get_session() -> AsyncIterator[AsyncSession]:
             await session.rollback()
             raise HTTPException(
                 status_code=500,
-                detail='Ошибка при работе с БД',
+                detail=f'Ошибка при работе с БД{error}',
             ) from error
 
 

@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy import ForeignKey, Numeric, String, UniqueConstraint, Uuid
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.base_model import Base
 from core.constants import COMMON_DESCRIPTION_MAX_LENGTH, DISH_NAME_MAX_LENGTH
@@ -44,3 +44,9 @@ class Dish(Base):
         nullable=True,
     )
     price: Mapped[Decimal] = mapped_column(Numeric(precision=10, scale=2))
+    cafes: Mapped[list['Cafe']] = relationship(  # noqa: F821
+        'Cafe',
+        secondary='cafe_dishes',
+        back_populates='dishes',
+        lazy='selectin',
+    )

@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.errors import APIError
+from crud.dish import DishAlreadyExistsError
 from crud.user import UserAlreadyExistsError, UserNotFoundError
 from schemas.error import CustomError
 
@@ -77,6 +78,17 @@ async def user_already_exists_handler(
     return custom_error_response(
         status.HTTP_400_BAD_REQUEST,
         'Пользователь с такими данными уже существует.',
+    )
+
+
+async def dish_already_exists_handler(
+    _: Request,
+    __: DishAlreadyExistsError,
+) -> JSONResponse:
+    """Возвращает единый ответ при конфликте уникального имени блюда."""
+    return custom_error_response(
+        status.HTTP_400_BAD_REQUEST,
+        'Блюдо с таким именем уже существует.',
     )
 
 

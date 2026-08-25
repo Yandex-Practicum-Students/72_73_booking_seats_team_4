@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+import redis.asyncio as aioredis
 import uvicorn
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
@@ -11,12 +12,14 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from api.errors import APIError
 from api.exceptions import (
     api_error_handler,
+    dish_already_exists_handler,
     http_exception_handler,
     request_validation_error_handler,
     user_already_exists_handler,
     user_not_found_handler,
 )
 from api.routers import api_router
+from crud.dish import DishAlreadyExistsError
 from crud.user import UserAlreadyExistsError, UserNotFoundError
 
 from core.logging import configure_loguru
@@ -27,7 +30,20 @@ from core.settings import settings
 async def lifespan(app: FastAPI) -> AsyncGenerator:
     """Жизненный цикл приложения FastAPI."""
     logger.info('Привет! Запускаем приложение...')
+    app.state.redis = aioredis.from_url(
+        settings.redis_url,
+        decode_responses=settings.decode_responses,
+        max_connections=settings.max_connections,
+        password=settings.redis_password,
+    )
+    try:
+        await app.state.redis.ping()
+        logger.info('Успешное подключение к пулу Redis!')
+    except Exception as e:
+        logger.error(f'Не удалось подключиться к Redis: {e}')
     yield
+    logger.info('Закрываем соединения с Redis...')
+    await app.state.redis.close()
     logger.info('Завершаем работу приложения. До скорых встреч!')
 
 
@@ -49,6 +65,7 @@ app.add_middleware(
 )
 
 app.add_exception_handler(APIError, api_error_handler)
+app.add_exception_handler(DishAlreadyExistsError, dish_already_exists_handler)
 app.add_exception_handler(UserAlreadyExistsError, user_already_exists_handler)
 app.add_exception_handler(UserNotFoundError, user_not_found_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
