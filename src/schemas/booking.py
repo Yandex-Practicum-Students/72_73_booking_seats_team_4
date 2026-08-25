@@ -74,6 +74,7 @@ class BookingUpdate(BookingCreate):
     guest_number: Optional[PositiveInt] = Field(None)
     booking_date: Optional[BookinDateNotPast] = Field(None)
     status: Optional[StatusBooking] = Field(None)
+    is_active: Optional[bool] = Field(None)
 
 
 class BookingInfo(IdScheme, BookingBase, BaseInfoScheme):

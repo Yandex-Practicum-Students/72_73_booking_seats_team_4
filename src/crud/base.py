@@ -14,8 +14,9 @@ UpdateSchemaType = TypeVar('UpdateSchemaType', bound=BaseModel)
 
 
 class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
-    """Базовый клаcc CRUD. При наследовании требуется указать типизацию.
+    """Базовый клаcc CRUD.
 
+    При наследовании требуется указать типизацию.
     Модель, схему создания, схему обновления.
     Пример:
     CafeCRUD(CRUDBase[Cafe, CreateCafeScheme, UpdateCafeScheme])
