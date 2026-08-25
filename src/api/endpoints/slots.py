@@ -3,18 +3,16 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from api.dependencies.cafe import get_cafe_or_404
 from api.dependencies.permissions import CurrentUser, StaffUser
-from api.dependencies.slots import (
-    check_manager_cafe_access,
-    get_cafe_or_404,
-    get_slot_in_cafe,
-)
+from api.dependencies.slots import get_slot_in_cafe
 from api.responses import error_responses
 from crud.slot import slot_crud
 from models.cafe import Cafe
 from models.slots import Slot
 from models.user import UserRole
 from schemas.slots import TimeSlotCreate, TimeSlotInfo, TimeSlotUpdate
+from services.cafe import ensure_manager_cafe_access
 
 from core.core_dependencies import redis_dep
 from core.db import DBSession
@@ -79,7 +77,7 @@ async def create_slot(
 
     Менеджер создает слоты только в своём кафе.
     """
-    await check_manager_cafe_access(current_user, cafe_id)
+    ensure_manager_cafe_access(current_user, cafe_id)
     return await slot_crud.create_with_cafe(cafe_id, slot_create, session)
 
 
@@ -101,7 +99,7 @@ async def get_slot_by_id(
     Для администраторов и менеджеров — все слоты,
     для пользователей — только активные.
     """
-    await check_manager_cafe_access(current_user, cafe_id)
+    ensure_manager_cafe_access(current_user, cafe_id)
 
     if current_user.role == UserRole.USER and not _slot.is_active:
         raise HTTPException(
@@ -131,7 +129,7 @@ async def update_slot(
 
     Менеджер обновляет слоты только в своём кафе.
     """
-    await check_manager_cafe_access(current_user, cafe_id)
+    ensure_manager_cafe_access(current_user, cafe_id)
     return await slot_crud.update(_slot, slot_update, session, redis)
 
 
@@ -152,5 +150,5 @@ async def delete_slot(
 
     Менеджер удаляет слоты только в своём кафе.
     """
-    await check_manager_cafe_access(current_user, cafe_id)
+    ensure_manager_cafe_access(current_user, cafe_id)
     await slot_crud.soft_delete(_slot, session)

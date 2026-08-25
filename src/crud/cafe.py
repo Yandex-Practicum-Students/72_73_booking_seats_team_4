@@ -13,18 +13,6 @@ from services.cafe import ensure_managers_exist_and_role, normalize_managers, sy
 from core.core_dependencies import redis_dep
 
 
-class ManagerNotFoundError(ValueError):
-    """Ошибка: менеджер не найден."""
-
-
-class ManagerRoleError(ValueError):
-    """Ошибка: пользователь не является менеджером."""
-
-
-class ManagerAlreadyAssignedError(ValueError):
-    """Ошибка: менеджер уже привязан к другому кафе."""
-
-
 class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
     """CRUD-операции для кафе и связанных менеджеров."""
 

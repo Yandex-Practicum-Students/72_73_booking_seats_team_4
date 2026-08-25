@@ -3,13 +3,14 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from api.dependencies.dish import check_cafes_exist, get_dish_or_404, require_manager_cafe_access_for_dish
+from api.dependencies.dish import get_dish_or_404
 from api.dependencies.permissions import CurrentUser, StaffUser
 from api.responses import error_responses
 from crud.dish import dish_crud
 from models.dish import Dish
 from models.user import UserRole
 from schemas.dish import DishCreate, DishInfo, DishUpdate
+from services.dish import ensure_cafes_exist, ensure_manager_cafe_access
 
 from core.core_dependencies import redis_dep
 from core.db import DBSession
@@ -94,8 +95,8 @@ async def create_dish(
 
     Только для администраторов и менеджеров.
     """
-    require_manager_cafe_access_for_dish(current_user, dish_create.cafes_id)
-    await check_cafes_exist(dish_create.cafes_id, session)
+    ensure_manager_cafe_access(current_user, dish_create.cafes_id)
+    await ensure_cafes_exist(dish_create.cafes_id, session)
     return await dish_crud.create(dish_create, session)
 
 
@@ -148,8 +149,8 @@ async def update_dish(
         if dish_update.cafes_id is not None
         else [cafe.id for cafe in dish.cafes]
     )
-    require_manager_cafe_access_for_dish(current_user, new_cafes_id)
-    await check_cafes_exist(new_cafes_id, session)
+    ensure_manager_cafe_access(current_user, new_cafes_id)
+    await ensure_cafes_exist(new_cafes_id, session)
     return await dish_crud.update(dish, dish_update, session, redis)
 
 
@@ -170,5 +171,5 @@ async def delete_dish(
 
     Только для администраторов и менеджеров.
     """
-    require_manager_cafe_access_for_dish(current_user, [cafe.id for cafe in dish.cafes])
+    ensure_manager_cafe_access(current_user, [cafe.id for cafe in dish.cafes])
     await dish_crud.soft_delete(dish, session, redis)

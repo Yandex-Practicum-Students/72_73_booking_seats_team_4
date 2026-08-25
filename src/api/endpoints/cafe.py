@@ -3,13 +3,14 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from api.dependencies.cafe import get_cafe_or_404, get_manager_cafe, require_manager_cafe_access
+from api.dependencies.cafe import get_cafe_or_404
 from api.dependencies.permissions import AdminUser, CurrentUser, StaffUser
 from api.responses import error_responses
 from crud.cafe import cafe_crud
 from models.cafe import Cafe
 from models.user import UserRole
 from schemas.cafe import CafeCreate, CafeInfo, CafeUpdate
+from services.cafe import ensure_manager_cafe_access, get_manager_cafes
 
 from core.core_dependencies import redis_dep
 from core.db import DBSession
@@ -44,7 +45,7 @@ async def get_cafes(
         )
 
     if current_user.role == UserRole.MANAGER:
-        return await get_manager_cafe(current_user, session)
+        return await get_manager_cafes(current_user, session, cafe_crud)
 
     return await cafe_crud.get_all(
         session=session,
@@ -99,7 +100,7 @@ async def get_cafe_by_id(
     Для администраторов и менеджеров - все кафе,
     для пользователей - только активные.
     """
-    require_manager_cafe_access(current_user, cafe_id)
+    ensure_manager_cafe_access(current_user, cafe_id)
 
     if current_user.role == UserRole.USER and not cafe.is_active:
         raise HTTPException(
@@ -134,5 +135,5 @@ async def update_cafe(
 
     Только для администраторов и менеджеров.
     """
-    require_manager_cafe_access(_, cafe_id)
+    ensure_manager_cafe_access(_, cafe_id)
     return await cafe_crud.update(cafe, cafe_update, session, redis)

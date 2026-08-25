@@ -7,13 +7,13 @@ from api.dependencies.permissions import (
     AdminUser,
     MeUser,
     StaffUser,
-    ensure_user_update_allowed,
 )
 from api.responses import error_responses
 from api.validators import ensure_contact_remains, reject_null_required_fields
 from crud.user import user_crud
 from models.user import User, UserRole
 from schemas.user import AuthData, AuthToken, UserCreate, UserInfo, UserUpdate
+from services.user import ensure_user_update_allowed
 
 from core.core_dependencies import redis_dep
 from core.db import get_session
