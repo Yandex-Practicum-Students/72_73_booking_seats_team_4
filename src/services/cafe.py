@@ -4,6 +4,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from crud.cafe import ManagerNotFoundError, ManagerRoleError
 from models.cafe import Cafe
 from models.user import User, UserRole
 
@@ -42,13 +43,11 @@ async def ensure_managers_exist_and_role(
     requested_ids = {str(manager_id) for manager_id in manager_ids}
 
     if missing := requested_ids - found_ids:
-        raise ValueError(f'Пользователи не найдены: {missing}')
+        raise ManagerNotFoundError(missing)
 
     for manager in managers:
         if manager.role != UserRole.MANAGER:
-            raise ValueError(
-                f'Пользователь {manager.username} не является менеджером',
-            )
+            raise ManagerRoleError(manager.username)
 
 
 async def set_managers(

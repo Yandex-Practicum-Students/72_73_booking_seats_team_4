@@ -72,7 +72,7 @@ async def create_cafe(
 ) -> Cafe:
     """Создание нового кафе.
 
-    Только для администраторов и менеджеров.
+    Только для администраторов.
     """
     return await cafe_crud.create(cafe_create, session, redis)
 

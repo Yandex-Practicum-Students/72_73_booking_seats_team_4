@@ -13,6 +13,18 @@ from services.cafe import ensure_managers_exist_and_role, normalize_managers, sy
 from core.core_dependencies import redis_dep
 
 
+class ManagerNotFoundError(ValueError):
+    """Ошибка: менеджер не найден."""
+
+
+class ManagerRoleError(ValueError):
+    """Ошибка: пользователь не является менеджером."""
+
+
+class ManagerAlreadyAssignedError(ValueError):
+    """Ошибка: менеджер уже привязан к другому кафе."""
+
+
 class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
     """CRUD-операции для кафе и связанных менеджеров."""
 
@@ -65,7 +77,7 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
         if obj_in.managers_id:
             await ensure_managers_exist_and_role(obj_in.managers_id, session)
         cafe_schema = await super().create(obj_in, session, redis)
-        cafe = await self.get(cafe_schema.id, session) # ORM-объект из бд
+        cafe = await self.get(cafe_schema.id, session)
         await sync_managers(cafe, obj_in.managers_id, session)
 
         logger.success('Кафе успешно создано: cafe_id={}, name={}', cafe.id, cafe.name)
@@ -92,14 +104,13 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
 
         if update_data:
             temp_obj = CafeUpdate(**update_data)
-            cafe = await super().update(db_obj, temp_obj, session, redis)
-        else:
-            cafe = db_obj
+            await super().update(db_obj, temp_obj, session, redis)
+            await session.refresh(db_obj, attribute_names=['managers'])
 
-        await sync_managers(cafe, managers_id, session)
+        await sync_managers(db_obj, managers_id, session)
 
-        logger.success('Кафе обновлено: id={}, name={}', cafe.id, cafe.name)
-        return cafe
+        logger.success('Кафе обновлено: id={}, name={}', db_obj.id, db_obj.name)
+        return db_obj
 
 
 cafe_crud = CafeCRUD()

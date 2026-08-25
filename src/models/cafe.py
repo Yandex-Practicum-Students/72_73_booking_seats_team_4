@@ -28,12 +28,12 @@ class Cafe(base_model.Base, base_model.DescriptionMixin):
     tables: Mapped[List['Table']] = relationship(  # noqa: F821
         'Table',
         back_populates='cafe',
-        lazy='noload',
+        lazy='selectin',
     )
     slots: Mapped[List['Slot']] = relationship(  # noqa: F821
         'Slot',
         back_populates='cafe',
-        lazy='noload',
+        lazy='selectin',
     )
     dishes: Mapped[List['Dish']] = relationship(  # noqa: F821
         'Dish',

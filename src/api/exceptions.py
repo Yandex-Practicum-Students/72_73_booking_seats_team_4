@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.errors import APIError
+from crud.cafe import ManagerAlreadyAssignedError, ManagerNotFoundError, ManagerRoleError
 from crud.dish import DishAlreadyExistsError
 from crud.user import UserAlreadyExistsError, UserNotFoundError
 from schemas.error import CustomError
@@ -100,4 +101,37 @@ async def user_not_found_handler(
     return custom_error_response(
         status.HTTP_404_NOT_FOUND,
         'Пользователь не найден.',
+    )
+
+
+async def manager_not_found_handler(
+    _: Request,
+    exception: ManagerNotFoundError,
+) -> JSONResponse:
+    """Возвращает ошибку, если менеджер не найден."""
+    return custom_error_response(
+        exception.status_code,
+        exception.message,
+    )
+
+
+async def manager_role_error_handler(
+    _: Request,
+    exception: ManagerRoleError,
+) -> JSONResponse:
+    """Возвращает ошибку, если пользователь не является менеджером."""
+    return custom_error_response(
+        exception.status_code,
+        exception.message,
+    )
+
+
+async def manager_already_assigned_handler(
+    _: Request,
+    exception: ManagerAlreadyAssignedError,
+) -> JSONResponse:
+    """Возвращает ошибку, если менеджер уже привязан к другому кафе."""
+    return custom_error_response(
+        exception.status_code,
+        exception.message,
     )
