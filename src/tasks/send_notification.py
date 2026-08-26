@@ -168,7 +168,7 @@ async def _dispatch_notification(
         f'ID Бронирования: {booking.id}\n'
         f'Дата: {booking.booking_date}\n'
         f'Количество гостей: {booking.guest_number}\n'
-        f'Комментарий: {booking.note or "нет"}'
+        f'Комментарий: {booking.note or "-"}'
     )
 
     for manager_id in managers_ids:

@@ -56,13 +56,13 @@ class RetryableTask(Task):
     default_countdown: int = 60
     no_retry_exceptions: tuple[type[Exception], ...] = ()
 
-    def run(self, *args: Any, **kwargs: Any) -> Any:
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """Точка входа для выполнения задачи Celery."""
         log = logger.bind(task_name=self.name, task_id=self.request.id)
         log.info('Старт задачи {name}', name=self.name)
 
         try:
-            return super().run(*args, **kwargs)
+            return super().__call__(*args, **kwargs)
         except Retry:
             raise
         except Exception as error:
@@ -86,7 +86,7 @@ class RetryableTask(Task):
                     max_retries=self.max_retries,
                     exc_info=True,
                 )
-                raise self.retry(countdown=self.default_countdown, exc=error)
+                self.retry(countdown=self.default_countdown, exc=error)
 
             log.error(
                 'Задача {id} -> {name} провалена после {attempts} попыток',
