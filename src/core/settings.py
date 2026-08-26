@@ -16,17 +16,6 @@ class Environment(StrEnum):
     PRODUCTION = 'production'
 
 
-class LogLevel(StrEnum):
-    """Уровни логирования, поддерживаемые приложением."""
-
-    DEBUG = 'DEBUG'
-    INFO = 'INFO'
-    SUCCESS = 'SUCCESS'
-    WARNING = 'WARNING'
-    ERROR = 'ERROR'
-    CRITICAL = 'CRITICAL'
-
-
 def parse_space_separated(row: str | list[str]) -> list[str]:
     """Парсит space-separated списки."""
     if isinstance(row, list):
@@ -67,7 +56,7 @@ class Settings(BaseSettings):
     jwt_lifetime_seconds: int = Field(default=3600, gt=0)
 
     # Настройки логирования
-    log_level: LogLevel = LogLevel.DEBUG
+    log_level: str
     log_file_path: Path = BASE_DIR / '..' / 'logs' / 'app.log'
     log_rotation_size_mb: int = Field(default=10, ge=1, le=1024)
     log_retention_count: int = Field(default=4, ge=1, le=10)
@@ -78,10 +67,18 @@ class Settings(BaseSettings):
     allowed_methods: SpaceSeparatedList = ['OPTIONS', 'GET', 'POST', 'PUT', 'PATCH']
     allowed_headers: SpaceSeparatedList = ['Authorization', 'Accept', 'Content-Type']
 
+    # Настройки SMTP
+    smtp_host: str
+    smtp_port: int
+    smtp_user: str
+    smtp_password: str
+    smtp_from_email: str
+
     # Настройка Redis
     max_connections: int = 10
     decode_responses: bool = True
     redis_password: str
+    redis_port: int
     redis_cache_expire_seconds: int = 3600
     redis_url: str = 'redis://localhost:6379'
 

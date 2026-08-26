@@ -5,7 +5,7 @@ from core.settings import settings
 celery_app = Celery(
     'booking_seats',
     broker=settings.celery_broker_url,
-    include=('tasks.system',),
+    include=('tasks.system', 'tasks.notifications'),
 )
 
 celery_app.conf.update(
@@ -21,4 +21,13 @@ celery_app.conf.update(
     task_track_started=True,
     timezone='UTC',
     worker_send_task_events=True,
+    task_acks_late=True,
+    task_reject_on_worker_lost=True,
+    beat_schedule={
+        'dispatch-due-reminders-every-minute': {
+            'task': 'booking.notifications.process_pending_due_notifications',
+            'schedule': 60.0,
+            'args': (100,),
+        },
+    },
 )

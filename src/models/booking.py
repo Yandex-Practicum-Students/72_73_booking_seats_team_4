@@ -72,6 +72,12 @@ class Booking(Base):
     table_slot: Mapped[List['BookingTablesSlots']] = relationship(
         'BookingTablesSlots',
         back_populates='booking',
+        lazy='selectin',
+    )
+    notifications: Mapped[List['BookingNotification']] = relationship(  # noqa: F821
+        'BookingNotification',
+        back_populates='booking',
+        lazy='selectin',
     )
 
     __table_args__ = (Index('user_booking_date', 'user_id', 'booking_date'),)

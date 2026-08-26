@@ -53,7 +53,7 @@ services:
     restart: unless-stopped
 
   rabbitmq:
-    image: rabbitmq:4.3-management-alpine
+    image: rabbitmq:4.2-management-alpine
     hostname: rabbitmq
     env_file:
       - ./.env

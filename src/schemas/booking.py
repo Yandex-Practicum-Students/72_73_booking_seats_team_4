@@ -73,6 +73,7 @@ class BookingUpdate(BookingCreate):
     tables_slots: Optional[List[BookingTableSlot]] = Field(None)
     guest_number: Optional[PositiveInt] = Field(None)
     booking_date: Optional[BookinDateNotPast] = Field(None)
+
     status: Optional[StatusBooking] = Field(None)
 
 
