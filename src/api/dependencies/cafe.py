@@ -40,3 +40,30 @@ def require_manager_cafe_access(user: StaffUser, cafe_id: uuid.UUID) -> None:
             detail='Менеджер может управлять только своим кафе',
         )
     logger.info('Доступ разрешён: user_id={}, cafe_id={}', user.id, cafe_id)
+
+
+async def get_manager_cafe(
+        current_user: StaffUser,
+        session: DBSession,
+) -> list[Cafe]:
+    """Возвращает кафе для менеджера или пустой список.
+
+    Менеджер видит только свое кафе
+    """
+    if current_user.role != UserRole.MANAGER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Только для менеджеров',
+        )
+
+    if current_user.cafe_id is None:
+        logger.warning('Менеджер не привязан к кафе: user_id={}', current_user.id)
+        return []
+
+    cafe = await cafe_crud.get(current_user.cafe_id, session)
+    if cafe is None:
+        logger.warning('Кафе менеджера не найдено: cafe_id={}', current_user.cafe_id)
+        return []
+
+    logger.info('Кафе менеджера найдено: cafe_id={}', current_user.cafe_id)
+    return [cafe]

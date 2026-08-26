@@ -80,7 +80,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return result
         except Exception as e:
             logger.error(f'Ошибка при получении объекта "{db_obj_key}":\n {e}')
-            raise e
+            raise
 
     async def get_with_cache(
         self,
@@ -165,7 +165,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return result.scalars().all()
         except Exception as e:
             logger.error(f'Ошибка при получении объектов "{all_key}":\n {e}')
-            raise e
+            raise
 
     async def get_all_with_cache(
         self,
@@ -266,7 +266,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             raise
         except Exception as e:
             logger.error(f'Ошибка при сохранении объекта: {db_obj}.\n {e}')
-            raise e
+            raise
 
     async def update(
         self,
@@ -308,10 +308,10 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         except ConnectionError as e:
             logger.error(f'Ошибка подключения к бд при сохранении объекта: {db_obj}.\n {e}')
-            raise e
+            raise
         except Exception as e:
             logger.error(f'Ошибка при обнвлении объекта "{db_obj}":\n {e}')
-            raise e
+            raise
 
     def _all_cache_key(self, is_active: Optional[bool] = None) -> str:
         """Возвращает отдельный ключ для каждого фильтра активности."""
@@ -336,4 +336,4 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             logger.error(f'Ошибка при удалении ключей redis "{redis_keys}":\n {e}')
         except Exception as e:
             logger.error(f'Ошибка при удалении ключей redis "{redis_keys}":\n {e}')
-            raise e
+            raise
