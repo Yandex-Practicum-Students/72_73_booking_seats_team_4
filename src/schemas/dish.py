@@ -17,8 +17,8 @@ from core.constants import (
 )
 
 
-class DishCreate(BaseModel):
-    """Схема создания блюда."""
+class DishBase(BaseModel):
+    """Общие поля блюда."""
 
     model_config = ConfigDict(extra='forbid')
 
@@ -31,15 +31,20 @@ class DishCreate(BaseModel):
         max_digits=DISH_PRICE_MAX_DIGITS,
         decimal_places=DISH_PRICE_DECIMAL_PLACES,
     )
+
+
+class DishCreate(DishBase):
+    """Схема создания блюда."""
+
     cafes_id: list[uuid.UUID] = Field(default_factory=list)
 
     check_not_empty_fields = field_validator('name', 'cafes_id')(validate_empty_field)
 
 
-class DishInfo(IdScheme, DishCreate, BaseInfoScheme):
+class DishInfo(IdScheme, DishBase, BaseInfoScheme):
     """Схема полных данных о блюде."""
 
-    cafes_id: list[CafeShortInfo]
+    cafes: list[CafeShortInfo]
 
 
 class DishUpdate(DishCreate):

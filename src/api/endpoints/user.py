@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.dependencies.permissions import (
-    AdminUser,
     MeUser,
     StaffUser,
 )
@@ -15,7 +14,6 @@ from models.user import User, UserRole
 from schemas.user import AuthData, AuthToken, UserCreate, UserInfo, UserUpdate
 from services.user import ensure_user_update_allowed
 
-from core.core_dependencies import redis_dep
 from core.db import get_session
 from core.user import (
     DUMMY_PASSWORD_HASH,
@@ -186,29 +184,6 @@ async def update_user_by_id(
 
     ensure_contact_remains(target_user, update_data)
     return await user_crud.update(target_user, update_data, session)
-
-
-@users_router.delete(
-    '/{user_id}',
-    status_code=status.HTTP_204_NO_CONTENT,
-    responses=error_responses(
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_404_NOT_FOUND,
-        status.HTTP_422_UNPROCESSABLE_CONTENT,
-    ),
-    summary='Удаление пользователя по его ID',
-    include_in_schema=False,
-)
-async def delete_user_by_id(
-    user_id: uuid.UUID,
-    _: AdminUser,
-    redis: redis_dep,
-    session: AsyncSession = Depends(get_session),
-) -> None:
-    """Блокирует пользователя; операция доступна только администратору."""
-    user = await user_crud.get_or_raise(user_id, session)
-    await user_crud.soft_delete(user, session, redis)
 
 
 router.include_router(auth_router)

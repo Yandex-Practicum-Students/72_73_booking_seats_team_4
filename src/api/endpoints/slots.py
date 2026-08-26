@@ -27,7 +27,6 @@ _COMMON_VALIDATION = (status.HTTP_422_UNPROCESSABLE_CONTENT,)
 GET_RESPONSES = _COMMON_AUTH + _COMMON_404 + _COMMON_VALIDATION
 POST_RESPONSES = (status.HTTP_400_BAD_REQUEST,) + GET_RESPONSES
 PATCH_RESPONSES = (status.HTTP_400_BAD_REQUEST,) + GET_RESPONSES
-DELETE_RESPONSES = _COMMON_AUTH + _COMMON_404 + _COMMON_VALIDATION
 
 router = APIRouter()
 
@@ -131,24 +130,3 @@ async def update_slot(
     """
     ensure_manager_cafe_access(current_user, cafe_id)
     return await slot_crud.update(_slot, slot_update, session, redis)
-
-
-@router.delete(
-    '/{slot_id}',
-    status_code=status.HTTP_204_NO_CONTENT,
-    responses=error_responses(*DELETE_RESPONSES),
-    summary='Удаление временного слота по его ID (мягкое удаление)',
-)
-async def delete_slot(
-    cafe_id: uuid.UUID,
-    slot_id: uuid.UUID,
-    current_user: StaffUser,
-    session: DBSession,
-    _slot: Slot = Depends(get_slot_in_cafe),
-) -> None:
-    """Мягкое удаление временного слота в кафе (установка is_active=False).
-
-    Менеджер удаляет слоты только в своём кафе.
-    """
-    ensure_manager_cafe_access(current_user, cafe_id)
-    await slot_crud.soft_delete(_slot, session)
