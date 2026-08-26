@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from datetime import datetime, timezone
 from typing import Sequence
@@ -24,10 +25,7 @@ from core.settings import settings
     no_retry_exceptions=(ValueError,),
 )
 @async_task
-async def send_booking_notification(
-    self: RetryableTask,
-    notification_id: str | uuid.UUID,
-) -> None:
+async def send_booking_notification(notification_id: str | uuid.UUID) -> None:
     """Отправка одного уведомления (клиенту или менеджеру)."""
     if isinstance(notification_id, str):
         notification_id = uuid.UUID(notification_id)
@@ -89,35 +87,6 @@ async def send_booking_notification(
         )
 
 
-@celery_app.task(
-    base=RetryableTask,
-    name='booking.notifications.send_single_email_task',
-    bind=True,
-    default_countdown=30,
-)
-@async_task
-async def send_single_email_task(
-    self: RetryableTask,
-    recipient_id: str | uuid.UUID,
-    subject: str,
-    body: str,
-) -> None:
-    """Изолированная отправка одного письма без влияния на других адресатов."""
-    if isinstance(recipient_id, str):
-        recipient_id = uuid.UUID(recipient_id)
-
-    async with session_maker() as session:
-        channel = EmailChannel(
-            session=session,
-            smtp_host=settings.smtp_host,
-            smtp_port=settings.smtp_port,
-            smtp_user=settings.smtp_user,
-            smtp_password=settings.smtp_password,
-            from_email=settings.smtp_from_email,
-        )
-        await channel.send(recipient_id=recipient_id, subject=subject, body=body)
-
-
 @celery_app.task(name='booking.notifications.process_pending_due_notifications')
 @async_task
 async def process_pending_due_notifications(limit: int = 100) -> None:
@@ -162,6 +131,12 @@ async def _dispatch_notification(
         )
         return
 
+    already_sent = set(notification.sent_to or [])
+    pending_ids = [manager_id for manager_id in managers_ids if manager_id not in already_sent]
+
+    if not pending_ids:
+        return
+
     subject = f'Бронирование #{booking.id}: статус {notification.type}'
     body = (
         f'Событие: {notification.type}\n'
@@ -171,5 +146,28 @@ async def _dispatch_notification(
         f'Комментарий: {booking.note or "-"}'
     )
 
-    for manager_id in managers_ids:
-        send_single_email_task.delay(str(manager_id), subject, body)
+    tasks = [channel.send(recipient_id=manager_id, subject=subject, body=body) for manager_id in pending_ids]
+
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    successful: list[uuid.UUID] = []
+    failed = []
+    for manager_id, result in zip(pending_ids, results):
+        if isinstance(result, Exception):
+            failed.append((manager_id, result))
+        else:
+            successful.append(manager_id)
+
+    if successful:
+        notification.sent_to = list(already_sent.union(successful))
+        session.add(notification)
+
+    if failed:
+        for manager_id, error in failed:
+            logger.error(
+                'Ошибка отправки менеджеру {manager}: {error}',
+                manager=manager_id,
+                error=error,
+            )
+        error = f'Не удалось отправить {len(failed)} сообщений менеджерам'
+        raise RuntimeError(error)

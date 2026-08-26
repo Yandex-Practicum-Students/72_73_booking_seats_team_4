@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import TIMESTAMP, UUID, CheckConstraint, Enum, ForeignKey, Index, Integer, String, text
+from sqlalchemy import ARRAY, TIMESTAMP, UUID, CheckConstraint, Enum, ForeignKey, Index, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.base_model import Base
@@ -60,6 +60,11 @@ class BookingNotification(Base):
         String(NOTIFICATION_ERROR_MAX_LENGTH),
         nullable=True,
     )
+    sent_to: Mapped[list[uuid.UUID]] = mapped_column(
+        ARRAY(UUID(as_uuid=True)),
+        default=list,
+        server_default='{}',
+    )
     booking: Mapped['Booking'] = relationship(  # noqa: F821
         'Booking',
         back_populates='notifications',
@@ -72,7 +77,7 @@ class BookingNotification(Base):
             'booking_id',
             'type',
             unique=True,
-            postgresql_where=text("status NOT IN ('CANCELED', 'FAILED')"),
+            postgresql_where=text("status IN ('PENDING', 'PROCESSING')"),
         ),
         # Для штатной выборки очереди Beat-диспетчером
         Index(

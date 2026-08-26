@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     jwt_lifetime_seconds: int = Field(default=3600, gt=0)
 
     # Настройки логирования
-    log_level: str
+    log_level: str = 'INFO'
     log_file_path: Path = BASE_DIR / '..' / 'logs' / 'app.log'
     log_rotation_size_mb: int = Field(default=10, ge=1, le=1024)
     log_retention_count: int = Field(default=4, ge=1, le=10)
@@ -68,17 +68,17 @@ class Settings(BaseSettings):
     allowed_headers: SpaceSeparatedList = ['Authorization', 'Accept', 'Content-Type']
 
     # Настройки SMTP
-    smtp_host: str
-    smtp_port: int
-    smtp_user: str
-    smtp_password: str
-    smtp_from_email: str
+    smtp_host: str = 'smtp.yandex.ru'
+    smtp_port: int = 465
+    smtp_user: str = 'smtp_user'
+    smtp_password: str = ''
+    smtp_from_email: str = 'noreply@yourdomain.com'
 
     # Настройка Redis
     max_connections: int = 10
     decode_responses: bool = True
     redis_password: str
-    redis_port: int
+    redis_port: int = 6379
     redis_cache_expire_seconds: int = 3600
     redis_url: str = 'redis://localhost:6379'
 

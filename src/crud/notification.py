@@ -143,7 +143,7 @@ class NotificationCRUD:
         if notification.attempts >= max_attempts:
             notification.status = NotificationStatus.FAILED
         else:
-            notification.status = NotificationStatus.PENDING
+            notification.status = NotificationStatus.PROCESSING
 
 
 notification_crud = NotificationCRUD()

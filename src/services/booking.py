@@ -9,7 +9,6 @@ from crud.notification import NotificationCRUD, notification_crud
 from models.booking import Booking, StatusBooking
 from models.notification import NotificationType
 from schemas.booking import BookingCreate, BookingUpdate
-from tasks.send_notification import send_booking_notification
 
 REMINDER_MINUTES_BEFORE = 180
 DEFAULT_BOOKING_TIME = time(12, 0, tzinfo=timezone.utc)
@@ -76,7 +75,7 @@ class BookingService:
         """Создание бронирования с уведомлением."""
         booking = await self.booking_crud.create(obj_in, self.session, self.redis)
 
-        manager_notification = await self.notification_crud.create_for_booking(
+        await self.notification_crud.create_for_booking(
             booking_id=booking.id,
             type_=NotificationType.CREATED,
             scheduled_at=datetime.now(timezone.utc),
@@ -93,7 +92,6 @@ class BookingService:
         await self.session.commit()
         await self.session.refresh(booking)
 
-        send_booking_notification.delay(str(manager_notification.id))
         logger.info('Бронирование {id} создано', id=booking.id)
         return booking
 
@@ -108,7 +106,7 @@ class BookingService:
             redis=self.redis,
         )
 
-        notification = None
+        now = datetime.now(timezone.utc)
 
         if booking.status == StatusBooking.CANCELED:
             if old_status != StatusBooking.CANCELED:
@@ -116,21 +114,21 @@ class BookingService:
                     booking_id=booking.id,
                     session=self.session,
                 )
-                notification = await self.notification_crud.create_for_booking(
+                await self.notification_crud.create_for_booking(
                     booking_id=booking.id,
                     type_=NotificationType.CANCELED,
-                    scheduled_at=datetime.now(timezone.utc),
+                    scheduled_at=now,
                     session=self.session,
                 )
         else:
-            notification = await self.notification_crud.create_for_booking(
-                booking_id=booking.id,
-                type_=NotificationType.UPDATED,
-                scheduled_at=datetime.now(timezone.utc),
-                session=self.session,
-            )
             await self.notification_crud.cancel_pending_for_booking(
                 booking_id=booking.id,
+                session=self.session,
+            )
+            await self.notification_crud.create_for_booking(
+                booking_id=booking.id,
+                type_=NotificationType.UPDATED,
+                scheduled_at=now,
                 session=self.session,
             )
             await self.notification_crud.create_for_booking(
@@ -142,9 +140,6 @@ class BookingService:
 
         await self.session.commit()
         await self.session.refresh(booking)
-
-        if notification:
-            send_booking_notification.delay(str(notification.id))
 
         logger.info('Бронирование {id} изменено', id=booking.id)
         return booking
