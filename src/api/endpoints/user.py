@@ -6,13 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.dependencies.permissions import (
     MeUser,
     StaffUser,
-    ensure_user_update_allowed,
 )
 from api.responses import error_responses
 from api.validators import ensure_contact_remains, reject_null_required_fields
 from crud.user import user_crud
 from models.user import User, UserRole
 from schemas.user import AuthData, AuthToken, UserCreate, UserInfo, UserUpdate
+from services.user import ensure_user_update_allowed
 
 from core.db import get_session
 from core.user import (

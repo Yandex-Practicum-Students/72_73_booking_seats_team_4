@@ -160,7 +160,17 @@ class BackendFoundationTests(IsolatedAsyncioTestCase):
         session.execute.return_value = query_result
         redis = AsyncMock()
 
-        with patch.object(cafe_crud.response_schema, 'model_validate', side_effect=lambda obj: obj):
+        async def get_created_cafe(*_: object, **__: object) -> object:
+            return session.add.call_args.args[0]
+
+        with (
+            patch.object(cafe_crud.response_schema, 'model_validate', side_effect=lambda obj: obj),
+            patch.object(
+                cafe_crud,
+                'get',
+                new=AsyncMock(side_effect=get_created_cafe),
+            ),
+        ):
             cafe = await cafe_crud.create(
                 CafeCreate(
                     name='Cafe',

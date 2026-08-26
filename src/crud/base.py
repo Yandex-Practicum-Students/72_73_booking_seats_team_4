@@ -103,38 +103,27 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         options=[selectinload(Cafe.managers)])
         """
         db_obj_key = f'{self.model.__tablename__}:{obj_id}'
-        try:
-            try:
-                cached_result = await redis.get(db_obj_key)
-            except RedisError as e:
-                logger.error(f'Ошибка redis для ключа "{db_obj_key}":\n {e}')
-                cached_result = None
+        cached_result = await self._get_redis_value(db_obj_key, redis)
+        if cached_result:
+            logger.info(f'Объект "{db_obj_key}" получен из Redis')
+            return self.response_schema.model_validate_json(cached_result)
 
-            if cached_result:
-                logger.info(f'Объект "{db_obj_key}" получен из Redis')
-                return self.response_schema.model_validate_json(cached_result)
+        if not options:
+            db_obj = await self.get(obj_id=obj_id, session=session)
+        else:
+            db_obj = await self.get(obj_id=obj_id, session=session, options=options)
 
-            if not options:
-                db_obj = await self.get(obj_id=obj_id, session=session)
-            else:
-                db_obj = await self.get(obj_id=obj_id, session=session, options=options)
+        if db_obj is None:
+            return None
 
-            if db_obj is None:
-                return None
-
-            pydantic_obj = self.response_schema.model_validate(db_obj)
-            json_str = pydantic_obj.model_dump_json()
-            try:
-                await redis.set(db_obj_key, json_str, ex=ex_redis)
-                logger.info(f'Объект "{db_obj_key}" записан в Redis')
-            except RedisError as e:
-                logger.error(f'Ошибка redis для ключа "{db_obj_key}":\n {e}')
-
-            return pydantic_obj
-
-        except Exception as e:
-            logger.error(f'Ошибка при получении объекта "{db_obj_key}":\n {e}')
-            raise
+        pydantic_obj = self.response_schema.model_validate(db_obj)
+        await self._set_redis_value(
+            db_obj_key,
+            pydantic_obj.model_dump_json(),
+            redis,
+            ex_redis,
+        )
+        return pydantic_obj
 
     async def get_all(
         self,
@@ -188,44 +177,32 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         options=[selectinload(Cafe.managers)])
         """
         redis_all_key = self._all_cache_key(is_active)
+        cached_result = await self._get_redis_value(redis_all_key, redis)
+        list_schema = RootModel[List[self.response_schema]]
+        if cached_result:
+            logger.info(f'Список "{redis_all_key}" получен из Redis')
+            return list_schema.model_validate_json(cached_result).root
 
-        try:
-            try:
-                cached_result = await redis.get(redis_all_key)
-            except RedisError as e:
-                logger.error(f'Ошибка redis для ключа "{redis_all_key}":\n {e}')
-                cached_result = None
+        db_obj = await CRUDBase.get_all(
+            self,
+            session=session,
+            is_active=is_active,
+            options=options,
+        )
 
-            list_schema = RootModel[List[self.response_schema]]
-            if cached_result:
-                logger.info(f'Список "{redis_all_key}" получен из Redis')
-                return list_schema.model_validate_json(cached_result).root
+        if not db_obj:
+            return []
 
-            db_obj = await CRUDBase.get_all(
-                self,
-                session=session,
-                is_active=is_active,
-                options=options,
-            )
-
-            if not db_obj:
-                return []
-
-            validated_models = list_schema.model_validate(db_obj)
-            raw_dicts = validated_models.model_dump(mode='json')
-            data_for_redis = json.dumps(raw_dicts, default=str)
-
-            try:
-                await redis.set(redis_all_key, data_for_redis, ex=ex_redis)
-                logger.info(f'Список "{redis_all_key}" записан в Redis')
-            except RedisError as e:
-                logger.error(f'Ошибка redis для ключа "{redis_all_key}":\n {e}')
-
-            return validated_models.root
-
-        except Exception as e:
-            logger.error(f'Ошибка при получении объекта "{redis_all_key}":\n {e}')
-            raise
+        validated_models = list_schema.model_validate(db_obj)
+        raw_dicts = validated_models.model_dump(mode='json')
+        data_for_redis = json.dumps(raw_dicts, default=str)
+        await self._set_redis_value(
+            redis_all_key,
+            data_for_redis,
+            redis,
+            ex_redis,
+        )
+        return validated_models.root
 
     async def create(
         self,
@@ -325,6 +302,32 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             self._all_cache_key(True),
             self._all_cache_key(False),
         )
+
+    @staticmethod
+    async def _get_redis_value(
+        key: str,
+        redis: redis_dep,
+    ) -> str | bytes | None:
+        """Читает значение из Redis, не прерывая запрос при сбое кэша."""
+        try:
+            return await redis.get(key)
+        except RedisError as error:
+            logger.error(f'Ошибка redis для ключа "{key}":\n {error}')
+            return None
+
+    @staticmethod
+    async def _set_redis_value(
+        key: str,
+        value: str,
+        redis: redis_dep,
+        expire_seconds: int,
+    ) -> None:
+        """Записывает значение в Redis, не прерывая запрос при сбое кэша."""
+        try:
+            await redis.set(key, value, ex=expire_seconds)
+            logger.info(f'Ключ "{key}" записан в Redis')
+        except RedisError as error:
+            logger.error(f'Ошибка redis для ключа "{key}":\n {error}')
 
     @staticmethod
     async def _del_redis_key(*args: str, redis: redis_dep) -> None:
