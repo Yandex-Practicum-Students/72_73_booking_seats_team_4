@@ -37,13 +37,6 @@ PATCH_RESPONSES = (
     status.HTTP_422_UNPROCESSABLE_CONTENT,
 )
 
-DELETE_RESPONSES = (
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_404_NOT_FOUND,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-)
-
 router = APIRouter()
 
 
@@ -152,28 +145,3 @@ async def update_table(
     """
     require_manager_cafe_access(_, cafe_id)
     return await table_crud.update(table, table_update, session, redis)
-
-
-@router.delete(
-    '/{table_id}',
-    status_code=status.HTTP_204_NO_CONTENT,
-    responses=error_responses(*DELETE_RESPONSES),
-    summary='Удаление стола по его ID (мягкое удаление)',
-    include_in_schema=False,
-)
-async def delete_table(
-    cafe_id: uuid.UUID,
-    table_id: uuid.UUID,
-    _: StaffUser,  # Только админ или менеджер
-    session: DBSession,
-    table: Table = Depends(get_table_in_cafe),  # проверка существования кафе + стола + принадлежности
-) -> None:
-    """Мягкое удаление стола в кафе (установка is_active=False).
-
-    Только для администраторов и менеджеров.
-    """
-    require_manager_cafe_access(_, cafe_id)
-
-    table.is_active = False
-    session.add(table)
-    await session.commit()

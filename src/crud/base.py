@@ -80,7 +80,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return result
         except Exception as e:
             logger.error(f'Ошибка при получении объекта "{db_obj_key}":\n {e}')
-            raise e
+            raise
 
     async def get_with_cache(
         self,
@@ -104,7 +104,12 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
         db_obj_key = f'{self.model.__tablename__}:{obj_id}'
         try:
-            cached_result = await redis.get(db_obj_key)
+            try:
+                cached_result = await redis.get(db_obj_key)
+            except RedisError as e:
+                logger.error(f'Ошибка redis для ключа "{db_obj_key}":\n {e}')
+                cached_result = None
+
             if cached_result:
                 logger.info(f'Объект "{db_obj_key}" получен из Redis')
                 return self.response_schema.model_validate_json(cached_result)
@@ -119,17 +124,17 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
             pydantic_obj = self.response_schema.model_validate(db_obj)
             json_str = pydantic_obj.model_dump_json()
-            await redis.set(db_obj_key, json_str, ex=ex_redis)
-            await redis.expire(db_obj_key, ex_redis)
-
-            logger.info(f'Объект "{db_obj_key}" записан в Redis')
+            try:
+                await redis.set(db_obj_key, json_str, ex=ex_redis)
+                logger.info(f'Объект "{db_obj_key}" записан в Redis')
+            except RedisError as e:
+                logger.error(f'Ошибка redis для ключа "{db_obj_key}":\n {e}')
 
             return pydantic_obj
 
-        except RedisError as e:
-            logger.error(f'Ошибка redis для ключа "{db_obj_key}":\n {e}')
         except Exception as e:
             logger.error(f'Ошибка при получении объекта "{db_obj_key}":\n {e}')
+            raise
 
     async def get_all(
         self,
@@ -160,7 +165,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return result.scalars().all()
         except Exception as e:
             logger.error(f'Ошибка при получении объектов "{all_key}":\n {e}')
-            raise e
+            raise
 
     async def get_all_with_cache(
         self,
@@ -182,19 +187,26 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         ex_redis=3600,    время жизни кэша в редис если не нравится стандартное
         options=[selectinload(Cafe.managers)])
         """
-        redis_all_key = f'{self.model.__tablename__}:all'
+        redis_all_key = self._all_cache_key(is_active)
 
         try:
-            cached_result = await redis.get(redis_all_key)
+            try:
+                cached_result = await redis.get(redis_all_key)
+            except RedisError as e:
+                logger.error(f'Ошибка redis для ключа "{redis_all_key}":\n {e}')
+                cached_result = None
+
             list_schema = RootModel[List[self.response_schema]]
             if cached_result:
                 logger.info(f'Список "{redis_all_key}" получен из Redis')
                 return list_schema.model_validate_json(cached_result).root
 
-            if not options:
-                db_obj = await self.get_all(session=session)
-            else:
-                db_obj = await self.get_all(session=session, options=options)
+            db_obj = await CRUDBase.get_all(
+                self,
+                session=session,
+                is_active=is_active,
+                options=options,
+            )
 
             if not db_obj:
                 return []
@@ -203,18 +215,17 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             raw_dicts = validated_models.model_dump(mode='json')
             data_for_redis = json.dumps(raw_dicts, default=str)
 
-            await redis.set(redis_all_key, data_for_redis, ex=ex_redis)
-
-            logger.info(f'Список "{redis_all_key}" записан в Redis')
+            try:
+                await redis.set(redis_all_key, data_for_redis, ex=ex_redis)
+                logger.info(f'Список "{redis_all_key}" записан в Redis')
+            except RedisError as e:
+                logger.error(f'Ошибка redis для ключа "{redis_all_key}":\n {e}')
 
             return validated_models.root
 
-        except RedisError as e:
-            logger.error(f'Ошибка redis для ключа "{redis_all_key}":\n {e}')
-            return []
         except Exception as e:
             logger.error(f'Ошибка при получении объекта "{redis_all_key}":\n {e}')
-            raise e
+            raise
 
     async def create(
         self,
@@ -223,7 +234,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         redis: redis_dep,
     ) -> ResponseSchemaType:
         """Создание объекта с гибким поиском связей по карте rel_map."""
-        redis_all_key = f'{self.model.__tablename__}:all'
+        redis_all_keys = self._all_cache_keys()
         try:
             input_data = obj_in.model_dump()
             db_obj = self.model()
@@ -247,14 +258,15 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             session.add(db_obj)
             await session.commit()
             logger.info(f'Объект {self.model.__tablename__} с ID {db_obj.id} успешно сохранен')
-            await self._del_redis_key(redis_all_key, redis=redis)
+            await self._del_redis_key(*redis_all_keys, redis=redis)
 
             return self.response_schema.model_validate(db_obj)
         except ConnectionError as e:
             logger.error(f'Ошибка подключения к бд при сохранении объекта: {db_obj}.\n {e}')
+            raise
         except Exception as e:
             logger.error(f'Ошибка при сохранении объекта: {db_obj}.\n {e}')
-            raise e
+            raise
 
     async def update(
         self,
@@ -264,7 +276,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         redis: redis_dep,
     ) -> ResponseSchemaType:
         """Обновление объекта с поддержкой карты rel_map."""
-        redis_all_key = f'{self.model.__tablename__}:all'
+        redis_all_keys = self._all_cache_keys()
         redis_obj_key = f'{self.model.__tablename__}:{db_obj.id}'
         try:
             update_data = obj_in.model_dump(exclude_unset=True)
@@ -290,38 +302,29 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 f'Объект "{redis_obj_key}" успешно зафискирован в бд при'
                 f'обновлении. изменененные атрибуты объекта:\n {update_data}',
             )
-            await self._del_redis_key(redis_all_key, redis_obj_key, redis=redis)
+            await self._del_redis_key(*redis_all_keys, redis_obj_key, redis=redis)
 
             return self.response_schema.model_validate(db_obj)
 
         except ConnectionError as e:
             logger.error(f'Ошибка подключения к бд при сохранении объекта: {db_obj}.\n {e}')
-            raise e
+            raise
         except Exception as e:
             logger.error(f'Ошибка при обнвлении объекта "{db_obj}":\n {e}')
-            raise e
+            raise
 
-    async def soft_delete(self, db_obj: ModelType, session: AsyncSession, redis: redis_dep) -> ModelType:
-        """Деактивирует объект без удаления записи из базы данных."""
-        redis_obj_key = f'{self.model.__tablename__}:{db_obj.id}'
-        redis_all_key = f'{self.model.__tablename__}:all'
+    def _all_cache_key(self, is_active: Optional[bool] = None) -> str:
+        """Возвращает отдельный ключ для каждого фильтра активности."""
+        suffix = 'all' if is_active is None else f'all:{str(is_active).lower()}'
+        return f'{self.model.__tablename__}:{suffix}'
 
-        try:
-            db_obj.is_active = False
-            session.add(db_obj)
-            await session.commit()
-            logger.info(
-                f'Объект "{redis_obj_key}" успешно зафискирован в бд при изменении is_active',
-            )
-            await session.refresh(db_obj)
-            await self._del_redis_key(redis_obj_key, redis_all_key, redis=redis)
-            return db_obj
-        except ConnectionError as e:
-            logger.error(f'Ошибка подключения к бд при сохранении объекта: {db_obj}:\n {e}')
-            raise e
-        except Exception as e:
-            logger.error(f'Ошибка при обнвлении объекта "{db_obj}":\n {e}')
-            raise e
+    def _all_cache_keys(self) -> tuple[str, str, str]:
+        """Возвращает все ключи списков, которые меняются при записи."""
+        return (
+            self._all_cache_key(),
+            self._all_cache_key(True),
+            self._all_cache_key(False),
+        )
 
     @staticmethod
     async def _del_redis_key(*args: str, redis: redis_dep) -> None:
@@ -333,4 +336,4 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             logger.error(f'Ошибка при удалении ключей redis "{redis_keys}":\n {e}')
         except Exception as e:
             logger.error(f'Ошибка при удалении ключей redis "{redis_keys}":\n {e}')
-            raise e
+            raise

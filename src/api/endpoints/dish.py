@@ -36,13 +36,6 @@ PATCH_RESPONSES = (
     status.HTTP_422_UNPROCESSABLE_CONTENT,
 )
 
-DELETE_RESPONSES = (
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_404_NOT_FOUND,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-)
-
 router = APIRouter()
 
 
@@ -89,6 +82,7 @@ async def create_dish(
     dish_create: DishCreate,
     current_user: StaffUser,
     session: DBSession,
+    redis: redis_dep,
 ) -> Dish:
     """Создание нового блюда.
 
@@ -96,7 +90,7 @@ async def create_dish(
     """
     require_manager_cafe_access_for_dish(current_user, dish_create.cafes_id)
     await check_cafes_exist(dish_create.cafes_id, session)
-    return await dish_crud.create(dish_create, session)
+    return await dish_crud.create(dish_create, session, redis)
 
 
 @router.get(
@@ -151,24 +145,3 @@ async def update_dish(
     require_manager_cafe_access_for_dish(current_user, new_cafes_id)
     await check_cafes_exist(new_cafes_id, session)
     return await dish_crud.update(dish, dish_update, session, redis)
-
-
-@router.delete(
-    '/{dish_id}',
-    status_code=status.HTTP_204_NO_CONTENT,
-    responses=error_responses(*DELETE_RESPONSES),
-    summary='Удаление блюда по его ID (мягкое удаление)',
-)
-async def delete_dish(
-    dish_id: uuid.UUID,
-    current_user: StaffUser,
-    session: DBSession,
-    redis: redis_dep,
-    dish: Dish = Depends(get_dish_or_404),
-) -> None:
-    """Мягкое удаление блюда (установка is_active=False).
-
-    Только для администраторов и менеджеров.
-    """
-    require_manager_cafe_access_for_dish(current_user, [cafe.id for cafe in dish.cafes])
-    await dish_crud.soft_delete(dish, session, redis)
