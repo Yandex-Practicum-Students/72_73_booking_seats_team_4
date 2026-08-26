@@ -2,7 +2,8 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ARRAY, TIMESTAMP, UUID, CheckConstraint, Enum, ForeignKey, Index, Integer, String, text
+from sqlalchemy import TIMESTAMP, UUID, CheckConstraint, Enum, ForeignKey, Index, Integer, String, text
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.base_model import Base
