@@ -87,7 +87,7 @@ jobs:
         POSTGRES_SERVER: postgres
         JWT_SECRET: '01234567890123456789012345678901'
         REDIS_URL: redis://localhost:6379
-        PYTHONPATH: src
+        PYTHONPATH: ${{ github.workspace }}/src
         # Сервер БД запущен в Docker, но его порт проброшен на хост
         # Поэтому подключаемся к 127.0.0.1:5432
         DB_HOST: 127.0.0.1
