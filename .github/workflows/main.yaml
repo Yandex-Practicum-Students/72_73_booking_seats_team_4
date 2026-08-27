@@ -74,7 +74,7 @@ jobs:
       env:
         CELERY_BROKER_URL: amqp://guest:guest@localhost:5672//
         CELERY_RESULT_BACKEND: redis://localhost:6379/0
-        #PYTHONPATH: ${{ github.workspace }}/src
+        PYTHONPATH: ${{ github.workspace }}/src
       run: |
         uv run celery -A tasks.celery_app:celery_app worker --loglevel=info &
     # Запускаем flake8
@@ -94,7 +94,7 @@ jobs:
         DB_HOST: 127.0.0.1
         DB_PORT: 5432
       run: |
-        uv run python -m unittest discover -s tasks
+        uv run python -m unittest discover -s tests
   # build_and_push_to_docker_hub:
   #   name: Push Docker image to DockerHub
   #   runs-on: ubuntu-latest
