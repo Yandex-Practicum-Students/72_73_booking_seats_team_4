@@ -21,6 +21,7 @@ class EmailChannel(NotificationChannel):
         smtp_user: str,
         smtp_password: str,
         from_email: str,
+        use_tls: bool = True,
         timeout: float = 10.0,
     ) -> None:
         """Настройка экземпляра класса."""
@@ -30,6 +31,7 @@ class EmailChannel(NotificationChannel):
         self.smtp_user = smtp_user
         self.smtp_password = smtp_password
         self.from_email = from_email
+        self.use_tls = use_tls
         self.timeout = timeout
 
     async def send(self, recipient_id: UUID, subject: str, body: str) -> None:
@@ -61,5 +63,6 @@ class EmailChannel(NotificationChannel):
             port=self.smtp_port,
             username=self.smtp_user,
             password=self.smtp_password,
+            use_tls=self.use_tls,
             timeout=self.timeout,
         )

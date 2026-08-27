@@ -1,5 +1,5 @@
 from .action import Action, CafeAction
-from .booking import Booking, BookingTablesSlots
+from .booking import Booking, BookingTablesSlots, StatusBooking
 from .cafe import Cafe
 from .dish import CafeDish, Dish
 from .media import Media
@@ -21,6 +21,7 @@ __all__ = [
     'NotificationStatus',
     'NotificationType',
     'Slot',
+    'StatusBooking',
     'Table',
     'User',
 ]

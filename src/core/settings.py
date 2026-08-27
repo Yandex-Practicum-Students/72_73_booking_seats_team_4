@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     smtp_host: str = 'smtp.yandex.ru'
     smtp_port: int = 465
     smtp_user: str = 'smtp_user'
-    smtp_password: str = ''
+    smtp_password: str = 'smtp_pass'
     smtp_from_email: str = 'noreply@yourdomain.com'
 
     # Настройка Redis

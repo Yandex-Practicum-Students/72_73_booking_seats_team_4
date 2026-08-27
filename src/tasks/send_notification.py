@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 from datetime import datetime, timezone
 from typing import Sequence
@@ -6,10 +5,9 @@ from typing import Sequence
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from crud.booking import booking_crud
 from crud.notification import notification_crud
-from models.booking import StatusBooking
-from models.notification import BookingNotification, NotificationStatus, NotificationType
+from models import BookingNotification, NotificationStatus, NotificationType, StatusBooking
+from services.booking import get_managers_by_booking
 from tasks import celery_app
 from tasks.base import RetryableTask, async_task
 from tasks.channels.email import EmailChannel
@@ -25,7 +23,7 @@ from core.settings import settings
     no_retry_exceptions=(ValueError,),
 )
 @async_task
-async def send_booking_notification(notification_id: str | uuid.UUID) -> None:
+async def send_booking_notification(self: RetryableTask, notification_id: str | uuid.UUID) -> None:
     """Отправка одного уведомления (клиенту или менеджеру)."""
     if isinstance(notification_id, str):
         notification_id = uuid.UUID(notification_id)
@@ -122,7 +120,8 @@ async def _dispatch_notification(
         await channel.send(recipient_id=booking.user_id, subject=subject, body=body)
         return
 
-    managers_ids = await booking_crud.get_managers_by_booking(booking.id, session)
+    managers_ids = await get_managers_by_booking(booking.id, session)
+
     if not managers_ids:
         logger.warning(
             'Для бронирования {booking_id} не найдены менеджеры кафе для уведомления {notification_id}',
@@ -146,28 +145,23 @@ async def _dispatch_notification(
         f'Комментарий: {booking.note or "-"}'
     )
 
-    tasks = [channel.send(recipient_id=manager_id, subject=subject, body=body) for manager_id in pending_ids]
+    failed: list[tuple[uuid.UUID, Exception]] = []
 
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    successful: list[uuid.UUID] = []
-    failed = []
-    for manager_id, result in zip(pending_ids, results):
-        if isinstance(result, Exception):
-            failed.append((manager_id, result))
-        else:
-            successful.append(manager_id)
-
-    if successful:
-        notification.sent_to = list(already_sent.union(successful))
-        session.add(notification)
-
-    if failed:
-        for manager_id, error in failed:
+    for manager_id in pending_ids:
+        try:
+            await channel.send(recipient_id=manager_id, subject=subject, body=body)
+        except Exception as error:
             logger.error(
                 'Ошибка отправки менеджеру {manager}: {error}',
                 manager=manager_id,
                 error=error,
             )
-        error = f'Не удалось отправить {len(failed)} сообщений менеджерам'
-        raise RuntimeError(error)
+            failed.append((manager_id, error))
+        else:
+            already_sent.add(manager_id)
+            notification.sent_to = list(already_sent)
+            await session.commit()
+
+    if failed:
+        err = f'Не удалось отправить {len(failed)} сообщений менеджерам'
+        raise RuntimeError(err)
