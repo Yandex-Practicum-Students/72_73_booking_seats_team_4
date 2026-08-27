@@ -12,13 +12,27 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from api.errors import APIError
 from api.exceptions import (
     api_error_handler,
+    dish_already_exists_handler,
+    entity_not_found_handler,
     http_exception_handler,
+    manager_already_assigned_handler,
+    manager_not_found_handler,
+    manager_role_error_handler,
+    permission_denied_handler,
     request_validation_error_handler,
     user_already_exists_handler,
     user_not_found_handler,
 )
 from api.routers import api_router
+from crud.dish import DishAlreadyExistsError
 from crud.user import UserAlreadyExistsError, UserNotFoundError
+from services.errors import (
+    EntityNotFoundError,
+    ManagerAlreadyAssignedError,
+    ManagerNotFoundError,
+    ManagerRoleError,
+    PermissionDeniedError,
+)
 
 from core.logging import configure_loguru
 from core.settings import settings
@@ -63,11 +77,16 @@ app.add_middleware(
 )
 
 app.add_exception_handler(APIError, api_error_handler)
+app.add_exception_handler(EntityNotFoundError, entity_not_found_handler)
+app.add_exception_handler(PermissionDeniedError, permission_denied_handler)
+app.add_exception_handler(DishAlreadyExistsError, dish_already_exists_handler)
 app.add_exception_handler(UserAlreadyExistsError, user_already_exists_handler)
 app.add_exception_handler(UserNotFoundError, user_not_found_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, request_validation_error_handler)
-
+app.add_exception_handler(ManagerNotFoundError, manager_not_found_handler)
+app.add_exception_handler(ManagerRoleError, manager_role_error_handler)
+app.add_exception_handler(ManagerAlreadyAssignedError, manager_already_assigned_handler)
 app.include_router(api_router)
 
 
