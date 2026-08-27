@@ -11,7 +11,9 @@ ARG USER_ID=1000
 ARG GROUP_ID=1000
 
 RUN groupadd -g ${GROUP_ID} devuser \
-    && useradd -u ${USER_ID} -g devuser -m -s /bin/sh devuser
+&& useradd -u ${USER_ID} -g devuser -m -s /bin/sh devuser
+
+USER devuser
 
 ENV UV_PYTHON="python3.12" \
     UV_PYTHON_DOWNLOADS=never \
@@ -23,9 +25,9 @@ ENV UV_PYTHON="python3.12" \
 
 WORKDIR /app
 
+
 COPY --chown=${USER_ID}:${GROUP_ID} pyproject.toml uv.lock entrypoint.sh /app/
 
-USER devuser
 
 RUN uv sync --no-dev --no-install-project --frozen && uv cache clean
 
