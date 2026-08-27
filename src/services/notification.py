@@ -16,6 +16,19 @@ class NotificationService:
 
     - Уведомления менеджеру направляются сразу после создания, изменения, отмены брони
     - Напоминания гостю направляются за REMINDER_MINUTES_BEFORE до start_time самого раннего слота в брони
+
+    - Использование в бизнес-логике
+
+    ```python
+    # При создании бронирования:
+    notification_service = NotificationService(session)
+    await notification_service.create_booking_notifications(booking)
+    await session.commit()
+
+    # При обновлении/отмене бронирования:
+    await notification_service.update_booking_notifications(booking)
+    await session.commit()
+    ```
     """
 
     def __init__(
@@ -68,8 +81,6 @@ class NotificationService:
             session=self.session,
         )
 
-        await self.session.flush()
-
         logger.info(
             'Для бронирования {id} созданы уведомление менеджеру {notification} '
             'и напоминание клиенту {reminder}',
@@ -109,8 +120,6 @@ class NotificationService:
                 scheduled_at=self._get_reminder_time(booking),
                 session=self.session,
             )
-
-        await self.session.flush()
 
         logger.info(
             'Для измененного бронирования {id} созданы уведомление менеджеру {notification} '

@@ -72,12 +72,15 @@ async def send_booking_notification(self: RetryableTask, notification_id: str | 
             await notification_crud.increment_attempts(
                 notification=notification,
                 error=str(error),
+                session=session,
             )
             await session.commit()
             raise error
 
-        await notification_crud.mark_sent(notification)
+        notification.status = NotificationStatus.SENT
+        notification.sent_at = datetime.now(timezone.utc)
         await session.commit()
+
         logger.info(
             'Уведомление {id} ({type}) успешно отправлено',
             id=notification.id,
@@ -160,7 +163,7 @@ async def _dispatch_notification(
         else:
             already_sent.add(manager_id)
             notification.sent_to = list(already_sent)
-            await session.commit()
+            await session.flush()
 
     if failed:
         err = f'Не удалось отправить {len(failed)} сообщений менеджерам'

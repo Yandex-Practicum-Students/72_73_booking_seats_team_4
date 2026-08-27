@@ -1,36 +1,43 @@
 import uuid
-from datetime import time
+from typing import List, Optional
 
-from sqlalchemy import UUID, ForeignKey, Time
+from sqlalchemy import UUID, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from core.base_model import Base, DescriptionMixin
+from models.user import User
+
+from core import base_model
+from core.constants import CAFE_ADDRESS_MAX_LENGTH, CAFE_NAME_MAX_LENGTH, PHONE_NUMBER_MAX_LENGTH
 
 
-class Slot(Base, DescriptionMixin):
-    """Модель временного слота в кафе."""
+class Cafe(base_model.Base, base_model.DescriptionMixin):
+    """Модель Cafes."""
 
-    cafe_id: Mapped[uuid.UUID] = mapped_column(
+    name: Mapped[str] = mapped_column(String(CAFE_NAME_MAX_LENGTH), unique=True)
+    address: Mapped[str] = mapped_column(String(CAFE_ADDRESS_MAX_LENGTH), unique=True)
+    phone: Mapped[str] = mapped_column(String(PHONE_NUMBER_MAX_LENGTH), unique=True)
+    photo_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID,
-        ForeignKey('cafes.id', name='fk_cafe_id_slot', ondelete='NO ACTION'),
-        index=True,
+        ForeignKey('medias.id', name='fk_cafe_photo'),
+        nullable=True,
     )
-    start_time: Mapped[time] = mapped_column(
-        Time(timezone=True),
+    managers: Mapped[List[User]] = relationship(
+        'User',
+        primaryjoin='and_(Cafe.id == User.cafe_id, User.role == "MANAGER")',
     )
-    end_time: Mapped[time] = mapped_column(
-        Time(timezone=True),
-    )
-    cafe: Mapped['Cafe'] = relationship(  # noqa: F821
-        'Cafe',
-        back_populates='slots',
+    tables: Mapped[List['Table']] = relationship(  # noqa: F821
+        'Table',
+        back_populates='cafe',
         lazy='selectin',
     )
-    booking_tables_slots: Mapped[list['BookingTablesSlots']] = relationship(  # noqa: F821
-        'BookingTablesSlots',
-        back_populates='slot',
+    slots: Mapped[List['Slot']] = relationship(  # noqa: F821
+        'Slot',
+        back_populates='cafe',
         lazy='selectin',
     )
-
-    def __repr__(self) -> str:
-        return f'Слот {self.id} (кафе={self.cafe_id}, {self.start_time}-{self.end_time})'
+    dishes: Mapped[List['Dish']] = relationship(  # noqa: F821
+        'Dish',
+        secondary='cafe_dishes',
+        back_populates='cafes',
+        lazy='selectin',
+    )

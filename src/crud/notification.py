@@ -7,35 +7,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from models import BookingNotification, NotificationStatus, NotificationType
-from schemas.notification import BookingNotificationCreate
 
 
 class NotificationCRUD:
     """CRUD для уведомлений о бронировании.
 
-    ВАЖНО: для атомарности коммитит вызывающая сторона BookingService.
+    ВАЖНО: для атомарности коммитит вызывающая сторона при создании брони -> уведомления.
     """
 
     def __init__(self) -> None:
         """Настройки экземпляра."""
         self.model = BookingNotification
-
-    async def create(
-        self,
-        obj_in: BookingNotificationCreate,
-        session: AsyncSession,
-    ) -> BookingNotification:
-        """Создать уведомление."""
-        notification = self.model(
-            booking_id=obj_in.booking_id,
-            type=obj_in.type,
-            status=NotificationStatus.PENDING,
-            scheduled_at=obj_in.scheduled_at,
-            attempts=0,
-        )
-        session.add(notification)
-        await session.flush()
-        return notification
 
     async def create_for_booking(
         self,
@@ -44,13 +26,17 @@ class NotificationCRUD:
         scheduled_at: datetime,
         session: AsyncSession,
     ) -> BookingNotification:
-        """Создать уведомление для бронирования."""
-        obj_in = BookingNotificationCreate(
+        """Создать уведомление для бронирования с получением ID без коммита."""
+        notification = self.model(
             booking_id=booking_id,
             type=type_,
+            status=NotificationStatus.PENDING,
             scheduled_at=scheduled_at,
+            attempts=0,
         )
-        return await self.create(obj_in, session)
+        session.add(notification)
+        await session.flush()
+        return notification
 
     async def cancel_pending_for_booking(
         self,
@@ -122,18 +108,11 @@ class NotificationCRUD:
         result = await session.execute(query)
         return result.scalar_one_or_none()
 
-    async def mark_sent(
-        self,
-        notification: BookingNotification,
-    ) -> None:
-        """Пометить уведомление как отправленное."""
-        notification.status = NotificationStatus.SENT
-        notification.sent_at = datetime.now(timezone.utc)
-
     async def increment_attempts(
         self,
         notification: BookingNotification,
         error: str,
+        session: AsyncSession,
         max_attempts: int = 3,
     ) -> None:
         """Увеличить счётчик попыток и, при необходимости, пометить как FAILED."""
@@ -144,6 +123,8 @@ class NotificationCRUD:
             notification.status = NotificationStatus.FAILED
         else:
             notification.status = NotificationStatus.PROCESSING
+
+        session.add(notification)
 
 
 notification_crud = NotificationCRUD()
