@@ -75,7 +75,7 @@ jobs:
         CELERY_BROKER_URL: amqp://guest:guest@localhost:5672//
         CELERY_RESULT_BACKEND: redis://localhost:6379/0
       run: |
-        uv run celery -A tasks.celery_app:celery_app worker --loglevel=info &
+        uv run celery -A src.tasks.celery_app:celery_app worker --loglevel=info &
     # Запускаем flake8
     - name: Test app
       # Вызываем flake8 и указываем ему,
