@@ -87,12 +87,13 @@ jobs:
         POSTGRES_SERVER: postgres
         JWT_SECRET: '01234567890123456789012345678901'
         REDIS_URL: redis://localhost:6379
+        PYTHONPATH: src
         # Сервер БД запущен в Docker, но его порт проброшен на хост
         # Поэтому подключаемся к 127.0.0.1:5432
         DB_HOST: 127.0.0.1
         DB_PORT: 5432
       run: |
-        uv run python -m unittest discover -s tests
+        uv run python -m unittest discover -s src
   # build_and_push_to_docker_hub:
   #   name: Push Docker image to DockerHub
   #   runs-on: ubuntu-latest
