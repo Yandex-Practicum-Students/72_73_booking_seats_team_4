@@ -75,6 +75,11 @@ jobs:
         CELERY_BROKER_URL: amqp://guest:guest@localhost:5672//
         CELERY_RESULT_BACKEND: redis://localhost:6379/0
         PYTHONPATH: ${{ github.workspace }}/src
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+        POSTGRES_DB: postgres
+        JWT_SECRET: '01234567890123456789012345678901'
+        REDIS_URL: redis://localhost:6379
       run: |
         uv run celery -A tasks.celery_app:celery_app worker --loglevel=info &
     # Запускаем flake8
