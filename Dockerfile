@@ -33,12 +33,7 @@ WORKDIR /app
 
 COPY --chown=$USER_ID:$GROUP_ID pyproject.toml uv.lock entrypoint.sh /app/
 
-RUN <<EOF
-uv sync \
-  --no-dev \
-  --no-install-project \
-  --frozen
-EOF
+RUN uv sync --no-dev --no-install-project --frozen
 
 # PYTHONOPTIMIZE — указывает интерпретатору Python, что нужно использовать ранее скомпилированные файлы из  директории `__pycache__` с  суффиксом `opt-1` в имени.
 # PYTHONFAULTHANDLER — устанавливает обработчики ошибок для дополнительных сигналов.

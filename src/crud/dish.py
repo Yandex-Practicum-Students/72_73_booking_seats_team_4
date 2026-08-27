@@ -25,10 +25,15 @@ class DishCRUD(CRUDBase[Dish, DishCreate, DishUpdate]):
         """Настраивает модель блюда и связь с кафе."""
         super().__init__(Dish, DishInfo, rel_map={'cafes_id': 'cafes'})
 
-    async def create(self, obj_in: DishCreate, session: AsyncSession) -> Dish:
+    async def create(
+        self,
+        obj_in: DishCreate,
+        session: AsyncSession,
+        redis: redis_dep,
+    ) -> Dish:
         """Создаёт блюдо, преобразуя конфликт уникальности имени."""
         try:
-            return await super().create(obj_in, session)
+            return await super().create(obj_in, session, redis)
         except IntegrityError as error:
             await session.rollback()
             raise DishAlreadyExistsError from error
@@ -46,19 +51,6 @@ class DishCRUD(CRUDBase[Dish, DishCreate, DishUpdate]):
         except IntegrityError as error:
             await session.rollback()
             raise DishAlreadyExistsError from error
-
-    async def soft_delete(self, db_obj: Dish, session: AsyncSession, redis: redis_dep) -> Dish:
-        """Мягкое удаление блюда с очисткой кэша Redis."""
-        db_obj.is_active = False
-        session.add(db_obj)
-        await session.commit()
-        await session.refresh(db_obj)
-
-        redis_all_key = f'{self.model.__tablename__}:all'
-        redis_single_key = f'{self.model.__tablename__}:{db_obj.id}'
-        await redis.delete(redis_all_key, redis_single_key)
-        logger.info('Кэш очищен для ключей: "{}", "{}"', redis_all_key, redis_single_key)
-        return db_obj
 
     async def get(
         self,

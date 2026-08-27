@@ -8,12 +8,14 @@ from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock, patch
 
 from fastapi import HTTPException
+from redis.exceptions import RedisError
 from sqlalchemy.exc import SQLAlchemyError
 
 os.environ.setdefault('POSTGRES_USER', 'test')
 os.environ.setdefault('POSTGRES_PASSWORD', 'test')
 os.environ.setdefault('POSTGRES_DB', 'test')
 os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
+os.environ.setdefault('REDIS_PASSWORD', 'test')
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 
 from api.dependencies.permissions import get_staff_user  # noqa: E402
@@ -21,6 +23,7 @@ from api.errors import APIError  # noqa: E402
 from api.exceptions import api_error_handler  # noqa: E402
 from crud.cafe import cafe_crud  # noqa: E402
 from crud.user import user_crud  # noqa: E402
+from main import app  # noqa: E402
 from models.user import User, UserRole  # noqa: E402
 from schemas.cafe import CafeCreate  # noqa: E402
 from schemas.user import UserCreate  # noqa: E402
@@ -88,6 +91,7 @@ class BackendFoundationTests(IsolatedAsyncioTestCase):
                 await dependency.athrow(SQLAlchemyError('database error'))
 
         self.assertEqual(raised.exception.status_code, 500)
+        self.assertEqual(raised.exception.detail, 'Ошибка при работе с БД')
         session.rollback.assert_awaited_once()
         self.assertTrue(context.exited)
 
@@ -137,20 +141,6 @@ class BackendFoundationTests(IsolatedAsyncioTestCase):
         session.commit.assert_awaited_once()
         session.refresh.assert_awaited_once_with(user)
 
-    async def test_base_soft_delete_commits(self) -> None:
-        """Общий soft delete меняет статус и фиксирует транзакцию."""
-        session = AsyncMock()
-        session.add = Mock()
-        db_obj = SimpleNamespace(is_active=True)
-
-        result = await user_crud.soft_delete(db_obj, session)
-
-        self.assertIs(result, db_obj)
-        self.assertFalse(db_obj.is_active)
-        session.add.assert_called_once_with(db_obj)
-        session.commit.assert_awaited_once()
-        session.refresh.assert_awaited_once_with(db_obj)
-
     async def test_cafe_create_resolves_managers_and_commits(self) -> None:
         """CafeCRUD связывает менеджеров по UUID и коммитит создание."""
         manager_id = uuid.uuid4()
@@ -168,18 +158,89 @@ class BackendFoundationTests(IsolatedAsyncioTestCase):
         session = AsyncMock()
         session.add = Mock()
         session.execute.return_value = query_result
+        redis = AsyncMock()
 
-        cafe = await cafe_crud.create(
-            CafeCreate(
-                name='Cafe',
-                address='Address',
-                phone='+79991234567',
-                managers_id=[manager_id],
+        async def get_created_cafe(*_: object, **__: object) -> object:
+            return session.add.call_args.args[0]
+
+        with (
+            patch.object(cafe_crud.response_schema, 'model_validate', side_effect=lambda obj: obj),
+            patch.object(
+                cafe_crud,
+                'get',
+                new=AsyncMock(side_effect=get_created_cafe),
             ),
-            session,
-        )
+        ):
+            cafe = await cafe_crud.create(
+                CafeCreate(
+                    name='Cafe',
+                    address='Address',
+                    phone='+79991234567',
+                    managers_id=[manager_id],
+                ),
+                session,
+                redis,
+            )
 
         self.assertEqual(cafe.managers, [manager])
         session.add.assert_called_once_with(cafe)
         session.commit.assert_awaited_once()
-        session.refresh.assert_awaited_once_with(cafe)
+        redis.delete.assert_awaited_once_with(
+            'cafes:all',
+            'cafes:all:true',
+            'cafes:all:false',
+        )
+
+    async def test_get_all_cache_uses_activity_filter(self) -> None:
+        """Кэш списков разделён по фильтру активности."""
+        session = AsyncMock()
+        redis = AsyncMock()
+        redis.get.return_value = None
+
+        with patch('crud.base.CRUDBase.get_all', new=AsyncMock(return_value=[])) as get_all:
+            result = await cafe_crud.get_all_with_cache(
+                session=session,
+                redis=redis,
+                is_active=True,
+            )
+
+        self.assertEqual(result, [])
+        redis.get.assert_awaited_once_with('cafes:all:true')
+        get_all.assert_awaited_once_with(
+            cafe_crud,
+            session=session,
+            is_active=True,
+            options=None,
+        )
+
+    async def test_get_all_cache_falls_back_to_database(self) -> None:
+        """Недоступный Redis не скрывает данные из Postgres."""
+        session = AsyncMock()
+        redis = AsyncMock()
+        redis.get.side_effect = RedisError('redis unavailable')
+
+        with patch('crud.base.CRUDBase.get_all', new=AsyncMock(return_value=[])) as get_all:
+            result = await cafe_crud.get_all_with_cache(
+                session=session,
+                redis=redis,
+                is_active=False,
+            )
+
+        self.assertEqual(result, [])
+        get_all.assert_awaited_once_with(
+            cafe_crud,
+            session=session,
+            is_active=False,
+            options=None,
+        )
+
+    def test_generated_openapi_matches_delete_and_dish_contract(self) -> None:
+        """В публичном API нет DELETE, а DishInfo возвращает cafes."""
+        specification = app.openapi()
+
+        self.assertFalse(
+            any('delete' in methods for methods in specification['paths'].values()),
+        )
+        dish_fields = specification['components']['schemas']['DishInfo']['properties']
+        self.assertIn('cafes', dish_fields)
+        self.assertNotIn('cafes_id', dish_fields)
