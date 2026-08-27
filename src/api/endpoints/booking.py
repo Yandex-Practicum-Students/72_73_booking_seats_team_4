@@ -1,7 +1,7 @@
 import uuid
-from typing import Optional
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, status
+from loguru import logger
 
 from api.dependencies.permissions import CurrentUser
 from api.dependencies.tables import get_cafe_or_404
@@ -12,8 +12,10 @@ from models.booking import Booking, StatusBooking
 from models.user import UserRole
 from schemas.booking import BookingCreate, BookingInfo, BookingUpdate
 from services.booking import (
+    FilterParam,
     check_cafe_has_tables_slots,
     check_double_booking_exsist,
+    check_number_geusts_not_more_seat_number,
     check_user_have_same_slot,
     check_user_permission,
     get_booking_or_raise,
@@ -22,10 +24,10 @@ from services.booking import (
 
 from core.db import DBSession
 
-booking_router = APIRouter(prefix='/booking', tags=['Бронирования'])
+router = APIRouter()
 
 
-@booking_router.get(
+@router.get(
     '',
     response_model=list[BookingInfo],
     status_code=status.HTTP_200_OK,
@@ -38,9 +40,7 @@ booking_router = APIRouter(prefix='/booking', tags=['Бронирования'])
 async def get_all_bookings(
     current_user: CurrentUser,
     session: DBSession,
-    show_active: Optional[bool] = Query(None),
-    cafe_id: Optional[uuid.UUID] = Query(None),
-    user_id: Optional[uuid.UUID] = Query(None),
+    filters: FilterParam,
 ) -> list[Booking]:
     """Получение списка бронирований.
 
@@ -48,33 +48,23 @@ async def get_all_bookings(
     Для менеджера - все активные бронирования своего кафе (с возможностью выбора).
     Для пользователей - только свои активные бронирования(параметры игнорируются, кроме ID кафе).
     """
+    logger.info('Фильтрует параметры в зависимости от роли пользователя для получения списка бронирований.')
     if current_user.role == UserRole.USER:
-        bookings = await booking_crud.get_all(
-            session=session,
-            show_active=True,
-            cafe_id=cafe_id,
-            user_id=current_user.id,
-        )
+        filters.show_active = True
+        filters.user_id = current_user.id
     elif current_user.role == UserRole.MANAGER:
-        if show_active is None:
-            show_active = True
-        bookings = await booking_crud.get_all(
-            session=session,
-            show_active=show_active,
-            cafe_id=current_user.cafe_id,
-            user_id=user_id,
-        )
-    elif current_user.role == UserRole.ADMIN:
-        bookings = await booking_crud.get_all(
-            session=session,
-            show_active=show_active,
-            cafe_id=cafe_id,
-            user_id=user_id,
-        )
-    return bookings
+        if filters.show_active is None:
+            filters.show_active = True
+        filters.cafe_id = current_user.cafe_id
+    return await booking_crud.get_all(
+        session=session,
+        show_active=filters.show_active,
+        cafe_id=filters.cafe_id,
+        user_id=filters.user_id,
+    )
 
 
-@booking_router.get(
+@router.get(
     '/{booking_id}',
     response_model=BookingInfo,
     status_code=status.HTTP_200_OK,
@@ -102,7 +92,7 @@ async def get_booking(
     return booking
 
 
-@booking_router.post(
+@router.post(
     '',
     response_model=BookingInfo,
     status_code=status.HTTP_201_CREATED,
@@ -142,6 +132,11 @@ async def create_booking(
         user_id=current_user.id,
         slot_ids=slot_ids,
     )
+    await check_number_geusts_not_more_seat_number(
+        session=session,
+        guest_number=new_booking.guest_number,
+        table_ids=table_ids,
+    )
     return await booking_crud.create(
         obj_in=new_booking,
         session=session,
@@ -149,7 +144,7 @@ async def create_booking(
     )
 
 
-@booking_router.patch(
+@router.patch(
     '/{booking_id}',
     response_model=BookingInfo,
     status_code=status.HTTP_200_OK,
@@ -183,18 +178,26 @@ async def update_booking(
 
     await check_user_permission(booking=db_booking, user=current_user)
 
+    logger.info('Проверяет статус бронирования id{}', db_booking.id)
     if db_booking.status == StatusBooking.ACTIVE or db_booking.status == StatusBooking.COMPLETED:
+        logger.warning('Статус бронирования {} не допускает внесения изменений', db_booking.status)
         raise APIError(
             status_code=status.HTTP_400_BAD_REQUEST,
             message='Статус бронирования не допускает внесение изменений.',
         )
 
+    logger.info('Проверяет активно ли бронирование для пользователя с ролью User.')
     if not db_booking.is_active and current_user.role == UserRole.USER:
+        logger.warning(
+            'Бронирование id {} с полем is_active=false для пользователя не доступно',
+            db_booking.id,
+        )
         raise APIError(
             status_code=status.HTTP_400_BAD_REQUEST,
             message='Бронирование удалено.',
         )
 
+    logger.info('Проверка изменения поля tables_slots')
     if update_data.tables_slots is not None:
         table_slot_ids, table_ids, slot_ids = split_tables_slots(update_data.tables_slots)
         await check_cafe_has_tables_slots(
@@ -214,6 +217,7 @@ async def update_booking(
             cafe_id=db_booking.cafe_id,
             booking_date=booking_date,
             table_slot_ids=table_slot_ids,
+            booking_id=db_booking.id,
         )
 
         await check_user_have_same_slot(
@@ -221,17 +225,35 @@ async def update_booking(
             booking_date=booking_date,
             user_id=db_booking.user_id,
             slot_ids=slot_ids,
+            booking_id=db_booking.id,
         )
+
+    logger.info(
+        'Проверяет обновлялись ли поля tables_slots и/или guest_number '
+        'для сравенения колиичества гостей и мест.',
+    )
+    if update_data.tables_slots is not None or update_data.guest_number is not None:
+        if update_data.guest_number is not None:
+            guest_number = update_data.guest_number
+        else:
+            guest_number = db_booking.guest_number
+        if update_data.tables_slots is None:
+            table_slot_ids, table_ids, slot_ids = split_tables_slots(db_booking.tables_slots)
+        await check_number_geusts_not_more_seat_number(
+            session=session,
+            guest_number=guest_number,
+            table_ids=table_ids,
+        )
+
+    logger.info('Поверка на возможность редактирования поля статуса бронирования пользователем.')
     if update_data.status and current_user.role == UserRole.USER:
+        logger.warning(
+            'Пользователь с ролью USER не может редактировать поле status бронирования id {}',
+            db_booking.id,
+        )
         raise APIError(
             status_code=status.HTTP_400_BAD_REQUEST,
             message='Пользовтель не может реадктировать поле status.',
-        )
-
-    if update_data.is_active is not None and current_user.role == UserRole.USER:
-        raise APIError(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message='Пользовтель не может реадктировать поле is_active.',
         )
 
     return await booking_crud.update(

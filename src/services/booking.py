@@ -1,9 +1,12 @@
 import uuid
+from dataclasses import dataclass
 from datetime import date
+from typing import Annotated, Optional
 
-from fastapi import HTTPException, status
-from sqlalchemy import and_, or_, tuple_
-from sqlalchemy.orm import select, selectinload
+from fastapi import Depends, HTTPException, status
+from loguru import logger
+from sqlalchemy import and_, or_, select, tuple_
+from sqlalchemy.orm import selectinload
 
 from api.errors import APIError
 from crud.booking import booking_crud
@@ -48,6 +51,18 @@ class CrossSlotsExistsError(APIError):
         )
 
 
+@dataclass
+class QueryParamFilter:
+    """Фильтр query-параметров."""
+
+    show_active: Optional[bool] = None
+    cafe_id: Optional[uuid.UUID] = None
+    user_id: Optional[uuid.UUID] = None
+
+
+FilterParam = Annotated[QueryParamFilter, Depends(QueryParamFilter)]
+
+
 def split_tables_slots(tables_slots: list[tuple[int, int]]) -> tuple[list, list, list]:
     """Обрабатывает поле tables_slots из запроса.
 
@@ -65,17 +80,20 @@ async def get_booking_or_raise(
     session: DBSession,
 ) -> Booking:
     """Возвращает бронирование или сообщает, что объект не найден."""
+    logger.info('Получение бронирования по id: {}.', booking_id)
     booking = await booking_crud.get(
         obj_id=booking_id,
         session=session,
         options=[
             selectinload(Booking.user),
             selectinload(Booking.cafe),
-            selectinload(Booking.table_slot),
+            selectinload(Booking.tables_slots),
         ],
     )
     if booking is None:
+        logger.warning('Бронирование с id: {} не найдено.', booking_id)
         raise BookingNotFoundError
+    logger.info('Получение бронирование по id: {}.', booking_id)
     return booking
 
 
@@ -84,12 +102,15 @@ async def check_user_permission(
     user: User,
 ) -> None:
     """Проверяет наличие права доступа к бронированию у пользователя и менеджера."""
+    logger.info('Проверяет права пользователя на доступ к бронированию.')
     if user.role == UserRole.USER and user.id != booking.user_id:
+        logger.warning('У пользователя с ролью User нет доступа к бронированию id {}', booking.id)
         raise APIError(
             status_code=status.HTTP_403_FORBIDDEN,
             message='Доступ запрещен.',
         )
     if user.role == UserRole.MANAGER and (user.id != booking.user_id and user.cafe_id != booking.cafe_id):
+        logger.warning('У менеджера нет доступа к бронированию id {} в кафе {}', booking.id, booking.cafe_id)
         raise APIError(
             status_code=status.HTTP_403_FORBIDDEN,
             message='Доступ запрещен.',
@@ -101,19 +122,29 @@ async def check_double_booking_exsist(
     cafe_id: uuid.UUID,
     booking_date: date,
     table_slot_ids: list,
+    booking_id: Optional[uuid.UUID] = None,
 ) -> None:
     """Проверяет на наличе повторного бронирования."""
-    booking = await session.execute(
+    logger.info('Проверка на наличие повторного бронирования.')
+    booking = (
         select(Booking)
-        .join(Booking.table_slot)
+        .join(Booking.tables_slots)
         .where(
             Booking.cafe_id == cafe_id,
             Booking.booking_date == booking_date,
             Booking.status != StatusBooking.CANCELED,
             tuple_(BookingTablesSlots.table_id, BookingTablesSlots.slot_id).in_(table_slot_ids),
-        ),
+        )
     )
-    if booking.scalars().first() is not None:
+    if booking_id is not None:
+        booking = booking.where(Booking.id != booking_id)
+    booking = await session.execute(booking)
+    result = booking.scalars().first()
+    if result is not None:
+        logger.warning(
+            'Повторное бронирование. Уже существует бронирование id {} с такими параметрами.',
+            result.id,
+        )
         raise BookingAlreadyExistsError
 
 
@@ -122,26 +153,32 @@ async def check_user_have_same_slot(
     booking_date: date,
     user_id: uuid.UUID,
     slot_ids: list,
+    booking_id: Optional[uuid.UUID] = None,
 ) -> None:
     """Проверяет наличие у пользователя бронирований с пересекающимися слотами."""
+    logger.info('Проверка на пересекающиеся слоты пользователя.')
     slots = await session.execute(select(Slot).where(Slot.id.in_(slot_ids)))
     start_end_time_slots_new_booking = [(slot.start_time, slot.end_time) for slot in slots.scalars().all()]
     cross_slots = [
         and_(Slot.start_time < new_end, new_start < Slot.end_time)
         for new_start, new_end in start_end_time_slots_new_booking
     ]
-    bookings_user_cros_slots = await session.execute(
+    bookings_user_cros_slots = (
         select(Booking)
-        .join(Booking.table_slot)
+        .join(Booking.tables_slots)
         .join(BookingTablesSlots.slot)
         .where(
             Booking.user_id == user_id,
             Booking.booking_date == booking_date,
             Booking.status != StatusBooking.CANCELED,
             or_(*cross_slots),
-        ),
+        )
     )
-    if bookings_user_cros_slots.scalars().first() is not None:
+    if booking_id is not None:
+        bookings_user_cros_slots = bookings_user_cros_slots.where(Booking.id != booking_id)
+    bookings_user_cros_slots = await session.execute(bookings_user_cros_slots)
+    if bookings_user_cros_slots.scalars().all() is not None:
+        logger.warning('Пользователь имеет пересекающие слоты в других бронированиях.')
         raise CrossSlotsExistsError
 
 
@@ -152,6 +189,7 @@ async def check_cafe_has_tables_slots(
     slot_ids: list,
 ) -> None:
     """Проверяет существует ли в кафе указанные столы и слоты."""
+    logger.info('Проверяет существует ли в кафе указанные столы и слоты.')
     found_table_ids = await session.execute(
         select(Table.id).where(
             Table.cafe_id == cafe_id,
@@ -162,6 +200,7 @@ async def check_cafe_has_tables_slots(
     found_table_ids = set(found_table_ids.scalars().all())
     unknown_table_ids = set(table_ids) - found_table_ids
     if unknown_table_ids:
+        logger.warning('В кафе не найдены столы(по id){}', unknown_table_ids)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'В кафе не найдены столы(по id) {unknown_table_ids}',
@@ -177,7 +216,37 @@ async def check_cafe_has_tables_slots(
     found_slot_ids = set(found_slot_ids.scalars().all())
     unknown_slot_ids = set(slot_ids) - found_slot_ids
     if unknown_slot_ids:
+        logger.warning('В кафе не найдены слоты(по id){}', unknown_slot_ids)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'В кафе не найдены слот с id {unknown_slot_ids}',
+        )
+
+
+async def check_number_geusts_not_more_seat_number(
+    session: DBSession,
+    guest_number: int,
+    table_ids: list,
+) -> None:
+    """Проверка вместимости гостей.
+
+    Проверяет, что количество гостей в бронировании не превышает общего количества
+    сидячих мест за забронированными столиками.
+    """
+    logger.info('Сравнивает количество гостей и количество сидячих мест.')
+    seat_number_tables = await session.execute(
+        select(Table.seat_number).where(Table.id.in_(table_ids)),
+    )
+    seat_number_tables = sum(seat_number_tables.scalars().all())
+    if guest_number > seat_number_tables:
+        logger.warning(
+            'Количество гостей {} превышает количество мест {} за столами.',
+            guest_number,
+            seat_number_tables,
+        )
+        raise APIError(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message=(
+                f'Количество гостей {guest_number} превышае количество мест {seat_number_tables} за столами.'
+            ),
         )

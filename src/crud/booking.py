@@ -9,7 +9,7 @@ from sqlalchemy.orm import interfaces, selectinload
 from crud.base import CRUDBase
 from models.booking import Booking, BookingTablesSlots
 from models.user import User
-from schemas.booking import BookingCreate, BookingUpdate
+from schemas.booking import BookingCreate, BookingInfo, BookingUpdate
 
 
 def create_obj_booking_tables_slots(
@@ -39,7 +39,7 @@ class BookingCRUD(CRUDBase[Booking, BookingCreate, BookingUpdate]):
 
     def __init__(self) -> None:
         """Инициализирует CRUD для модели бронирования."""
-        super().__init__(Booking)
+        super().__init__(Booking, BookingInfo)
 
     async def get_all(
         self,
@@ -66,7 +66,7 @@ class BookingCRUD(CRUDBase[Booking, BookingCreate, BookingUpdate]):
             options = [
                 selectinload(self.model.user),
                 selectinload(self.model.cafe),
-                selectinload(self.model.table_slot),
+                selectinload(self.model.tables_slots),
             ]
         all_bookings = all_bookings.options(*options)
         result = await session.execute(all_bookings)
@@ -88,11 +88,19 @@ class BookingCRUD(CRUDBase[Booking, BookingCreate, BookingUpdate]):
         logger.info('Создание нового бронирования')
         obj_in_data = obj_in.model_dump()
         obj_in_data['user_id'] = current_user.id
-        obj_in_data['table_slot'] = create_obj_booking_tables_slots(obj_in_data)
+        obj_in_data['tables_slots'] = create_obj_booking_tables_slots(obj_in_data)
         new_booking_db = self.model(**obj_in_data)
         session.add(new_booking_db)
         await session.commit()
-        await session.refresh(new_booking_db)
+        new_booking_db = await booking_crud.get(
+            obj_id=new_booking_db.id,
+            session=session,
+            options=[
+                selectinload(Booking.user),
+                selectinload(Booking.cafe),
+                selectinload(Booking.tables_slots),
+            ],
+        )
         logger.info('Бронирование {} создано.', new_booking_db.id)
         return new_booking_db
 
@@ -107,9 +115,12 @@ class BookingCRUD(CRUDBase[Booking, BookingCreate, BookingUpdate]):
         update_data = obj_in.model_dump(exclude_unset=True)
 
         if 'tables_slots' in update_data:
-            for item in db_booking.table_slot:
+            for item in db_booking.tables_slots:
                 item.is_active = False
-            update_data['table_slot'] = create_obj_booking_tables_slots(update_data, booking_id=db_booking.id)
+            update_data['tables_slots'] = create_obj_booking_tables_slots(
+                update_data,
+                booking_id=db_booking.id,
+            )
 
         for field, value in update_data.items():
             if hasattr(db_booking, field):

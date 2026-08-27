@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from api import (
+    booking_router,
     cafe_router,
     dish_router,
     media_router,
@@ -17,6 +18,12 @@ api_router.include_router(
     cafe_router,
     prefix='/cafes',
     tags=['Кафе'],
+)
+
+api_router.include_router(
+    booking_router,
+    prefix='/booking',
+    tags=['Бронирования'],
 )
 
 api_router.include_router(

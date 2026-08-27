@@ -32,7 +32,7 @@ class BookingTablesSlots(Base):
         ForeignKey('bookings.id', name='fk_booking_id_booking_tables_slots'),
         index=True,
     )
-    booking: Mapped['Booking'] = relationship('Booking', back_populates='table_slot', lazy='selectin')
+    booking: Mapped['Booking'] = relationship('Booking', back_populates='tables_slots', lazy='selectin')
     table_id: Mapped[uuid.UUID] = mapped_column(
         UUID,
         ForeignKey('tables.id', name='fk_tables_id_booking_tables_slots'),
@@ -71,7 +71,7 @@ class Booking(Base):
         server_default=StatusBooking.BOOKING.value,
         index=True,
     )
-    table_slot: Mapped[List['BookingTablesSlots']] = relationship(
+    tables_slots: Mapped[List['BookingTablesSlots']] = relationship(
         'BookingTablesSlots',
         back_populates='booking',
     )
