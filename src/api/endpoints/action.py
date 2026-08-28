@@ -146,24 +146,3 @@ async def update_action(
     ensure_manager_cafe_access(current_user, new_cafes_id)
     await ensure_cafes_exist(new_cafes_id, session)
     return await action_crud.update(action, action_update, session, redis)
-
-
-@router.delete(
-    '/{action_id}',
-    status_code=status.HTTP_204_NO_CONTENT,
-    responses=error_responses(*GET_RESPONSES),
-    summary='Удаление акции по её ID (мягкое удаление)',
-)
-async def delete_action(
-    action_id: uuid.UUID,
-    current_user: StaffUser,
-    session: DBSession,
-    redis: redis_dep,
-    action: Action = Depends(get_action_or_404),
-) -> None:
-    """Мягкое удаление акции (установка is_active=False).
-
-    Только для администраторов и менеджеров.
-    """
-    ensure_manager_cafe_access(current_user, [cafe.id for cafe in action.cafes])
-    await action_crud.soft_delete(action, session, redis)
