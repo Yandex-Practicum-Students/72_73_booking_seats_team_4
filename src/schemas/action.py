@@ -4,6 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from schemas.base import BaseInfoScheme, IdScheme
+from schemas.cafe import CafeShortInfo
 from schemas.validators import field_cannot_be_null, validate_empty_field
 
 from core.constants import ACTION_DESCRIPTION_MAX_LENGTH
@@ -23,6 +24,8 @@ class ActionCreate(BaseModel):
 
 class ActionInfo(IdScheme, ActionCreate, BaseInfoScheme):
     """Схема полных данных об акции."""
+
+    cafes: list[CafeShortInfo]
 
 
 class ActionUpdate(ActionCreate):

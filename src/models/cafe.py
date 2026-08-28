@@ -41,3 +41,9 @@ class Cafe(base_model.Base, base_model.DescriptionMixin):
         back_populates='cafes',
         lazy='selectin',
     )
+    actions: Mapped[List['Action']] = relationship(  # noqa: F821
+        'Action',
+        secondary='cafe_actions',
+        back_populates='cafes',
+        lazy='selectin',
+    )
