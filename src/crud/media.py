@@ -47,7 +47,7 @@ class MediaCRUD:
         finally:
             await asyncio.to_thread(file_obj.close)
 
-        media = Media(id=media_id)
+        media = Media(id=media_id, name=upload.filename or f'{media_id}{extension}')
         self.session.add(media)
         await self.session.flush()
         await self.session.refresh(media)
