@@ -1,4 +1,4 @@
-FROM: rabbitmq:4.3-management-alpine
+FROM rabbitmq:4.3-management-alpine
 
 ENV RABBITMQ_DEFAULT_VHOST="/"
 
