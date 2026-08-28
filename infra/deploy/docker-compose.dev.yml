@@ -1,0 +1,116 @@
+name: booking-seats
+
+services:
+  app:
+    image: ${DOCKER_TUZ}/cafes_backend:latest
+    env_file:
+      - ./.env
+    ports:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery-worker:
+    image: ${DOCKER_TUZ}/cafes_backend:latest
+    env_file:
+      - ./.env
+    entrypoint:
+      - celery
+      - -A
+      - tasks.celery_app:celery_app
+      - worker
+      - --loglevel=INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  flower:
+    image: ${DOCKER_TUZ}/cafes_backend:latest
+    env_file:
+      - ./.env
+    entrypoint:
+      - celery
+      - -A
+      - tasks.celery_app:celery_app
+      - flower
+      - --address=0.0.0.0
+      - --port=5555
+    ports:
+      - "5555"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      celery-worker:
+        condition: service_started
+    restart: unless-stopped
+
+  rabbitmq:
+    image: ${DOCKER_TUZ}/rabbitmq:latest
+    hostname: rabbitmq
+    env_file:
+      - ./.env
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?RABBITMQ_USER is required}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    ports:
+      - "15672:15672"
+    volumes:
+      - "rabbitmq_data:/var/lib/rabbitmq"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.8.2-alpine3.23
+    env_file:
+      - ./.env
+    volumes:
+      - redis_data:/data
+    command: sh -c "redis-server --requirepass \$$REDIS_PASSWORD --maxmemory 268435456 --maxmemory-policy volatile-lru --save '' --loglevel debug --port \$$REDIS_PORT"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 5s
+
+  db:
+    image: postgres:17-alpine
+    env_file:
+      - ./.env
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - "pgdata:/var/lib/postgresql/data/pgdata"
+    command: >
+      postgres -c max_connections=1000
+               -c shared_buffers=256MB
+               -c effective_cache_size=768MB
+               -c maintenance_work_mem=64MB
+               -c checkpoint_completion_target=0.7
+               -c wal_buffers=16MB
+               -c default_statistics_target=100
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  rabbitmq_data:
+  redis_data:
