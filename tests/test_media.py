@@ -2,10 +2,12 @@ import os
 import sys
 import uuid
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock
 
 from fastapi import HTTPException, UploadFile
+from sqlalchemy.ext.asyncio import AsyncSession
 
 os.environ.setdefault('POSTGRES_USER', 'test')
 os.environ.setdefault('POSTGRES_PASSWORD', 'test')
@@ -36,12 +38,34 @@ def _make_upload(content: bytes, filename: str = 'photo.jpg') -> Mock:
     return upload
 
 
+def _make_session() -> Mock:
+    """Создаёт мок сессии БД с реальной сигнатурой AsyncSession.
+
+    add() — синхронный метод, flush()/refresh()/execute() — асинхронные.
+    Используем spec, чтобы синхронный метод не подменялся AsyncMock.
+    """
+    session = Mock(spec=AsyncSession)
+    session.add = Mock()
+    session.flush = AsyncMock()
+    session.refresh = AsyncMock()
+    session.execute = AsyncMock()
+    return session
+
+
 class MediaCRUDTests(IsolatedAsyncioTestCase):
     """Проверяет загрузку и поиск медиафайлов."""
 
+    def setUp(self) -> None:
+        """Подменяет MEDIA_ROOT на временную папку на время теста."""
+        self._tmp_dir = TemporaryDirectory()
+        self._original_media_root = media_module.MEDIA_ROOT
+        media_module.MEDIA_ROOT = Path(self._tmp_dir.name)
+        self.addCleanup(self._tmp_dir.cleanup)
+        self.addCleanup(setattr, media_module, 'MEDIA_ROOT', self._original_media_root)
+
     async def test_save_file_creates_record_and_writes_to_disk(self) -> None:
         """save_file сохраняет файл на диск чанками и создаёт запись в БД."""
-        session = AsyncMock()
+        session = _make_session()
         crud = MediaCRUD(session)
         upload = _make_upload(b'test image content')
 
@@ -55,11 +79,10 @@ class MediaCRUDTests(IsolatedAsyncioTestCase):
         saved_files = list(media_module.MEDIA_ROOT.glob(f'{media.id}.*'))
         self.assertEqual(len(saved_files), 1)
         self.assertEqual(saved_files[0].read_bytes(), b'test image content')
-        saved_files[0].unlink()
 
     async def test_save_file_rejects_files_over_size_limit(self) -> None:
         """save_file прерывает загрузку и удаляет файл при превышении лимита."""
-        session = AsyncMock()
+        session = _make_session()
         crud = MediaCRUD(session)
         oversized_content = b'x' * (media_module.MAX_FILE_SIZE + media_module.CHUNK_SIZE)
         upload = _make_upload(oversized_content)
@@ -72,8 +95,10 @@ class MediaCRUDTests(IsolatedAsyncioTestCase):
 
     async def test_get_file_path_returns_none_for_unknown_id(self) -> None:
         """get_file_path возвращает None, если записи с таким id нет в БД."""
-        session = AsyncMock()
-        session.execute.return_value.scalar_one_or_none.return_value = None
+        session = _make_session()
+        execute_result = Mock()
+        execute_result.scalar_one_or_none = Mock(return_value=None)
+        session.execute.return_value = execute_result
         crud = MediaCRUD(session)
 
         result = await crud.get_file_path(uuid.uuid4())
