@@ -5,6 +5,17 @@ services:
     image: ${DOCKER_TUZ}/cafes_backend:latest
     env_file:
       - ./.env
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_LIFETIME_SECONDS: ${JWT_LIFETIME_SECONDS}
+      REDIS_URL: ${REDIS_URL}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      RABBITMQ_SERVER: ${RABBITMQ_SERVER}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "8000"
     depends_on:
@@ -14,6 +25,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    restart: unless-stopped
 
   celery-worker:
     image: ${DOCKER_TUZ}/cafes_backend:latest
@@ -36,6 +48,8 @@ services:
     image: ${DOCKER_TUZ}/cafes_backend:latest
     env_file:
       - ./.env
+    environment:
+      FLOWER_BASIC_AUTH: ${FLOWER_BASIC_AUTH}
     entrypoint:
       - celery
       - -A
@@ -73,22 +87,24 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:8.8.2-alpine3.23
+    image: ${DOCKER_TUZ}/redis:latest
     env_file:
       - ./.env
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PORT: ${REDIS_PORT}
     volumes:
       - redis_data:/data
-    command: sh -c "redis-server --requirepass \$$REDIS_PASSWORD --maxmemory 268435456 --maxmemory-policy volatile-lru --save '' --loglevel debug --port \$$REDIS_PORT"
-
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "-p", "${REDIS_PORT}", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 5s
+    restart: unless-stopped
 
   db:
-    image: postgres:17-alpine
+    image: ${DOCKER_TUZ}/postgres:17-alpine
     env_file:
       - ./.env
     environment:
