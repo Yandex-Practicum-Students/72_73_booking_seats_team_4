@@ -52,6 +52,13 @@ def _make_session() -> Mock:
     return session
 
 
+def _execute_result_for(media_id: uuid.UUID) -> Mock:
+    """Создаёт синхронный результат execute() с готовым media_id."""
+    result = Mock()
+    result.scalar_one_or_none = Mock(return_value=Mock(id=media_id))
+    return result
+
+
 class MediaCRUDTests(IsolatedAsyncioTestCase):
     """Проверяет загрузку и поиск медиафайлов."""
 
@@ -76,9 +83,21 @@ class MediaCRUDTests(IsolatedAsyncioTestCase):
         session.flush.assert_awaited_once()
         session.refresh.assert_awaited_once_with(media)
 
-        saved_files = list(media_module.MEDIA_ROOT.glob(f'{media.id}.*'))
+        saved_files = list(media_module.MEDIA_ROOT.glob(f'{media.id}*'))
         self.assertEqual(len(saved_files), 1)
         self.assertEqual(saved_files[0].read_bytes(), b'test image content')
+
+    async def test_save_file_without_extension(self) -> None:
+        """save_file корректно сохраняет файл без расширения."""
+        session = _make_session()
+        crud = MediaCRUD(session)
+        upload = _make_upload(b'raw content', filename='noext')
+
+        media = await crud.save_file(upload)
+
+        saved_files = list(media_module.MEDIA_ROOT.glob(f'{media.id}*'))
+        self.assertEqual(len(saved_files), 1)
+        self.assertEqual(saved_files[0].name, str(media.id))
 
     async def test_save_file_rejects_files_over_size_limit(self) -> None:
         """save_file прерывает загрузку и удаляет файл при превышении лимита."""
@@ -104,3 +123,18 @@ class MediaCRUDTests(IsolatedAsyncioTestCase):
         result = await crud.get_file_path(uuid.uuid4())
 
         self.assertIsNone(result)
+
+    async def test_get_file_path_returns_path_for_existing_file(self) -> None:
+        """get_file_path возвращает путь к файлу, если запись и файл существуют."""
+        session = _make_session()
+        crud = MediaCRUD(session)
+        upload = _make_upload(b'existing image content')
+        media = await crud.save_file(upload)
+
+        session.execute.return_value = _execute_result_for(media.id)
+
+        result = await crud.get_file_path(media.id)
+
+        self.assertIsNotNone(result)
+        self.assertTrue(result.name.startswith(str(media.id)))
+        self.assertEqual(result.read_bytes(), b'existing image content')

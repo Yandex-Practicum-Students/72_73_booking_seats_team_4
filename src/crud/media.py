@@ -38,7 +38,7 @@ class MediaCRUD:
                 total_size += len(chunk)
                 if total_size > MAX_FILE_SIZE:
                     raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                         detail='Файл превышает допустимый размер.',
                     )
                 await asyncio.to_thread(file_obj.write, chunk)
@@ -66,6 +66,6 @@ class MediaCRUD:
             return None
 
         matches = await asyncio.to_thread(
-            lambda: list(MEDIA_ROOT.glob(f'{media_id}.*')),
+            lambda: list(MEDIA_ROOT.glob(f'{media_id}*')),
         )
         return matches[0] if matches else None
