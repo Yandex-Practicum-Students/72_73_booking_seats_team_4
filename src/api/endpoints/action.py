@@ -15,35 +15,18 @@ from services.action import ensure_cafes_exist, ensure_manager_cafe_access
 from core.core_dependencies import redis_dep
 from core.db import DBSession
 
-GET_RESPONSES = (
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_404_NOT_FOUND,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-)
-
-POST_RESPONSES = (
-    status.HTTP_400_BAD_REQUEST,
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-)
-
-PATCH_RESPONSES = (
-    status.HTTP_400_BAD_REQUEST,
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_404_NOT_FOUND,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-)
-
 router = APIRouter()
 
 
 @router.get(
     '',
     response_model=list[ActionInfo],
-    responses=error_responses(*GET_RESPONSES),
+    responses=error_responses(
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ),
     summary='Список акций',
 )
 async def get_all_actions(
@@ -76,7 +59,12 @@ async def get_all_actions(
     '',
     response_model=ActionInfo,
     status_code=status.HTTP_201_CREATED,
-    responses=error_responses(*POST_RESPONSES),
+    responses=error_responses(
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ),
     summary='Создание новой акции',
 )
 async def create_action(
@@ -97,7 +85,12 @@ async def create_action(
 @router.get(
     '/{action_id}',
     response_model=ActionInfo,
-    responses=error_responses(*GET_RESPONSES),
+    responses=error_responses(
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ),
     summary='Информация об акции по её ID',
 )
 async def get_action_by_id(
@@ -123,7 +116,13 @@ async def get_action_by_id(
 @router.patch(
     '/{action_id}',
     response_model=ActionInfo,
-    responses=error_responses(*PATCH_RESPONSES),
+    responses=error_responses(
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_404_NOT_FOUND,
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ),
     summary='Обновление информации об акции по её ID',
 )
 async def update_action(
