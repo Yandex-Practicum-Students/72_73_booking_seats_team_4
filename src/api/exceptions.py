@@ -6,8 +6,16 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.errors import APIError
+from crud.dish import DishAlreadyExistsError
 from crud.user import UserAlreadyExistsError, UserNotFoundError
 from schemas.error import CustomError
+from services.errors import (
+    EntityNotFoundError,
+    ManagerAlreadyAssignedError,
+    ManagerNotFoundError,
+    ManagerRoleError,
+    PermissionDeniedError,
+)
 
 
 def custom_error_response(
@@ -58,6 +66,28 @@ async def api_error_handler(
     )
 
 
+async def entity_not_found_handler(
+    _: Request,
+    exception: EntityNotFoundError,
+) -> JSONResponse:
+    """Преобразует ошибку сервисного слоя в ответ 404."""
+    return custom_error_response(
+        status.HTTP_404_NOT_FOUND,
+        str(exception),
+    )
+
+
+async def permission_denied_handler(
+    _: Request,
+    exception: PermissionDeniedError,
+) -> JSONResponse:
+    """Преобразует запрет сервисного слоя в ответ 403."""
+    return custom_error_response(
+        status.HTTP_403_FORBIDDEN,
+        str(exception),
+    )
+
+
 async def request_validation_error_handler(
     _: Request,
     exception: RequestValidationError,
@@ -80,6 +110,17 @@ async def user_already_exists_handler(
     )
 
 
+async def dish_already_exists_handler(
+    _: Request,
+    __: DishAlreadyExistsError,
+) -> JSONResponse:
+    """Возвращает единый ответ при конфликте уникального имени блюда."""
+    return custom_error_response(
+        status.HTTP_400_BAD_REQUEST,
+        'Блюдо с таким именем уже существует.',
+    )
+
+
 async def user_not_found_handler(
     _: Request,
     __: UserNotFoundError,
@@ -88,4 +129,37 @@ async def user_not_found_handler(
     return custom_error_response(
         status.HTTP_404_NOT_FOUND,
         'Пользователь не найден.',
+    )
+
+
+async def manager_not_found_handler(
+    _: Request,
+    exception: ManagerNotFoundError,
+) -> JSONResponse:
+    """Возвращает ошибку, если менеджер не найден."""
+    return custom_error_response(
+        status.HTTP_404_NOT_FOUND,
+        str(exception),
+    )
+
+
+async def manager_role_error_handler(
+    _: Request,
+    exception: ManagerRoleError,
+) -> JSONResponse:
+    """Возвращает ошибку, если пользователь не является менеджером."""
+    return custom_error_response(
+        status.HTTP_400_BAD_REQUEST,
+        str(exception),
+    )
+
+
+async def manager_already_assigned_handler(
+    _: Request,
+    exception: ManagerAlreadyAssignedError,
+) -> JSONResponse:
+    """Возвращает ошибку, если менеджер уже привязан к другому кафе."""
+    return custom_error_response(
+        status.HTTP_400_BAD_REQUEST,
+        str(exception),
     )

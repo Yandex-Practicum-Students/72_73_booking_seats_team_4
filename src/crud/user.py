@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from crud.base import CRUDBase
 from models.user import User
-from schemas.user import UserCreate, UserUpdate
+from schemas.user import UserCreate, UserInfo, UserUpdate
 from schemas.validators import normalize_login, normalize_phone
 
 from core.user import hash_password
@@ -41,7 +41,7 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
 
     def __init__(self) -> None:
         """Инициализирует CRUD для модели пользователя."""
-        super().__init__(User)
+        super().__init__(User, UserInfo)
 
     async def get_or_raise(self, user_id: uuid.UUID, session: AsyncSession) -> User:
         """Возвращает пользователя или сообщает, что он не найден."""
