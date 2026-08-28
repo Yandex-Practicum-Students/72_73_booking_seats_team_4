@@ -37,15 +37,18 @@ class MediaCRUD:
             while chunk := await upload.read(CHUNK_SIZE):
                 total_size += len(chunk)
                 if total_size > MAX_FILE_SIZE:
-                    await asyncio.to_thread(file_obj.close)
-                    await asyncio.to_thread(file_path.unlink, True)
                     raise HTTPException(
                         status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                         detail='Файл превышает допустимый размер.',
                     )
                 await asyncio.to_thread(file_obj.write, chunk)
-        finally:
+        except (OSError, HTTPException):
             await asyncio.to_thread(file_obj.close)
+            await asyncio.to_thread(file_path.unlink, True)
+            raise
+        finally:
+            if not file_obj.closed:
+                await asyncio.to_thread(file_obj.close)
 
         media = Media(id=media_id, name=upload.filename or f'{media_id}{extension}')
         self.session.add(media)
