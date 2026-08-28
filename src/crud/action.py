@@ -19,7 +19,7 @@ class ActionAlreadyExistsError(ValueError):
 
 
 class ActionCRUD(CRUDBase[Action, ActionCreate, ActionUpdate]):
-    """CRUD-операции для акций."""
+    """CRUD операции для акций."""
 
     def __init__(self) -> None:
         """Настраивает модель акции и связь с кафе."""
@@ -71,7 +71,7 @@ class ActionCRUD(CRUDBase[Action, ActionCreate, ActionUpdate]):
         is_active: bool | None = None,
         cafe_id: uuid.UUID | None = None,
     ) -> list[Action]:
-        """Возвращает все акции, при необходимости фильтруя по активности и кафе."""
+        """Возвращает акции с фильтрацией по активности и кафе."""
         logger.info('Получение всех акций: is_active={}, cafe_id={}', is_active, cafe_id)
         query = select(Action)
         if is_active is not None:
