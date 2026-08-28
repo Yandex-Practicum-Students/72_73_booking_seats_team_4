@@ -76,7 +76,7 @@ jobs:
         CELERY_RESULT_BACKEND: redis://localhost:6379/0
         PYTHONPATH: ${{ github.workspace }}/src
       run: |
-        uv run celery -A src.tasks.celery_app:celery_app worker --loglevel=info &
+        uv run celery -A tasks.celery_app:celery_app worker --loglevel=info &
     # Запускаем flake8
     - name: Test app
       # Вызываем flake8 и указываем ему,
@@ -88,7 +88,7 @@ jobs:
         POSTGRES_SERVER: postgres
         JWT_SECRET: '01234567890123456789012345678901'
         REDIS_URL: redis://localhost:6379
-        #PYTHONPATH: ${{ github.workspace }}/src
+        PYTHONPATH: ${{ github.workspace }}
         # Сервер БД запущен в Docker, но его порт проброшен на хост
         # Поэтому подключаемся к 127.0.0.1:5432
         DB_HOST: 127.0.0.1
