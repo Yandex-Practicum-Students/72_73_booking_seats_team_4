@@ -50,10 +50,10 @@ router = APIRouter()
 )
 async def get_tables_by_cafe(
     cafe_id: uuid.UUID,
-    current_user: CurrentUser,  # все авторизованные
+    current_user: CurrentUser,
     session: DBSession,
     show_active: Optional[bool] = Query(None),
-    _cafe: Cafe = Depends(get_cafe_or_404),  # проверка существования кафе
+    _cafe: Cafe = Depends(get_cafe_or_404),
 ) -> list[Table]:
     """Получение списка доступных для бронирования столов в кафе.
 
@@ -84,9 +84,9 @@ async def get_tables_by_cafe(
 async def create_table(
     cafe_id: uuid.UUID,
     table_create: TableCreate,
-    _: StaffUser,  # Только админ или менеджер
+    _: StaffUser,
     session: DBSession,
-    _cafe: Cafe = Depends(get_cafe_or_404),  # проверка существования кафе
+    _cafe: Cafe = Depends(get_cafe_or_404),
 ) -> Table:
     """Создание нового стола в кафе.
 
@@ -106,9 +106,9 @@ async def create_table(
 async def get_table_by_id(
     cafe_id: uuid.UUID,
     table_id: uuid.UUID,
-    current_user: CurrentUser,  # все авторизованные
+    current_user: CurrentUser,
     session: DBSession,
-    table: Table = Depends(get_table_in_cafe),  # проверка существования кафе + стола + принадлежности
+    table: Table = Depends(get_table_in_cafe),
 ) -> Table:
     """Получение информации о столе в кафе по его ID.
 
@@ -136,10 +136,10 @@ async def update_table(
     cafe_id: uuid.UUID,
     table_id: uuid.UUID,
     table_update: TableUpdate,
-    _: StaffUser,  # Только админ или менеджер
+    _: StaffUser,
     session: DBSession,
     redis: redis_dep,
-    table: Table = Depends(get_table_in_cafe),  # проверка существования кафе + стола + принадлежности
+    table: Table = Depends(get_table_in_cafe),
 ) -> Table:
     """Обновление информации о столе в кафе по его ID.
 
