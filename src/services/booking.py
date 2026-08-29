@@ -14,6 +14,7 @@ from models.booking import Booking, BookingTablesSlots, StatusBooking
 from models.slots import Slot
 from models.table import Table
 from models.user import User, UserRole
+from schemas.booking import BookingUpdate
 
 from core.db import DBSession
 
@@ -87,7 +88,7 @@ async def get_booking_or_raise(
         options=[
             selectinload(Booking.user),
             selectinload(Booking.cafe),
-            selectinload(Booking.tables_slots),
+            selectinload(Booking.tables_slots.and_(BookingTablesSlots.is_active)),
         ],
     )
     if booking is None:
@@ -133,6 +134,7 @@ async def check_double_booking_exsist(
             Booking.cafe_id == cafe_id,
             Booking.booking_date == booking_date,
             Booking.status != StatusBooking.CANCELED,
+            Booking.is_active,
             tuple_(BookingTablesSlots.table_id, BookingTablesSlots.slot_id).in_(table_slot_ids),
         )
     )
@@ -171,13 +173,14 @@ async def check_user_have_same_slot(
             Booking.user_id == user_id,
             Booking.booking_date == booking_date,
             Booking.status != StatusBooking.CANCELED,
+            Booking.is_active,
             or_(*cross_slots),
         )
     )
     if booking_id is not None:
         bookings_user_cros_slots = bookings_user_cros_slots.where(Booking.id != booking_id)
     bookings_user_cros_slots = await session.execute(bookings_user_cros_slots)
-    if bookings_user_cros_slots.scalars().all() is not None:
+    if bookings_user_cros_slots.scalars().first() is not None:
         logger.warning('Пользователь имеет пересекающие слоты в других бронированиях.')
         raise CrossSlotsExistsError
 
@@ -249,4 +252,18 @@ async def check_number_geusts_not_more_seat_number(
             message=(
                 f'Количество гостей {guest_number} превышае количество мест {seat_number_tables} за столами.'
             ),
+        )
+
+
+def check_only_is_active_changes(update_data: BookingUpdate) -> None:
+    """Проверяет изменение поля is_active.
+
+    Проверка что изменение значения поля is_active на false проходит без изменения други полей.
+    """
+    extra_fields = update_data.model_fields_set - set({'is_active'})
+    if extra_fields:
+        logger.warning('Присовение полю is_active значения false должно быть без изменения других полей')
+        raise APIError(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message='Деактивация брони должна осуществляться без изменения других полей.',
         )

@@ -66,7 +66,7 @@ class BookingCRUD(CRUDBase[Booking, BookingCreate, BookingUpdate]):
             options = [
                 selectinload(self.model.user),
                 selectinload(self.model.cafe),
-                selectinload(self.model.tables_slots),
+                selectinload(self.model.tables_slots.and_(BookingTablesSlots.is_active)),
             ]
         all_bookings = all_bookings.options(*options)
         result = await session.execute(all_bookings)
@@ -92,13 +92,13 @@ class BookingCRUD(CRUDBase[Booking, BookingCreate, BookingUpdate]):
         new_booking_db = self.model(**obj_in_data)
         session.add(new_booking_db)
         await session.commit()
-        new_booking_db = await booking_crud.get(
+        new_booking_db = await self.get(
             obj_id=new_booking_db.id,
             session=session,
             options=[
                 selectinload(Booking.user),
                 selectinload(Booking.cafe),
-                selectinload(Booking.tables_slots),
+                selectinload(Booking.tables_slots.and_(BookingTablesSlots.is_active)),
             ],
         )
         logger.info('Бронирование {} создано.', new_booking_db.id)
@@ -117,10 +117,15 @@ class BookingCRUD(CRUDBase[Booking, BookingCreate, BookingUpdate]):
         if 'tables_slots' in update_data:
             for item in db_booking.tables_slots:
                 item.is_active = False
+        if 'tables_slots' in update_data and not (
+            'is_active' in update_data and not update_data['is_active']
+        ):
             update_data['tables_slots'] = create_obj_booking_tables_slots(
                 update_data,
                 booking_id=db_booking.id,
             )
+            db_booking.tables_slots.extend(update_data['tables_slots'])
+            del update_data['tables_slots']
 
         for field, value in update_data.items():
             if hasattr(db_booking, field):
@@ -128,9 +133,17 @@ class BookingCRUD(CRUDBase[Booking, BookingCreate, BookingUpdate]):
 
         session.add(db_booking)
         await session.commit()
-        await session.refresh(db_booking)
+        update_db_booking = await self.get(
+            obj_id=db_booking.id,
+            session=session,
+            options=[
+                selectinload(Booking.user),
+                selectinload(Booking.cafe),
+                selectinload(Booking.tables_slots.and_(BookingTablesSlots.is_active)),
+            ],
+        )
         logger.info('Обновление бронирования id {} завершено.', db_booking.id)
-        return db_booking
+        return update_db_booking
 
 
 booking_crud = BookingCRUD()
