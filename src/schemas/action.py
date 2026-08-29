@@ -4,25 +4,33 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from schemas.base import BaseInfoScheme, IdScheme
+from schemas.cafe import CafeShortInfo
 from schemas.validators import field_cannot_be_null, validate_empty_field
 
 from core.constants import ACTION_DESCRIPTION_MAX_LENGTH
 
 
-class ActionCreate(BaseModel):
-    """Схема создания акции."""
+class ActionBase(BaseModel):
+    """Общие поля акции."""
 
     model_config = ConfigDict(extra='forbid')
 
     description: str = Field(..., max_length=ACTION_DESCRIPTION_MAX_LENGTH)
     photo_id: Optional[uuid.UUID]
-    cafes_id: list[uuid.UUID] = Field(default_factory=list)
+
+
+class ActionCreate(ActionBase):
+    """Схема создания акции."""
+
+    cafes_id: list[uuid.UUID]
 
     check_not_empty_fields = field_validator('description', 'cafes_id')(validate_empty_field)
 
 
-class ActionInfo(IdScheme, ActionCreate, BaseInfoScheme):
+class ActionInfo(IdScheme, ActionBase, BaseInfoScheme):
     """Схема полных данных об акции."""
+
+    cafes: list[CafeShortInfo]
 
 
 class ActionUpdate(ActionCreate):

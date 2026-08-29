@@ -2,7 +2,7 @@ import uuid
 from typing import Optional
 
 from sqlalchemy import ForeignKey, String, UniqueConstraint, Uuid
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.base_model import Base
 from core.constants import ACTION_DESCRIPTION_MAX_LENGTH
@@ -38,4 +38,10 @@ class Action(Base):
         Uuid,
         ForeignKey('medias.id', name='fk_action_photo'),
         nullable=True,
+    )
+    cafes: Mapped[list['Cafe']] = relationship(  # noqa: F821
+        'Cafe',
+        secondary='cafe_actions',
+        back_populates='actions',
+        lazy='selectin',
     )

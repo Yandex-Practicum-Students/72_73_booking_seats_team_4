@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.errors import APIError
+from crud.action import ActionAlreadyExistsError
 from crud.dish import DishAlreadyExistsError
 from crud.user import UserAlreadyExistsError, UserNotFoundError
 from schemas.error import CustomError
@@ -118,6 +119,17 @@ async def dish_already_exists_handler(
     return custom_error_response(
         status.HTTP_400_BAD_REQUEST,
         'Блюдо с таким именем уже существует.',
+    )
+
+
+async def action_already_exists_handler(
+    _: Request,
+    __: ActionAlreadyExistsError,
+) -> JSONResponse:
+    """Возвращает единый ответ при конфликте описания акции."""
+    return custom_error_response(
+        status.HTTP_400_BAD_REQUEST,
+        'Акция с таким описанием уже существует.',
     )
 
 
