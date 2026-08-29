@@ -260,10 +260,33 @@ def check_only_is_active_changes(update_data: BookingUpdate) -> None:
 
     Проверка что изменение значения поля is_active на false проходит без изменения други полей.
     """
-    extra_fields = update_data.model_fields_set - set({'is_active'})
-    if extra_fields:
-        logger.warning('Присовение полю is_active значения false должно быть без изменения других полей')
+    if update_data.is_active is not None and not update_data.is_active:
+        extra_fields = update_data.model_fields_set - set({'is_active'})
+        if extra_fields:
+            logger.warning('Присовение полю is_active значения false должно быть без изменения других полей')
+            raise APIError(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                message='Деактивация брони должна осуществляться без изменения других полей.',
+            )
+
+
+def check_booking_status(db_booking: Booking) -> None:
+    """Проверка статуса бронирования и возможности изменения."""
+    if db_booking.status == StatusBooking.ACTIVE or db_booking.status == StatusBooking.COMPLETED:
+        logger.warning('Статус бронирования {} не допускает внесения изменений', db_booking.status)
         raise APIError(
             status_code=status.HTTP_400_BAD_REQUEST,
-            message='Деактивация брони должна осуществляться без изменения других полей.',
+            message='Статус бронирования не допускает внесение изменений.',
+        )
+
+
+def check_role_user_cant_not_changed_is_active(update_data: BookingUpdate, current_user: User) -> None:
+    """Проверка что обычный пользователь не меняет поле is_active."""
+    if update_data.is_active is not None and current_user.role == UserRole.USER:
+        logger.warning(
+            'Пользователь с ролью USER не может редактировать поле is_active бронирования.',
+        )
+        raise APIError(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message='Пользовтель не может реадктировать поле is_active.',
         )
