@@ -16,8 +16,11 @@ async def get_slot_in_cafe_or_raise(
     cafe_reader: CafeReader,
 ) -> Slot:
     """Возвращает слот указанного кафе или сообщает, что он не найден."""
-    await get_cafe_or_raise(cafe_id, session, cafe_reader)
-    logger.info('Проверка слота в кафе: cafe_id={}, slot_id={}', cafe_id, slot_id)
+    try:
+        cafe = await get_cafe_or_raise(cafe_id, session, cafe_reader)
+    except EntityNotFoundError:
+        logger.warning('Кафе не найдено: cafe_id={}', cafe_id)
+        raise EntityNotFoundError(f'Кафе с ID "{cafe_id}" не найдено')
     slot = await slot_crud.get_by_cafe_and_id(cafe_id, slot_id, session)
     if slot is None:
         logger.warning('Слот не принадлежит кафе: cafe_id={}, slot_id={}', cafe_id, slot_id)
