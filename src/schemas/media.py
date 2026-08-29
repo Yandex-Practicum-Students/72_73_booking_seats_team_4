@@ -1,6 +1,4 @@
 import uuid
-from datetime import datetime
-from typing import Optional
 
 from fastapi import UploadFile
 from pydantic import BaseModel, ConfigDict
@@ -27,11 +25,4 @@ class MediaDB(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    filename: str
-    content_type: str
-    size: int
-    file_path: str
-    original_name: Optional[str]
-    is_active: bool
-    created_at: datetime
-    updated_at: datetime
+    name: str
