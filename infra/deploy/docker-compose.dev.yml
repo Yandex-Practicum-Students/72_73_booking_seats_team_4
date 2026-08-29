@@ -18,6 +18,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "8000"
+    volumes:
+      - media:/media
     depends_on:
       db:
         condition: service_healthy
@@ -141,3 +143,4 @@ volumes:
   pgdata:
   rabbitmq_data:
   redis_data:
+  media:
