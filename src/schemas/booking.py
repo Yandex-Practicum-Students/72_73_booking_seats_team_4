@@ -67,7 +67,7 @@ class BookingCreate(BookingBase):
     booking_date: BookinDateNotPast
 
 
-class BookingUpdate(BookingCreate):
+class BookingUpdate(BookingBase):
     """Класс схемы, описывающей изменение бронирования."""
 
     tables_slots: Optional[List[BookingTableSlot]] = Field(None)
@@ -75,6 +75,7 @@ class BookingUpdate(BookingCreate):
     booking_date: Optional[BookinDateNotPast] = Field(None)
 
     status: Optional[StatusBooking] = Field(None)
+    is_active: Optional[bool] = Field(None)
 
 
 class BookingInfo(IdScheme, BookingBase, BaseInfoScheme):

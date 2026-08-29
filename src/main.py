@@ -11,6 +11,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.errors import APIError
 from api.exceptions import (
+    action_already_exists_handler,
     api_error_handler,
     dish_already_exists_handler,
     entity_not_found_handler,
@@ -24,6 +25,7 @@ from api.exceptions import (
     user_not_found_handler,
 )
 from api.routers import api_router
+from crud.action import ActionAlreadyExistsError
 from crud.dish import DishAlreadyExistsError
 from crud.user import UserAlreadyExistsError, UserNotFoundError
 from services.errors import (
@@ -79,6 +81,7 @@ app.add_middleware(
 app.add_exception_handler(APIError, api_error_handler)
 app.add_exception_handler(EntityNotFoundError, entity_not_found_handler)
 app.add_exception_handler(PermissionDeniedError, permission_denied_handler)
+app.add_exception_handler(ActionAlreadyExistsError, action_already_exists_handler)
 app.add_exception_handler(DishAlreadyExistsError, dish_already_exists_handler)
 app.add_exception_handler(UserAlreadyExistsError, user_already_exists_handler)
 app.add_exception_handler(UserNotFoundError, user_not_found_handler)
