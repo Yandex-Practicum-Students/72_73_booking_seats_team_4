@@ -5,9 +5,10 @@ on:
     branches:
       - feature/documentation
     paths:
-      - 'src/**'
-      - 'docs/**'
-      - 'pyproject.toml'
+      - "src/**"
+      - "docs/**"
+      - "pyproject.toml"
+      - ".github/workflows/deploy_docs.yml"
 
 permissions:
   contents: write
@@ -17,27 +18,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-    - name: Setup uv
-      uses: astral-sh/setup-uv@v5
-      with:
-        enable-cache: true
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-    - name: Install dependencies
-      run: uv sync --frozen
+      - name: Install dependencies
+        run: uv sync --frozen
 
-    - name: Generate Static Swagger HTML
-      run: uv run docs/generate_doc.py
+      - name: Generate Static Swagger HTML
+        run: uv run docs/generate_doc.py
 
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./docs
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
