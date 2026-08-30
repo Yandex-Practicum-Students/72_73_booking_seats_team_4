@@ -6,11 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from api.dependencies.cafe import get_cafe_or_404
 from api.dependencies.permissions import AdminUser, CurrentUser, StaffUser
 from api.responses import error_responses
+from api.responses.statuses import CREATED, RESOURCE_CREATE, RESOURCE_DETAIL, RESOURCE_LIST, RESOURCE_UPDATE
 from crud.cafe import cafe_crud
 from models.cafe import Cafe
 from models.user import UserRole
 from schemas.cafe import CafeCreate, CafeInfo, CafeUpdate
+from services.cafe import create_cafe as create_cafe_service
 from services.cafe import ensure_manager_cafe_access, get_manager_cafes
+from services.cafe import update_cafe as update_cafe_service
 
 from core.core_dependencies import redis_dep
 from core.db import DBSession
@@ -21,11 +24,7 @@ router = APIRouter()
 @router.get(
     '',
     response_model=list[CafeInfo],
-    responses=error_responses(
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_422_UNPROCESSABLE_CONTENT,
-    ),
+    responses=error_responses(*RESOURCE_LIST),
     summary='Список кафе',
 )
 async def get_cafes(
@@ -56,13 +55,8 @@ async def get_cafes(
 @router.post(
     '',
     response_model=CafeInfo,
-    status_code=status.HTTP_201_CREATED,
-    responses=error_responses(
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_422_UNPROCESSABLE_CONTENT,
-    ),
+    status_code=CREATED,
+    responses=error_responses(*RESOURCE_CREATE),
     summary='Создание нового кафе',
 )
 async def create_cafe(
@@ -75,18 +69,13 @@ async def create_cafe(
 
     Только для администраторов.
     """
-    return await cafe_crud.create(cafe_create, session, redis)
+    return await create_cafe_service(cafe_create, session, redis)
 
 
 @router.get(
     '/{cafe_id}',
     response_model=CafeInfo,
-    responses=error_responses(
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_404_NOT_FOUND,
-        status.HTTP_422_UNPROCESSABLE_CONTENT,
-    ),
+    responses=error_responses(*RESOURCE_DETAIL),
     summary='Информация о кафе по его ID',
 )
 async def get_cafe_by_id(
@@ -114,13 +103,7 @@ async def get_cafe_by_id(
 @router.patch(
     '/{cafe_id}',
     response_model=CafeInfo,
-    responses=error_responses(
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_404_NOT_FOUND,
-        status.HTTP_422_UNPROCESSABLE_CONTENT,
-    ),
+    responses=error_responses(*RESOURCE_UPDATE),
     summary='Обновление информации о кафе по его ID',
 )
 async def update_cafe(
@@ -136,4 +119,4 @@ async def update_cafe(
     Только для администраторов и менеджеров.
     """
     ensure_manager_cafe_access(_, cafe_id)
-    return await cafe_crud.update(cafe, cafe_update, session, redis)
+    return await update_cafe_service(cafe, cafe_update, session, redis)

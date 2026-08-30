@@ -202,7 +202,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
             'managers_id': [str(manager_id)],
         }
 
-        with patch('api.endpoints.cafe.cafe_crud.create', new=create):
+        with patch('api.endpoints.cafe.create_cafe_service', new=create):
             response = await self.client.post('/cafes', json=payload)
 
         self.assertEqual(response.status_code, 201)
@@ -219,7 +219,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
         self._set_user(_make_user(UserRole.USER))
         create = AsyncMock()
 
-        with patch('api.endpoints.cafe.cafe_crud.create', new=create):
+        with patch('api.endpoints.cafe.create_cafe_service', new=create):
             response = await self.client.post(
                 '/cafes',
                 json={
@@ -294,7 +294,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
         self._set_cafe(cafe)
         update = AsyncMock(return_value=updated_cafe)
 
-        with patch('api.endpoints.cafe.cafe_crud.update', new=update):
+        with patch('api.endpoints.cafe.update_cafe_service', new=update):
             response = await self.client.patch(
                 f'/cafes/{cafe_id}',
                 json={'name': updated_cafe.name},
@@ -316,7 +316,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
         self._set_cafe(cafe)
         update = AsyncMock()
 
-        with patch('api.endpoints.cafe.cafe_crud.update', new=update):
+        with patch('api.endpoints.cafe.update_cafe_service', new=update):
             response = await self.client.patch(
                 f'/cafes/{cafe.id}',
                 json={'name': 'Недоступное обновление'},
@@ -332,7 +332,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
         self._set_cafe(cafe)
         update = AsyncMock()
 
-        with patch('api.endpoints.cafe.cafe_crud.update', new=update):
+        with patch('api.endpoints.cafe.update_cafe_service', new=update):
             response = await self.client.patch(
                 f'/cafes/{cafe.id}',
                 json={'name': None},

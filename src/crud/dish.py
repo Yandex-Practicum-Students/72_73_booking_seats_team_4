@@ -10,7 +10,6 @@ from crud.base import CRUDBase
 from models.cafe import Cafe
 from models.dish import Dish
 from schemas.dish import DishCreate, DishInfo, DishUpdate
-from services.media import get_media_or_raise
 
 from core.core_dependencies import redis_dep
 
@@ -33,8 +32,6 @@ class DishCRUD(CRUDBase[Dish, DishCreate, DishUpdate]):
         redis: redis_dep,
     ) -> Dish:
         """Создаёт блюдо, преобразуя конфликт уникальности имени."""
-        if obj_in.photo_id is not None:
-            await get_media_or_raise(obj_in.photo_id, session, check_file=False)
         try:
             return await super().create(obj_in, session, redis)
         except IntegrityError as error:
@@ -49,8 +46,6 @@ class DishCRUD(CRUDBase[Dish, DishCreate, DishUpdate]):
         redis: redis_dep,
     ) -> Dish:
         """Обновляет блюдо, преобразуя конфликт уникальности имени."""
-        if obj_in.photo_id is not None:
-            await get_media_or_raise(obj_in.photo_id, session, check_file=False)
         try:
             return await super().update(db_obj, obj_in, session, redis)
         except IntegrityError as error:

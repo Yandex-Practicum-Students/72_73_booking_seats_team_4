@@ -7,6 +7,7 @@ from api.dependencies.cafe import get_cafe_or_404
 from api.dependencies.permissions import CurrentUser, StaffUser
 from api.dependencies.tables import get_table_in_cafe
 from api.responses import error_responses
+from api.responses.statuses import CREATED, RESOURCE_CREATE_WITH_PARENT, RESOURCE_DETAIL, RESOURCE_UPDATE
 from crud.table import table_crud
 from models import Cafe, Table
 from models.user import UserRole
@@ -16,36 +17,13 @@ from services.cafe import ensure_manager_cafe_access
 from core.core_dependencies import redis_dep
 from core.db import DBSession
 
-GET_RESPONSES = (
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_404_NOT_FOUND,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-)
-
-POST_RESPONSES = (
-    status.HTTP_400_BAD_REQUEST,
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_404_NOT_FOUND,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-)
-
-PATCH_RESPONSES = (
-    status.HTTP_400_BAD_REQUEST,
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_404_NOT_FOUND,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-)
-
 router = APIRouter()
 
 
 @router.get(
     '',
     response_model=list[TableInfo],
-    responses=error_responses(*GET_RESPONSES),
+    responses=error_responses(*RESOURCE_DETAIL),
     summary='Список столов в кафе',
 )
 async def get_tables_by_cafe(
@@ -77,8 +55,8 @@ async def get_tables_by_cafe(
 @router.post(
     '',
     response_model=TableInfo,
-    status_code=status.HTTP_201_CREATED,
-    responses=error_responses(*POST_RESPONSES),
+    status_code=CREATED,
+    responses=error_responses(*RESOURCE_CREATE_WITH_PARENT),
     summary='Новый стол в кафе',
 )
 async def create_table(
@@ -100,7 +78,7 @@ async def create_table(
 @router.get(
     '/{table_id}',
     response_model=TableInfo,
-    responses=error_responses(*GET_RESPONSES),
+    responses=error_responses(*RESOURCE_DETAIL),
     summary='Информация о столе в кафе по его ID',
 )
 async def get_table_by_id(
@@ -129,7 +107,7 @@ async def get_table_by_id(
 @router.patch(
     '/{table_id}',
     response_model=TableInfo,
-    responses=error_responses(*PATCH_RESPONSES),
+    responses=error_responses(*RESOURCE_UPDATE),
     summary='Обновление информации о столе в кафе по его ID',
 )
 async def update_table(
