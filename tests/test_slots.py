@@ -24,8 +24,10 @@ from test_cafes_api import _make_cafe, _make_user
 from api.dependencies.cafe import get_cafe_or_404  # noqa: E402
 from api.dependencies.logging import get_current_user_with_logging  # noqa: E402
 from api.dependencies.slots import get_slot_in_cafe  # noqa: E402
+from crud.slot import slot_crud  # noqa: E402
 from main import app  # noqa: E402
 from models.user import UserRole  # noqa: E402
+from schemas.slots import TimeSlotCreate  # noqa: E402
 from services.errors import EntityNotFoundError  # noqa: E402
 
 from core.db import get_session  # noqa: E402
@@ -498,3 +500,97 @@ class SlotAPITests(IsolatedAsyncioTestCase):
             {'code': 403, 'message': 'Менеджер может управлять только своим кафе'},
         )
         update.assert_not_awaited()
+
+
+class SlotCRUDTests(IsolatedAsyncioTestCase):
+    """Проверяет CRUD-операции для слотов."""
+
+    async def test_create_with_cafe_uses_cafe_id_from_url(self) -> None:
+        """create_with_cafe использует cafe_id из URL, а не из тела запроса."""
+        cafe_id = uuid.uuid4()
+        session = AsyncMock(spec=AsyncSession)
+        session.commit = AsyncMock()
+        session.refresh = AsyncMock()
+
+        obj_in = TimeSlotCreate(
+            start_time=time(10, 0),
+            end_time=time(12, 0),
+            description='Тестовый слот',
+        )
+
+        mock_slot = _make_slot(cafe_id=cafe_id, start_time=time(10, 0), end_time=time(12, 0))
+
+        with patch.object(slot_crud, 'get', new=AsyncMock(return_value=mock_slot)):
+            result = await slot_crud.create_with_cafe(cafe_id, obj_in, session)
+
+        self.assertEqual(result.cafe_id, cafe_id)
+        self.assertEqual(result.start_time, time(10, 0))
+        self.assertEqual(result.end_time, time(12, 0))
+        session.add.assert_called_once()
+        session.commit.assert_awaited_once()
+        session.refresh.assert_awaited_once()
+
+    async def test_get_by_cafe_filters_by_show_active(self) -> None:
+        """get_by_cafe корректно фильтрует по show_active."""
+        cafe_id = uuid.uuid4()
+        session = AsyncMock(spec=AsyncSession)
+
+        mock_slots_active = [_make_slot(cafe_id=cafe_id, is_active=True)]
+        mock_result_active = AsyncMock()
+        mock_result_active.scalars.return_value.all.return_value = mock_slots_active
+        session.execute.return_value = mock_result_active
+
+        result = await slot_crud.get_by_cafe(cafe_id, session, show_active=True)
+        self.assertEqual(len(result), 1)
+        self.assertTrue(result[0].is_active)
+
+        mock_slots_inactive = [_make_slot(cafe_id=cafe_id, is_active=False)]
+        mock_result_inactive = AsyncMock()
+        mock_result_inactive.scalars.return_value.all.return_value = mock_slots_inactive
+        session.execute.return_value = mock_result_inactive
+
+        result = await slot_crud.get_by_cafe(cafe_id, session, show_active=False)
+        self.assertEqual(len(result), 1)
+        self.assertFalse(result[0].is_active)
+
+        mock_slots_all = [
+            _make_slot(cafe_id=cafe_id, is_active=True),
+            _make_slot(cafe_id=cafe_id, is_active=False),
+        ]
+        mock_result_all = AsyncMock()
+        mock_result_all.scalars.return_value.all.return_value = mock_slots_all
+        session.execute.return_value = mock_result_all
+
+        result = await slot_crud.get_by_cafe(cafe_id, session, show_active=None)
+        self.assertEqual(len(result), 2)
+
+    async def test_get_by_cafe_and_id_returns_slot_if_belongs_to_cafe(self) -> None:
+        """get_by_cafe_and_id возвращает слот, принадлежащий кафе."""
+        cafe_id = uuid.uuid4()
+        slot_id = uuid.uuid4()
+        session = AsyncMock(spec=AsyncSession)
+        slot = _make_slot(cafe_id=cafe_id, slot_id=slot_id)
+
+        mock_result = AsyncMock()
+        mock_result.scalar_one_or_none.return_value = slot
+        session.execute.return_value = mock_result
+
+        result = await slot_crud.get_by_cafe_and_id(cafe_id, slot_id, session)
+
+        self.assertIs(result, slot)
+        session.execute.assert_awaited_once()
+
+    async def test_get_by_cafe_and_id_returns_none_if_slot_not_in_cafe(self) -> None:
+        """get_by_cafe_and_id возвращает None, если слот не принадлежит кафе."""
+        cafe_id = uuid.uuid4()
+        slot_id = uuid.uuid4()
+        session = AsyncMock(spec=AsyncSession)
+
+        mock_result = AsyncMock()
+        mock_result.scalar_one_or_none.return_value = None
+        session.execute.return_value = mock_result
+
+        result = await slot_crud.get_by_cafe_and_id(cafe_id, slot_id, session)
+
+        self.assertIsNone(result)
+        session.execute.assert_awaited_once()
