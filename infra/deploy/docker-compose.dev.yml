@@ -6,16 +6,6 @@ services:
     env_file:
       - ./.env
     environment:
-      jwt_secret: ${JWT_SECRET}
-      jwt_lifetime_seconds: ${JWT_LIFETIME_SECONDS}
-      redis_url: ${REDIS_URL}
-      redis_password: ${REDIS_PASSWORD}
-      rabbitmq_user: ${RABBITMQ_USER}
-      rabbitmq_password: ${RABBITMQ_PASSWORD}
-      rabbitmq_server: ${RABBITMQ_SERVER}
-      postgres_user: ${POSTGRES_USER}
-      postgres_password: ${POSTGRES_PASSWORD}
-      postgres_db: ${POSTGRES_DB}
       PYTHONPATH: /app:/app/src
     working_dir: /app
     ports:
@@ -56,7 +46,6 @@ services:
     env_file:
       - ./.env
     environment:
-      FLOWER_BASIC_AUTH: ${FLOWER_BASIC_AUTH}
       PYTHONPATH: /app:/app/src
     working_dir: /app
     entrypoint:
@@ -119,9 +108,6 @@ services:
       - ./.env
     environment:
       PGDATA: /var/lib/postgresql/data/pgdata
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - "pgdata:/var/lib/postgresql/data/pgdata"
       - /var/log/booking-seats/postgres:/logs
