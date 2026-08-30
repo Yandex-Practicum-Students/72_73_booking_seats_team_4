@@ -3,7 +3,9 @@ name: Deploy API Docs to GitHub Pages
 on:
   push:
     branches:
-      - feature/documentation
+      - develop
+      - master
+      - main
     paths:
       - "src/**"
       - "docs/**"
