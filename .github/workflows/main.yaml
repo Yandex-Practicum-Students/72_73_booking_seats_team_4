@@ -238,26 +238,24 @@ jobs:
           envs: IMAGE_TAG,DOCKER_TUZ,RABBITMQ_USER,RABBITMQ_PASSWORD,RABBITMQ_SERVER,POSTGRES_USER,POSTGRES_PASSWORD,POSTGRES_DB,JWT_SECRET,JWT_LIFETIME_SECONDS,REDIS_PASSWORD,REDIS_PORT,REDIS_URL,FLOWER_BASIC_AUTH,RABBITMQ_ERLANG_COOKIE
           script: |
             cd /opt/booking-seats
-            SECRETS=$(cat <<EOF
-            POSTGRES_USER=${POSTGRES_USER}
-            POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-            POSTGRES_DB=${POSTGRES_DB}
-            JWT_SECRET=${JWT_SECRET}
-            REDIS_PASSWORD=${REDIS_PASSWORD}
-            JWT_LIFETIME_SECONDS=${JWT_LIFETIME_SECONDS}
-            REDIS_PORT=${REDIS_PORT}
-            REDIS_URL=${REDIS_URL}
-            RABBITMQ_USER=${RABBITMQ_USER}
-            RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
-            RABBITMQ_SERVER=${RABBITMQ_SERVER}
+            export postgres_user="${POSTGRES_USER}"
+            export postgres_password="${POSTGRES_PASSWORD}"
+            export postgres_db="${POSTGRES_DB}"
+            export jwt_secret="${JWT_SECRET}"
+            export redis_password="${REDIS_PASSWORD}"
+            jwt_lifetime_seconds=${JWT_LIFETIME_SECONDS}
+            redis_url=${REDIS_URL}
+            rabbitmq_user=${RABBITMQ_USER}
+            rabbitmq_password=${RABBITMQ_PASSWORD}
+            rabbitmq_server=${RABBITMQ_SERVER}
             IMAGE_TAG=${IMAGE_TAG}
             DOCKER_TUZ=${DOCKER_TUZ}
-            EOF
-            )
-            echo "$SECRETS" | docker compose -f docker-compose.dev.yml --env-file .env --env-file /dev/stdin pull
-            echo "$SECRETS" | docker compose -f docker-compose.dev.yml --env-file .env --env-file /dev/stdin down
-            echo "$SECRETS" | docker compose -f docker-compose.dev.yml --env-file .env --env-file /dev/stdin up -d
-            echo "$SECRETS" | docker compose -f docker-compose.dev.yml --env-file .env --env-file /dev/stdin exec app alembic upgrade head
+
+            docker compose -f docker-compose.dev.yml pull
+            docker compose -f docker-compose.dev.yml down
+            docker compose -f docker-compose.dev.yml up -d
+            docker compose -f docker-compose.dev.yml exec app alembic upgrade head
+
             sleep 5
             docker image prune -f
   send_message:

@@ -6,16 +6,16 @@ services:
     env_file:
       - ./.env
     environment:
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_LIFETIME_SECONDS: ${JWT_LIFETIME_SECONDS}
-      REDIS_URL: ${REDIS_URL}
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-      RABBITMQ_USER: ${RABBITMQ_USER}
-      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-      RABBITMQ_SERVER: ${RABBITMQ_SERVER}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      jwt_secret: ${JWT_SECRET}
+      jwt_lifetime_seconds: ${JWT_LIFETIME_SECONDS}
+      redis_url: ${REDIS_URL}
+      redis_password: ${REDIS_PASSWORD}
+      rabbitmq_user: ${RABBITMQ_USER}
+      rabbitmq_password: ${RABBITMQ_PASSWORD}
+      rabbitmq_server: ${RABBITMQ_SERVER}
+      postgres_user: ${POSTGRES_USER}
+      postgres_password: ${POSTGRES_PASSWORD}
+      postgres_db: ${POSTGRES_DB}
       PYTHONPATH: /app:/app/src
     working_dir: /app
     ports:
