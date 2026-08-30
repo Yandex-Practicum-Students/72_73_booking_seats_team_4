@@ -239,10 +239,10 @@ jobs:
           script: |
             cd /opt/booking-seats
             COMPOSE_ENV="IMAGE_TAG=${IMAGE_TAG} DOCKER_TUZ=${DOCKER_TUZ} RABBITMQ_USER=${RABBITMQ_USER} RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD} RABBITMQ_SERVER=${RABBITMQ_SERVER} POSTGRES_USER=${POSTGRES_USER} POSTGRES_PASSWORD=${POSTGRES_PASSWORD} POSTGRES_DB=${POSTGRES_DB} JWT_SECRET=${JWT_SECRET} JWT_LIFETIME_SECONDS=${JWT_LIFETIME_SECONDS} REDIS_PASSWORD=${REDIS_PASSWORD} REDIS_PORT=${REDIS_PORT} REDIS_URL=${REDIS_URL} FLOWER_BASIC_AUTH=${FLOWER_BASIC_AUTH} RABBITMQ_ERLANG_COOKIE=${RABBITMQ_ERLANG_COOKIE}"
-            sudo env $COMPOSE_ENV docker compose -f docker-compose.dev.yml pull
-            sudo env $COMPOSE_ENV docker compose -f docker-compose.dev.yml down
-            sudo  env $COMPOSE_ENV docker compose -f docker-compose.dev.yml up -d
-            sudo env $COMPOSE_ENV docker compose -f docker-compose.dev.yml exec app alembic upgrade head
+            env $COMPOSE_ENV docker compose -f docker-compose.dev.yml pull
+            env $COMPOSE_ENV docker compose -f docker-compose.dev.yml down
+            env $COMPOSE_ENV docker compose -f docker-compose.dev.yml up -d
+            env $COMPOSE_ENV docker compose -f docker-compose.dev.yml exec app alembic upgrade head
             sleep 5
             docker image prune -f
   send_message:

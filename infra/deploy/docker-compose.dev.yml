@@ -35,10 +35,13 @@ services:
     image: ${DOCKER_TUZ}/cafes_backend:latest
     env_file:
       - ./.env
+    environment:
+      PYTHONPATH: /app:/app/src
+    working_dir: /app
     entrypoint:
       - celery
       - -A
-      - tasks.celery_app:celery_app
+      - src.tasks.celery_app:celery_app
       - worker
       - --loglevel=INFO
     depends_on:
@@ -54,10 +57,12 @@ services:
       - ./.env
     environment:
       FLOWER_BASIC_AUTH: ${FLOWER_BASIC_AUTH}
+      PYTHONPATH: /app:/app/src
+    working_dir: /app
     entrypoint:
       - celery
       - -A
-      - tasks.celery_app:celery_app
+      - src.tasks.celery_app:celery_app
       - flower
       - --address=0.0.0.0
       - --port=5555
