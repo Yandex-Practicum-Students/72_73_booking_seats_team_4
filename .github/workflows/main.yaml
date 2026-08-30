@@ -222,6 +222,8 @@ jobs:
           script: |
             cd /opt/booking-seats
 
+            cp .env .env.bak
+
             echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" >> .env
             echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env
             echo "RABBITMQ_SERVER=${{ secrets.RABBITMQ_SERVER }}" >> .env
@@ -236,15 +238,15 @@ jobs:
             echo "FLOWER_BASIC_AUTH=${{ secrets.FLOWER_BASIC_AUTH }}" >> .env
             echo "RABBITMQ_ERLANG_COOKIE=${{ secrets.RABBITMQ_ERLANG_COOKIE }}" >> .env
 
-            export IMAGE_TAG=${sercrets.IMAGE_TAG}
-            export DOCKER_TUZ=${sercrets.DOCKER_TUZ}
+            export IMAGE_TAG=${secrets.IMAGE_TAG}
+            export DOCKER_TUZ=${secrets.DOCKER_TUZ}
 
             docker compose -f docker-compose.dev.yml pull
             docker compose -f docker-compose.dev.yml down
             docker compose -f docker-compose.dev.yml up -d
             docker compose -f docker-compose.dev.yml exec app alembic upgrade head
 
-            sed -i -e :a -e '$d;N;2,13ba' -e 'P;D' .env
+            mv .env.bak .env
 
             sleep 5
             docker image prune -f
