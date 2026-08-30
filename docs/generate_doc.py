@@ -12,7 +12,7 @@ for folder in (BASE_DIR, SRC_DIR):
 os.environ.setdefault('POSTGRES_USER', 'stub_user')
 os.environ.setdefault('POSTGRES_PASSWORD', 'stub_pass')
 os.environ.setdefault('POSTGRES_DB', 'stub_db')
-os.environ.setdefault('JWT_SECRET', 'stub_jwt_secret_value')
+os.environ.setdefault('JWT_SECRET', 'stub_jwt_secret_value_with_more_than_32_chars')
 os.environ.setdefault('REDIS_PASSWORD', 'stub_redis_pass')
 
 from src.main import app  # noqa: E402, I001
