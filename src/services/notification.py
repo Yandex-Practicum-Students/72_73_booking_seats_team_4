@@ -49,7 +49,7 @@ class NotificationService:
         """Расчёт времени напоминания за N минут до начала визита."""
         earliest_time = DEFAULT_BOOKING_TIME
 
-        table_slots = getattr(booking, 'table_slot', None) or []
+        table_slots = getattr(booking, 'tables_slots', None) or []
         start_times = [
             table_slot.slot.start_time
             for table_slot in table_slots

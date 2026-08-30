@@ -32,6 +32,23 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  celery-beat:
+    build: ../
+    env_file:
+      - ./.env
+    entrypoint:
+      - celery
+      - -A
+      - tasks.celery_app:celery_app
+      - beat
+      - --loglevel=INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
   flower:
     build: ../
     env_file:
