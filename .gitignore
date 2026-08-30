@@ -13,3 +13,6 @@ logs/
 
 .vscode
 .idea/
+
+# Локально собранный файл документации
+docs/index.html
