@@ -239,6 +239,7 @@ jobs:
             REDIS_URL=${{ secrets.REDIS_URL }}
             FLOWER_BASIC_AUTH=${{ secrets.FLOWER_BASIC_AUTH }}
             RABBITMQ_ERLANG_COOKIE=${{ secrets.RABBITMQ_ERLANG_COOKIE }}
+            EOF
 
             docker compose -f docker-compose.dev.yml pull
             docker compose -f docker-compose.dev.yml down
