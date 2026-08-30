@@ -89,9 +89,6 @@ services:
     image: ${DOCKER_TUZ}/redis:latest
     env_file:
       - ./.env
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-      REDIS_PORT: ${REDIS_PORT}
     volumes:
       - redis_data:/data
     healthcheck:
