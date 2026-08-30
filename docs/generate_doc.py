@@ -9,6 +9,12 @@ SRC_DIR = os.path.join(BASE_DIR, 'src')
 for folder in (BASE_DIR, SRC_DIR):
     sys.path.insert(0, folder)
 
+os.environ.setdefault('POSTGRES_USER', 'stub_user')
+os.environ.setdefault('POSTGRES_PASSWORD', 'stub_pass')
+os.environ.setdefault('POSTGRES_DB', 'stub_db')
+os.environ.setdefault('JWT_SECRET', 'stub_jwt_secret_value')
+os.environ.setdefault('REDIS_PASSWORD', 'stub_redis_pass')
+
 from src.main import app  # noqa: E402, I001
 
 
