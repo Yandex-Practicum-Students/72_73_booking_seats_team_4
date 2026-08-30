@@ -9,6 +9,7 @@ from crud.base import CRUDBase
 from models.cafe import Cafe
 from schemas.cafe import CafeCreate, CafeInfo, CafeUpdate
 from services.cafe import ensure_managers_exist_and_role, normalize_managers, sync_managers
+from services.media import get_media_or_raise
 
 from core.core_dependencies import redis_dep
 
@@ -62,6 +63,9 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
         Обновляет поле cafe_id менеджера с помощью sync_managers()
         """
         logger.info('Создание нового кафе: name={}, address={}', obj_in.name, obj_in.address)
+        if obj_in.photo_id is not None:
+            await get_media_or_raise(obj_in.photo_id, session, check_file=False)
+
         if obj_in.managers_id:
             await ensure_managers_exist_and_role(obj_in.managers_id, session)
         cafe_schema = await super().create(obj_in, session, redis)
@@ -86,6 +90,9 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
 
         update_data = obj_in.model_dump(exclude_unset=True)
         managers_id = update_data.pop('managers_id', None)
+
+        if obj_in.photo_id is not None:
+            await get_media_or_raise(obj_in.photo_id, session, check_file=False)
 
         if managers_id:
             await ensure_managers_exist_and_role(managers_id, session)
