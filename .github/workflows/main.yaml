@@ -11,13 +11,10 @@ on:
 
 jobs:
   tests:
-    # Разворачиваем окружение:
     runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:17
-        # Указываем имя тестовой базы, имя и пароль пользователя в открытом виде,
-        # ведь эта база будет работать только во время прогона тестов
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -25,14 +22,9 @@ jobs:
           POSTGRES_SERVER: postgres
         ports:
           - 5432:5432
-        # Эта конструкция описывает проверку готовности сервиса postgres
-        # Если её не будет, то тесты могут запуститься раньше, чем сервер PostgreSQL
-        # В результате тесты опять решат, что базы нет, — и упадут
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
       redis:
         image: redis:8.8.2-alpine
-        # Указываем имя тестовой базы, имя и пароль пользователя в открытом виде,
-        # ведь эта база будет работать только во время прогона тестов
         ports:
           - 6379:6379
         options: >-
@@ -50,17 +42,12 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-    # Копируем код проекта
     - name: Check out code
       uses: actions/checkout@v3
-    # Устанавливаем Python с помощью action
     - name: Set up Python
       uses: actions/setup-python@v4
-    # В action setup-python@v4 передаём параметр — версию Python
       with:
         python-version: 3.12
-    # Обновляем pip, устанавливаем flake8 и flake8-isort,
-    # устанавливаем зависимости проекта
     - name: Install uv
       uses: astral-sh/setup-uv@v5
       with:
@@ -86,10 +73,7 @@ jobs:
         REDIS_URL: redis://localhost:6379
         REDIS_PASSWORD: redis
       run: uv run celery -A tasks.celery_app:celery_app worker --loglevel=info &
-    # Запускаем flake8
     - name: Test app
-      # Вызываем flake8 и указываем ему,
-      # что нужно проверить файлы только в папке backend/
       env:
         POSTGRES_USER: postgres
         POSTGRES_PASSWORD: postgres
@@ -97,9 +81,6 @@ jobs:
         POSTGRES_SERVER: postgres
         JWT_SECRET: '01234567890123456789012345678901'
         REDIS_URL: redis://localhost:6379
-        #PYTHONPATH: ${{ github.workspace }}
-        # Сервер БД запущен в Docker, но его порт проброшен на хост
-        # Поэтому подключаемся к 127.0.0.1:5432
         DB_HOST: 127.0.0.1
         DB_PORT: 5432
       run: uv run python -m unittest discover -s tests
@@ -109,35 +90,20 @@ jobs:
     needs: tests
     steps:
       - name: Check out the repo
-        # Получение исходного кода из репозитория
         uses: actions/checkout@v3
       - name: Set up Docker Buildx
-        # Установка сборщика контейнеров Docker
         uses: docker/setup-buildx-action@v2
       - name: Login to Docker
-        # Авторизация на Docker Hub
         uses: docker/login-action@v2
-        # При помощи with передаём в action параметры username и password
         with:
           username: ${{ secrets.DOCKER_TUZ }}
           password: ${{ secrets.DOCKER_TUZ_PASSWORD }}
-          # Хорошо ли держать логин и пароль прямо в коде workflow?
-          # Нет, это нехорошо
       - name: Push to DockerHub
-        # Одновременный билд и пуш образа в Docker Hub
         uses: docker/build-push-action@v4
         with:
-          # Параметр context: ./backend/ указывает, что нужный Dockerfile
-          # находится в ./backend/
           context: .
-          # Параметр push: true указывает, что образ нужно не только собрать,
-          # но и отправить на Docker Hub
           file: ./infra/deploy/app/Dockerfile
           push: true
-          # В параметре tags задаётся название и тег для образа.ss
-          # Для каждого пересобранного образа
-          # устанавливаем тег latest, чтобы потом
-          # на сервере и в docker-compose.yml не указывать версию
           tags: |
             ${{ secrets.DOCKER_TUZ }}/cafes_backend:latest
             ${{ secrets.DOCKER_TUZ }}/cafes_backend:${{ github.sha }}
@@ -231,10 +197,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-      # Копируем docker-compose.production.yml на продакшен-сервер
       - name: Copy docker-compose.yml via ssh
         uses: appleboy/scp-action@master
-      # Передаём параметры для action appleboy/scp-action:
         with:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_USER }}
@@ -242,6 +206,7 @@ jobs:
           passphrase: ${{ secrets.DEV_SSH_PASSPHRASE }}
           source: "./infra/deploy/docker-compose.dev.yml"
           target: "/opt/booking-seats"
+          strip_components: 2
       - name: Executing remote ssh commands to deploy
         uses: appleboy/ssh-action@v1.0.3
         env:
