@@ -242,9 +242,10 @@ jobs:
             sudo env $COMPOSE_ENV docker compose -f docker-compose.dev.yml pull
             sudo env $COMPOSE_ENV docker compose -f docker-compose.dev.yml down
             sudo  env $COMPOSE_ENV docker compose -f docker-compose.dev.yml up -d
-            docker image prune -f
-            sudo env $COMPOSE_ENV docker compose -f docker-compose.dev.yml exec backend alembic upgrade head
-            sudo env $COMPOSE_ENV docker compose -f docker-compose.dev.yml exec backend uvicorn main:app --host 0.0.0.0 --port 8000
+            sudo env $COMPOSE_ENV docker compose -f docker-compose.dev.yml exec app alembic upgrade head
+            sudo env $COMPOSE_ENV docker compose -f docker-compose.dev.yml exec app uvicorn main:app --host 0.0.0.0 --port 8000
+            sleep 5
+            docker docker image prune -f
   send_message:
     runs-on: ubuntu-latest
     needs: deploy
