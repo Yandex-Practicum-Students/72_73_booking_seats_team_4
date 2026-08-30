@@ -1,6 +1,7 @@
 from models import (
     Action,
     Booking,
+    BookingNotification,
     BookingTablesSlots,
     Cafe,
     CafeAction,
@@ -18,6 +19,7 @@ __all__ = [
     'Action',
     'CafeAction',
     'Booking',
+    'BookingNotification',
     'BookingTablesSlots',
     'Cafe',
     'CafeDish',
