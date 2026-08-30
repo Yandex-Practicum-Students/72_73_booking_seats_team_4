@@ -5,7 +5,7 @@ from core.settings import settings
 celery_app = Celery(
     'booking_seats',
     broker=settings.celery_broker_url,
-    include=('tasks.system', 'tasks.send_notification'),
+    include=('tasks.notifications'),
 )
 
 celery_app.conf.update(
