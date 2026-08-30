@@ -232,7 +232,6 @@ jobs:
             echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
             echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
             echo "JWT_LIFETIME_SECONDS=${{ secrets.JWT_LIFETIME_SECONDS }}" >> .env
-            echo "REDIS_USER=${{ secrets.REDIS_USER }}" >> .env
             echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> .env
             echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
             echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env

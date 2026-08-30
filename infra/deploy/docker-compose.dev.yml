@@ -11,7 +11,7 @@ services:
     ports:
       - "8000"
     volumes:
-      - /var/log/booking-seats/app:/logs
+      - /home/yc-user/logs/app:/logs
     depends_on:
       db:
         condition: service_healthy
@@ -89,6 +89,9 @@ services:
     image: ${DOCKER_TUZ}/redis:latest
     env_file:
       - ./.env
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PORT: ${REDIS_PORT}
     volumes:
       - redis_data:/data
     healthcheck:
@@ -107,7 +110,7 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - "pgdata:/var/lib/postgresql/data/pgdata"
-      - /var/log/booking-seats/postgres:/logs
+      - /home/yc-user/logs/app:/logs
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 30s
