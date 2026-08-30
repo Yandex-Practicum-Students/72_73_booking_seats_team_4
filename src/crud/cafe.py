@@ -8,10 +8,6 @@ from sqlalchemy.orm import selectinload
 from crud.base import CRUDBase
 from models.cafe import Cafe
 from schemas.cafe import CafeCreate, CafeInfo, CafeUpdate
-from services.cafe import ensure_managers_exist_and_role, normalize_managers, sync_managers
-from services.media import get_media_or_raise
-
-from core.core_dependencies import redis_dep
 
 
 class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
@@ -26,7 +22,6 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
         logger.info('Получение кафе по ID: {}', obj_id)
         cafe = await super().get(obj_id, session, options=[selectinload(Cafe.managers)])
         if cafe:
-            normalize_managers(cafe)
             logger.success('Кафе найдено: cafe_id={}, name={}', obj_id, cafe.name)
         else:
             logger.warning('Кафе не найдено: cafe_id={}', obj_id)
@@ -46,66 +41,8 @@ class CafeCRUD(CRUDBase[Cafe, CafeCreate, CafeUpdate]):
             options=[selectinload(Cafe.managers)],
         )
 
-        for cafe in cafes:
-            normalize_managers(cafe)
-
         logger.success('Найдено {} кафе', len(cafes))
         return cafes
-
-    async def create(
-            self,
-            obj_in: CafeCreate,
-            session: AsyncSession,
-            redis: redis_dep,
-    ) -> Cafe:
-        """Создаёт новое кафе.
-
-        Обновляет поле cafe_id менеджера с помощью sync_managers()
-        """
-        logger.info('Создание нового кафе: name={}, address={}', obj_in.name, obj_in.address)
-        if obj_in.photo_id is not None:
-            await get_media_or_raise(obj_in.photo_id, session, check_file=False)
-
-        if obj_in.managers_id:
-            await ensure_managers_exist_and_role(obj_in.managers_id, session)
-        cafe_schema = await super().create(obj_in, session, redis)
-        cafe = await self.get(cafe_schema.id, session)
-        await sync_managers(cafe, obj_in.managers_id, session)
-
-        logger.success('Кафе успешно создано: cafe_id={}, name={}', cafe.id, cafe.name)
-        return cafe
-
-    async def update(
-            self,
-            db_obj: Cafe,
-            obj_in: CafeUpdate,
-            session: AsyncSession,
-            redis: redis_dep,
-    ) -> Cafe:
-        """Обновляет кафе.
-
-        Обновляет поле cafe_id менеджера с помощью sync_managers()
-        """
-        logger.info('Обновление кафе: id={}, name={}', db_obj.id, db_obj.name)
-
-        update_data = obj_in.model_dump(exclude_unset=True)
-        managers_id = update_data.pop('managers_id', None)
-
-        if obj_in.photo_id is not None:
-            await get_media_or_raise(obj_in.photo_id, session, check_file=False)
-
-        if managers_id:
-            await ensure_managers_exist_and_role(managers_id, session)
-
-        if update_data:
-            temp_obj = CafeUpdate(**update_data)
-            await super().update(db_obj, temp_obj, session, redis)
-            await session.refresh(db_obj, attribute_names=['managers'])
-
-        await sync_managers(db_obj, managers_id, session)
-
-        logger.success('Кафе обновлено: id={}, name={}', db_obj.id, db_obj.name)
-        return db_obj
 
 
 cafe_crud = CafeCRUD()

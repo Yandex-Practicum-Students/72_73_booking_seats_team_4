@@ -30,7 +30,9 @@ from main import app  # noqa: E402
 from models.cafe import Cafe  # noqa: E402
 from models.user import UserRole  # noqa: E402
 from schemas.action import ActionCreate, ActionUpdate  # noqa: E402
-from services.action import ensure_manager_cafe_access, get_action_or_raise  # noqa: E402
+from services.action import get_action_or_raise  # noqa: E402
+from services.action import update_action as update_action_in_service  # noqa: E402
+from services.cafe import ensure_manager_cafes_access  # noqa: E402
 from services.errors import EntityNotFoundError, PermissionDeniedError  # noqa: E402
 
 
@@ -83,7 +85,7 @@ class ActionAccessTests(TestCase):
         )
 
         with self.assertRaises(PermissionDeniedError):
-            ensure_manager_cafe_access(manager, [own_cafe_id, uuid.uuid4()])
+            ensure_manager_cafes_access(manager, [own_cafe_id, uuid.uuid4()])
 
 
 class ActionEndpointTests(IsolatedAsyncioTestCase):
@@ -181,17 +183,12 @@ class ActionEndpointTests(IsolatedAsyncioTestCase):
         )
         session = AsyncMock(spec=AsyncSession)
         redis = AsyncMock()
-        ensure_cafes = AsyncMock()
         create = AsyncMock(return_value=SimpleNamespace(id=uuid.uuid4()))
 
-        with (
-            patch('api.endpoints.action.ensure_cafes_exist', new=ensure_cafes),
-            patch('api.endpoints.action.action_crud.create', new=create),
-        ):
+        with patch('api.endpoints.action.create_action_service', new=create):
             result = await create_action(payload, manager, session, redis)
 
-        ensure_cafes.assert_awaited_once_with([cafe_id], session)
-        create.assert_awaited_once_with(payload, session, redis)
+        create.assert_awaited_once_with(payload, manager, session, redis)
         self.assertIs(result, create.return_value)
 
     async def test_user_cannot_get_inactive_action(self) -> None:
@@ -225,13 +222,9 @@ class ActionEndpointTests(IsolatedAsyncioTestCase):
         payload = ActionUpdate(description='Новая скидка')
         session = AsyncMock(spec=AsyncSession)
         redis = AsyncMock()
-        ensure_cafes = AsyncMock()
         update = AsyncMock(return_value=action)
 
-        with (
-            patch('api.endpoints.action.ensure_cafes_exist', new=ensure_cafes),
-            patch('api.endpoints.action.action_crud.update', new=update),
-        ):
+        with patch('api.endpoints.action.update_action_service', new=update):
             result = await update_action(
                 action.id,
                 payload,
@@ -241,8 +234,7 @@ class ActionEndpointTests(IsolatedAsyncioTestCase):
                 action,
             )
 
-        ensure_cafes.assert_awaited_once_with([cafe_id], session)
-        update.assert_awaited_once_with(action, payload, session, redis)
+        update.assert_awaited_once_with(action, payload, manager, session, redis)
         self.assertIs(result, action)
 
     async def test_manager_cannot_move_foreign_action_to_own_cafe(self) -> None:
@@ -260,15 +252,14 @@ class ActionEndpointTests(IsolatedAsyncioTestCase):
         payload = ActionUpdate(cafes_id=[own_cafe_id])
         update = AsyncMock()
 
-        with patch('api.endpoints.action.action_crud.update', new=update):
+        with patch('services.action.action_crud.update', new=update):
             with self.assertRaises(PermissionDeniedError):
-                await update_action(
-                    action.id,
+                await update_action_in_service(
+                    action,
                     payload,
                     manager,
                     AsyncMock(spec=AsyncSession),
                     AsyncMock(),
-                    action,
                 )
 
         update.assert_not_awaited()

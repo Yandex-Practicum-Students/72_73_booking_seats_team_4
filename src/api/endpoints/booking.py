@@ -7,6 +7,14 @@ from api.dependencies.cafe import get_cafe_or_404
 from api.dependencies.permissions import CurrentUser
 from api.errors import APIError
 from api.responses import error_responses
+from api.responses.statuses import (
+    BOOKING_CREATE,
+    BOOKING_LIST,
+    CREATED,
+    OK,
+    RESOURCE_DETAIL,
+    RESOURCE_UPDATE,
+)
 from crud.booking import booking_crud
 from models.booking import Booking
 from models.user import UserRole
@@ -33,11 +41,8 @@ router = APIRouter()
 @router.get(
     '',
     response_model=list[BookingInfo],
-    status_code=status.HTTP_200_OK,
-    responses=error_responses(
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_422_UNPROCESSABLE_CONTENT,
-    ),
+    status_code=OK,
+    responses=error_responses(*BOOKING_LIST),
     summary='Получение списка бронирований',
 )
 async def get_all_bookings(
@@ -70,13 +75,8 @@ async def get_all_bookings(
 @router.get(
     '/{booking_id}',
     response_model=BookingInfo,
-    status_code=status.HTTP_200_OK,
-    responses=error_responses(
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_404_NOT_FOUND,
-        status.HTTP_422_UNPROCESSABLE_CONTENT,
-    ),
+    status_code=OK,
+    responses=error_responses(*RESOURCE_DETAIL),
     summary='Получение информации о бронировании по его ID.',
 )
 async def get_booking(
@@ -98,12 +98,8 @@ async def get_booking(
 @router.post(
     '',
     response_model=BookingInfo,
-    status_code=status.HTTP_201_CREATED,
-    responses=error_responses(
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_422_UNPROCESSABLE_CONTENT,
-    ),
+    status_code=CREATED,
+    responses=error_responses(*BOOKING_CREATE),
     summary='Создает новое бронирования.',
 )
 async def create_booking(
@@ -150,14 +146,8 @@ async def create_booking(
 @router.patch(
     '/{booking_id}',
     response_model=BookingInfo,
-    status_code=status.HTTP_200_OK,
-    responses=error_responses(
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_404_NOT_FOUND,
-        status.HTTP_422_UNPROCESSABLE_CONTENT,
-    ),
+    status_code=OK,
+    responses=error_responses(*RESOURCE_UPDATE),
     summary='Обновление информации о бронировании по его ID.',
 )
 async def update_booking(

@@ -8,6 +8,17 @@ from api.dependencies.permissions import (
     StaffUser,
 )
 from api.responses import error_responses
+from api.responses.statuses import (
+    CREATED,
+    LOGIN,
+    LOGIN_DESCRIPTIONS,
+    RESOURCE_DETAIL,
+    RESOURCE_UPDATE,
+    USER_CREATE,
+    USER_LIST,
+    USER_ME,
+    USER_UPDATE_ME,
+)
 from api.validators import ensure_contact_remains, reject_null_required_fields
 from crud.user import user_crud
 from models.user import User, UserRole
@@ -30,10 +41,8 @@ users_router = APIRouter(prefix='/users', tags=['Пользователи'])
     '/login',
     response_model=AuthToken,
     responses=error_responses(
-        status.HTTP_422_UNPROCESSABLE_CONTENT,
-        descriptions={
-            status.HTTP_422_UNPROCESSABLE_CONTENT: 'Неверные имя пользователя или пароль',
-        },
+        *LOGIN,
+        descriptions=LOGIN_DESCRIPTIONS,
     ),
     summary='Получение токена авторизации',
 )
@@ -67,11 +76,8 @@ async def login(
 @users_router.post(
     '',
     response_model=UserInfo,
-    status_code=status.HTTP_201_CREATED,
-    responses=error_responses(
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_422_UNPROCESSABLE_CONTENT,
-    ),
+    status_code=CREATED,
+    responses=error_responses(*USER_CREATE),
     summary='Регистрация нового пользователя',
 )
 async def create_user(
@@ -85,10 +91,7 @@ async def create_user(
 @users_router.get(
     '',
     response_model=list[UserInfo],
-    responses=error_responses(
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-    ),
+    responses=error_responses(*USER_LIST),
     summary='Получение списка пользователей',
 )
 async def get_all_users(
@@ -102,7 +105,7 @@ async def get_all_users(
 @users_router.get(
     '/me',
     response_model=UserInfo,
-    responses=error_responses(status.HTTP_403_FORBIDDEN),
+    responses=error_responses(*USER_ME),
     summary='Получение информации о текущем пользователе',
 )
 async def get_me(user: MeUser) -> User:
@@ -113,11 +116,7 @@ async def get_me(user: MeUser) -> User:
 @users_router.patch(
     '/me',
     response_model=UserInfo,
-    responses=error_responses(
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_422_UNPROCESSABLE_CONTENT,
-    ),
+    responses=error_responses(*USER_UPDATE_ME),
     summary='Обновление информации о текущем пользователе',
 )
 async def update_me(
@@ -138,12 +137,7 @@ async def update_me(
 @users_router.get(
     '/{user_id}',
     response_model=UserInfo,
-    responses=error_responses(
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_404_NOT_FOUND,
-        status.HTTP_422_UNPROCESSABLE_CONTENT,
-    ),
+    responses=error_responses(*RESOURCE_DETAIL),
     summary='Получение информации о пользователе по его ID',
 )
 async def get_user_by_id(
@@ -158,13 +152,7 @@ async def get_user_by_id(
 @users_router.patch(
     '/{user_id}',
     response_model=UserInfo,
-    responses=error_responses(
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_404_NOT_FOUND,
-        status.HTTP_422_UNPROCESSABLE_CONTENT,
-    ),
+    responses=error_responses(*RESOURCE_UPDATE),
     summary='Обновление информации о пользователе по его ID',
 )
 async def update_user_by_id(

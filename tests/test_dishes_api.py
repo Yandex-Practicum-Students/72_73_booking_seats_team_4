@@ -192,21 +192,16 @@ class DishAPITests(IsolatedAsyncioTestCase):
             'cafes_id': [str(cafe_id)],
         }
 
-        ensure_cafes = AsyncMock()
-
-        with (
-            patch('api.endpoints.dish.ensure_cafes_exist', new=ensure_cafes),
-            patch('api.endpoints.dish.dish_crud.create', new=create),
-        ):
+        with patch('api.endpoints.dish.create_dish_service', new=create):
             response = await self.client.post('/dishes', json=payload)
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()['name'], dish.name)
-        ensure_cafes.assert_awaited_once_with([cafe_id], self.session)
         create.assert_awaited_once()
-        request_schema, session, redis = create.await_args.args
+        request_schema, current_user, session, redis = create.await_args.args
         self.assertEqual(request_schema.name, dish.name)
         self.assertEqual(request_schema.cafes_id, [cafe_id])
+        self.assertEqual(current_user.role, UserRole.ADMIN)
         self.assertIs(session, self.session)
         self.assertIs(redis, self.redis)
 
@@ -215,7 +210,7 @@ class DishAPITests(IsolatedAsyncioTestCase):
         self._set_user(_make_user(UserRole.USER))
         create = AsyncMock()
 
-        with patch('api.endpoints.dish.dish_crud.create', new=create):
+        with patch('api.endpoints.dish.create_dish_service', new=create):
             response = await self.client.post(
                 '/dishes',
                 json={
@@ -259,7 +254,7 @@ class DishAPITests(IsolatedAsyncioTestCase):
         self._set_dish(dish)
         update = AsyncMock(return_value=dish)
 
-        with patch('api.endpoints.dish.dish_crud.update', new=update):
+        with patch('api.endpoints.dish.update_dish_service', new=update):
             response = await self.client.patch(
                 f'/dishes/{dish.id}',
                 json={'name': 'Новый борщ'},
@@ -268,9 +263,10 @@ class DishAPITests(IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['name'], dish.name)
         update.assert_awaited_once()
-        db_obj, request_schema, session, redis = update.await_args.args
+        db_obj, request_schema, current_user, session, redis = update.await_args.args
         self.assertIs(db_obj, dish)
         self.assertEqual(request_schema.name, 'Новый борщ')
+        self.assertEqual(current_user.role, UserRole.ADMIN)
         self.assertIs(session, self.session)
         self.assertIs(redis, self.redis)
 
@@ -281,7 +277,7 @@ class DishAPITests(IsolatedAsyncioTestCase):
         self._set_dish(dish)
         update = AsyncMock()
 
-        with patch('api.endpoints.dish.dish_crud.update', new=update):
+        with patch('api.endpoints.dish.update_dish_service', new=update):
             response = await self.client.patch(
                 f'/dishes/{dish.id}',
                 json={'name': 'Новый борщ'},

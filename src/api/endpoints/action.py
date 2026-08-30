@@ -6,36 +6,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from api.dependencies.action import get_action_or_404
 from api.dependencies.permissions import CurrentUser, StaffUser
 from api.responses import error_responses
+from api.responses.statuses import CREATED, RESOURCE_CREATE, RESOURCE_DETAIL, RESOURCE_UPDATE
 from crud.action import action_crud
 from models.action import Action
 from models.user import UserRole
 from schemas.action import ActionCreate, ActionInfo, ActionUpdate
-from services.action import ensure_cafes_exist, ensure_manager_cafe_access
+from services.action import create_action as create_action_service
+from services.action import update_action as update_action_service
 
 from core.core_dependencies import redis_dep
 from core.db import DBSession
-
-GET_RESPONSES = (
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_404_NOT_FOUND,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-)
-
-POST_RESPONSES = (
-    status.HTTP_400_BAD_REQUEST,
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-)
-
-PATCH_RESPONSES = (
-    status.HTTP_400_BAD_REQUEST,
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_404_NOT_FOUND,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-)
 
 router = APIRouter()
 
@@ -43,7 +23,7 @@ router = APIRouter()
 @router.get(
     '',
     response_model=list[ActionInfo],
-    responses=error_responses(*GET_RESPONSES),
+    responses=error_responses(*RESOURCE_DETAIL),
     summary='Список акций',
 )
 async def get_all_actions(
@@ -73,8 +53,8 @@ async def get_all_actions(
 @router.post(
     '',
     response_model=ActionInfo,
-    status_code=status.HTTP_201_CREATED,
-    responses=error_responses(*POST_RESPONSES),
+    status_code=CREATED,
+    responses=error_responses(*RESOURCE_CREATE),
     summary='Создание новой акции',
 )
 async def create_action(
@@ -84,15 +64,13 @@ async def create_action(
     redis: redis_dep,
 ) -> Action:
     """Создание акции администратором или менеджером."""
-    ensure_manager_cafe_access(current_user, action_create.cafes_id)
-    await ensure_cafes_exist(action_create.cafes_id, session)
-    return await action_crud.create(action_create, session, redis)
+    return await create_action_service(action_create, current_user, session, redis)
 
 
 @router.get(
     '/{action_id}',
     response_model=ActionInfo,
-    responses=error_responses(*GET_RESPONSES),
+    responses=error_responses(*RESOURCE_DETAIL),
     summary='Информация об акции по её ID',
 )
 async def get_action_by_id(
@@ -113,7 +91,7 @@ async def get_action_by_id(
 @router.patch(
     '/{action_id}',
     response_model=ActionInfo,
-    responses=error_responses(*PATCH_RESPONSES),
+    responses=error_responses(*RESOURCE_UPDATE),
     summary='Обновление информации об акции по её ID',
 )
 async def update_action(
@@ -125,9 +103,4 @@ async def update_action(
     action: Action = Depends(get_action_or_404),
 ) -> Action:
     """Обновление акции администратором или менеджером."""
-    current_cafes_id = [cafe.id for cafe in action.cafes]
-    ensure_manager_cafe_access(current_user, current_cafes_id)
-    new_cafes_id = action_update.cafes_id if action_update.cafes_id is not None else current_cafes_id
-    ensure_manager_cafe_access(current_user, new_cafes_id)
-    await ensure_cafes_exist(new_cafes_id, session)
-    return await action_crud.update(action, action_update, session, redis)
+    return await update_action_service(action, action_update, current_user, session, redis)
