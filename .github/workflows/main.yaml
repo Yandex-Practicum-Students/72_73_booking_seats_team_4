@@ -206,7 +206,7 @@ jobs:
           passphrase: ${{ secrets.DEV_SSH_PASSPHRASE }}
           source: "./infra/deploy/docker-compose.dev.yml"
           target: "/opt/booking-seats"
-          strip_components: 2
+          strip_components: 3
       - name: Executing remote ssh commands to deploy
         uses: appleboy/ssh-action@v1.0.3
         env:
