@@ -1,4 +1,4 @@
-name: Main Taski workflow
+name: booking-seats workflow
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
 jobs:
   tests:
     # Разворачиваем окружение:
+    needs: sytle_check
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -216,71 +217,69 @@ jobs:
           context: .
           push: true
           tags: ${{ secrets.DOCKER_TUZ }}/nginx-booking-seats:latest
-  # deploy:
-  #   runs-on: ubuntu-latest
-  #   needs:
-  #     # Дождёмся билда всех образов Taski
-  #     - build_and_push_to_docker_hub
-  #     - build_frontend_and_push_to_docker_hub
-  #     - build_gateway_and_push_to_docker_hub
-  #   steps:
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v3
-  #     # Копируем docker-compose.production.yml на продакшен-сервер
-  #     - name: Copy docker-compose.yml via ssh
-  #       uses: appleboy/scp-action@master
-  #     # Передаём параметры для action appleboy/scp-action:
-  #       with:
-  #         host: ${{ secrets.HOST }}
-  #         username: ${{ secrets.USER }}
-  #         key: ${{ secrets.SSH_KEY }}
-  #         #passphrase: ${{ secrets.SSH_PASSPHRASE }}
-  #         source: "docker-compose.production.yml"
-  #         target: "taski"
-      # - name: Executing remote ssh commands to deploy
-      #   uses: appleboy/ssh-action@v1.0.3
-        # env:
-        #   DOCKER_TUZ: ${{ secrets.DOCKER_TUZ }}
-        #   IMAGE_TAG: ${{ github.sha }}
-        #   RABBITMQ_USER: ${{ secrets.RABBITMQ_USER }}
-        #   RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
-        #   RABBITMQ_SERVER: ${{ secrets.RABBITMQ_SERVER }}
-        #   POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-        #   POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-        #   POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
-        #   JWT_SECRET: ${{ secrets.JWT_SECRET }}
-        #   JWT_LIFETIME_SECONDS: ${{ secrets.JWT_LIFETIME_SECONDS }}
-        #   REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
-        #   REDIS_PORT: ${{ secrets.REDIS_PORT }}
-        #   REDIS_URL: ${{ secrets.REDIS_URL }}
-        #   FLOWER_BASIC_AUTH: ${{ secrets.FLOWER_BASIC_AUTH }}
-        # with:
-        #   host: ${{ secrets.HOST }}
-        #   username: ${{ secrets.USER }}
-        #   key: ${{ secrets.SSH_KEY }}
-        #   #passphrase: ${{ secrets.SSH_PASSPHRASE }}
-        #   envs: IMAGE_TAG,DOCKER_TUZ,RABBITMQ_USER,RABBITMQ_PASSWORD,RABBITMQ_SERVER,POSTGRES_USER,POSTGRES_PASSWORD,POSTGRES_DB,JWT_SECRET,JWT_LIFETIME_SECONDS,REDIS_PASSWORD,REDIS_PORT,REDIS_URL,FLOWER_BASIC_AUTH
-      #     script: |
-  #           cd booking-seats
-  #           # Выполняет pull образов с Docker Hub
-  #           sudo docker compose -f docker-compose.production.yml pull
-  #           # Перезапускает все контейнеры в Docker Compose
-  #           sudo docker compose -f docker-compose.production.yml down
-  #           sudo docker compose -f docker-compose.production.yml up -d
-  #           # Выполняет миграции и сбор статики
-  #           sudo docker compose -f docker-compose.production.yml exec backend python manage.py migrate
-  #           sudo docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic
-  #           sudo docker compose -f docker-compose.production.yml exec backend cp -r /app/collected_static/. /backend_static/static/
-  # send_message:
-  #   runs-on: ubuntu-latest
-  #   needs: deploy
-  #   steps:
-  #   - name: Send message
-  #     uses: appleboy/telegram-action@master
-  #     with:
-  #       to: ${{ secrets.TELEGRAM_TO }}
-  #       token: ${{ secrets.TELEGRAM_TOKEN }}
-  #       message: |
-  #         Деплой kittygram успешно выполнен! Пуш выполнил ${{ github.actor }}.
-  #         Причина ${{ github.event.commits[0].message }}.
-  #         Ссылка на коммит https://github.com/${{ github.repository }}/commit/${{github.sha}}
+  deploy:
+    runs-on: ubuntu-latest
+    needs:
+      - build_app_and_push_to_docker_hub
+      - build_rabbitmq_and_push_to_docker_hub
+      - build_redis_and_push_to_docker_hub
+      - build_postgres_and_push_to_docker_hub
+      - build_gateway_and_push_to_docker_hub
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      # Копируем docker-compose.production.yml на продакшен-сервер
+      - name: Copy docker-compose.yml via ssh
+        uses: appleboy/scp-action@master
+      # Передаём параметры для action appleboy/scp-action:
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          passphrase: ${{ secrets.DEV_SSH_PASSPHRASE }}
+          source: "./infra/deploy/docker-compose.dev.yml"
+          target: "/opt/booking-seats"
+      - name: Executing remote ssh commands to deploy
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DOCKER_TUZ: ${{ secrets.DOCKER_TUZ }}
+          IMAGE_TAG: ${{ github.sha }}
+          RABBITMQ_USER: ${{ secrets.RABBITMQ_USER }}
+          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+          RABBITMQ_SERVER: ${{ secrets.RABBITMQ_SERVER }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_LIFETIME_SECONDS: ${{ secrets.JWT_LIFETIME_SECONDS }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          REDIS_PORT: ${{ secrets.REDIS_PORT }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          FLOWER_BASIC_AUTH: ${{ secrets.FLOWER_BASIC_AUTH }}
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          passphrase: ${{ secrets.DEV_SSH_PASSPHRASE }}
+          envs: IMAGE_TAG,DOCKER_TUZ,RABBITMQ_USER,RABBITMQ_PASSWORD,RABBITMQ_SERVER,POSTGRES_USER,POSTGRES_PASSWORD,POSTGRES_DB,JWT_SECRET,JWT_LIFETIME_SECONDS,REDIS_PASSWORD,REDIS_PORT,REDIS_URL,FLOWER_BASIC_AUTH
+          script: |
+            cd /opt/booking-seats
+            # Выполняет pull образов с Docker Hub
+            sudo docker compose -f docker-compose.dev.yml pull
+            sudo docker compose -f docker-compose.dev.yml down
+            sudo docker compose -f docker-compose.dev.yml up -d
+            sudo docker compose -f docker-compose.dev.yml exec backend alembic upgrade head
+            sudo docker compose -f docker-compose.dev.yml exec backend uvicorn main:app --host 0.0.0.0 --port 8000
+  send_message:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+    - name: Send message
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_TO }}
+        token: ${{ secrets.TELEGRAM_TOKEN }}
+        message: |
+          Деплой booking-seats успешно выполнен! Пуш выполнил ${{ github.actor }}.
+          Причина ${{ github.event.commits[0].message }}.
+          Ссылка на коммит https://github.com/${{ github.repository }}/commit/${{github.sha}}
