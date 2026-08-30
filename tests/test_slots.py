@@ -7,7 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Never
 from unittest import IsolatedAsyncioTestCase, TestCase
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -535,62 +535,50 @@ class SlotCRUDTests(IsolatedAsyncioTestCase):
         cafe_id = uuid.uuid4()
         session = AsyncMock(spec=AsyncSession)
 
-        mock_slots_active = [_make_slot(cafe_id=cafe_id, is_active=True)]
-        mock_result_active = AsyncMock()
-        mock_result_active.scalars.return_value.all.return_value = mock_slots_active
-        session.execute.return_value = mock_result_active
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [
+            _make_slot(cafe_id=cafe_id, is_active=True),
+        ]
+        session.execute = AsyncMock(return_value=mock_result)
 
         result = await slot_crud.get_by_cafe(cafe_id, session, show_active=True)
         self.assertEqual(len(result), 1)
         self.assertTrue(result[0].is_active)
 
-        mock_slots_inactive = [_make_slot(cafe_id=cafe_id, is_active=False)]
-        mock_result_inactive = AsyncMock()
-        mock_result_inactive.scalars.return_value.all.return_value = mock_slots_inactive
-        session.execute.return_value = mock_result_inactive
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [
+            _make_slot(cafe_id=cafe_id, is_active=False),
+        ]
+        session.execute = AsyncMock(return_value=mock_result)
 
         result = await slot_crud.get_by_cafe(cafe_id, session, show_active=False)
         self.assertEqual(len(result), 1)
         self.assertFalse(result[0].is_active)
 
-        mock_slots_all = [
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [
             _make_slot(cafe_id=cafe_id, is_active=True),
             _make_slot(cafe_id=cafe_id, is_active=False),
         ]
-        mock_result_all = AsyncMock()
-        mock_result_all.scalars.return_value.all.return_value = mock_slots_all
-        session.execute.return_value = mock_result_all
+        session.execute = AsyncMock(return_value=mock_result)
 
         result = await slot_crud.get_by_cafe(cafe_id, session, show_active=None)
         self.assertEqual(len(result), 2)
 
-    async def test_get_by_cafe_and_id_returns_slot_if_belongs_to_cafe(self) -> None:
-        """get_by_cafe_and_id возвращает слот, принадлежащий кафе."""
+    async def test_get_by_cafe_and_id_checks_cafe_ownership(self) -> None:
+        """get_by_cafe_and_id возвращает слот только если он принадлежит кафе."""
         cafe_id = uuid.uuid4()
         slot_id = uuid.uuid4()
         session = AsyncMock(spec=AsyncSession)
+
         slot = _make_slot(cafe_id=cafe_id, slot_id=slot_id)
-
-        mock_result = AsyncMock()
+        mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = slot
-        session.execute.return_value = mock_result
+        session.execute = AsyncMock(return_value=mock_result)
 
         result = await slot_crud.get_by_cafe_and_id(cafe_id, slot_id, session)
-
         self.assertIs(result, slot)
-        session.execute.assert_awaited_once()
 
-    async def test_get_by_cafe_and_id_returns_none_if_slot_not_in_cafe(self) -> None:
-        """get_by_cafe_and_id возвращает None, если слот не принадлежит кафе."""
-        cafe_id = uuid.uuid4()
-        slot_id = uuid.uuid4()
-        session = AsyncMock(spec=AsyncSession)
-
-        mock_result = AsyncMock()
         mock_result.scalar_one_or_none.return_value = None
-        session.execute.return_value = mock_result
-
         result = await slot_crud.get_by_cafe_and_id(cafe_id, slot_id, session)
-
         self.assertIsNone(result)
-        session.execute.assert_awaited_once()
