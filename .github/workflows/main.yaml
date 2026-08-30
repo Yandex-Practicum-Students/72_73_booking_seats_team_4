@@ -232,10 +232,14 @@ jobs:
           envs: IMAGE_TAG,DOCKER_TUZ,RABBITMQ_USER,RABBITMQ_PASSWORD,RABBITMQ_SERVER,POSTGRES_USER,POSTGRES_PASSWORD,POSTGRES_DB,JWT_SECRET,JWT_LIFETIME_SECONDS,REDIS_PASSWORD,REDIS_PORT,REDIS_URL,FLOWER_BASIC_AUTH
           script: |
             cd /opt/booking-seats
+            export IMAGE_TAG DOCKER_TUZ RABBITMQ_USER RABBITMQ_PASSWORD RABBITMQ_SERVER
+            export POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB JWT_SECRET JWT_LIFETIME_SECONDS
+            export REDIS_PASSWORD REDIS_PORT REDIS_URL FLOWER_BASIC_AUTH
             # Выполняет pull образов с Docker Hub
             sudo docker compose -f docker-compose.dev.yml pull
             sudo docker compose -f docker-compose.dev.yml down
             sudo docker compose -f docker-compose.dev.yml up -d
+            docker image prune -f
             sudo docker compose -f docker-compose.dev.yml exec backend alembic upgrade head
             sudo docker compose -f docker-compose.dev.yml exec backend uvicorn main:app --host 0.0.0.0 --port 8000
   send_message:

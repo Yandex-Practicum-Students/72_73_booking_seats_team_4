@@ -138,7 +138,7 @@ services:
       start_period: 5s
     restart: unless-stopped
     depends_on:
-        backend:
+        app:
           condition: service_healthy
 
 volumes:
