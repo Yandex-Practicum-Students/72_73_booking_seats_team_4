@@ -4,11 +4,14 @@ on:
   push:
     branches:
       - feature/deploy
+  workflow_run:
+    workflows: ["sytle_check"]
+    types:
+      - completed
 
 jobs:
   tests:
     # Разворачиваем окружение:
-    needs: sytle_check
     runs-on: ubuntu-latest
     services:
       postgres:
