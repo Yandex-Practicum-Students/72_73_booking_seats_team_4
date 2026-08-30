@@ -11,7 +11,7 @@ services:
     ports:
       - "8000"
     volumes:
-      - /home/yc-user/booking_seats/logs/app:/logs
+      - /home/yc-user/booking_seats/logs/app:/app/logs
     depends_on:
       db:
         condition: service_healthy
