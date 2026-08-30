@@ -8,7 +8,7 @@ from sqlalchemy.orm import interfaces, selectinload
 
 from crud.base import CRUDBase
 from models.booking import Booking, BookingTablesSlots
-from models.user import User
+from models.user import User, UserRole
 from schemas.booking import BookingCreate, BookingInfo, BookingUpdate
 
 
@@ -74,6 +74,22 @@ class BookingCRUD(CRUDBase[Booking, BookingCreate, BookingUpdate]):
         logger.info('Найдено {} бронирований', len(bookings))
         return bookings
 
+    async def get_managers_by_booking(
+        self,
+        booking_id: uuid.UUID,
+        session: AsyncSession,
+    ) -> list[uuid.UUID]:
+        """Получить ID всех менеджеров кафе, в котором сделано бронирование."""
+        result = await session.execute(
+            select(User.id)
+            .join(Booking, User.cafe_id == Booking.cafe_id)
+            .where(
+                Booking.id == booking_id,
+                User.role == UserRole.MANAGER,
+            ),
+        )
+        return list(result.scalars().all())
+
     async def create(
         self,
         obj_in: BookingCreate,
@@ -91,7 +107,7 @@ class BookingCRUD(CRUDBase[Booking, BookingCreate, BookingUpdate]):
         obj_in_data['tables_slots'] = create_obj_booking_tables_slots(obj_in_data)
         new_booking_db = self.model(**obj_in_data)
         session.add(new_booking_db)
-        await session.commit()
+        await session.flush()
         new_booking_db = await self.get(
             obj_id=new_booking_db.id,
             session=session,
@@ -132,7 +148,7 @@ class BookingCRUD(CRUDBase[Booking, BookingCreate, BookingUpdate]):
                 setattr(db_booking, field, value)
 
         session.add(db_booking)
-        await session.commit()
+        await session.flush()
         update_db_booking = await self.get(
             obj_id=db_booking.id,
             session=session,

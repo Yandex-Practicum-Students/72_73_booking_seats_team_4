@@ -2,10 +2,11 @@ from datetime import datetime, time, timedelta, timezone
 from typing import Optional
 
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from crud.notification import NotificationCRUD, notification_crud
 from models import Booking, BookingNotification, NotificationType, StatusBooking
+
+from core.db import DBSession
 
 REMINDER_MINUTES_BEFORE = 180
 DEFAULT_BOOKING_TIME = time(12, 0, tzinfo=timezone.utc)
@@ -33,7 +34,7 @@ class NotificationService:
 
     def __init__(
         self,
-        session: AsyncSession,
+        session: DBSession,
         notification_crud: NotificationCRUD = notification_crud,
     ) -> None:
         """Настройки экземпляра сервиса."""
@@ -65,7 +66,10 @@ class NotificationService:
 
         return max(reminder_time, datetime.now(timezone.utc))
 
-    async def create_booking_notifications(self, booking: Booking) -> None:
+    async def create_booking_notifications(
+        self,
+        booking: Booking,
+    ) -> tuple[BookingNotification, BookingNotification]:
         """Уведомление + напоминание при создании бронирования."""
         manager_notification = await self.notification_crud.create_for_booking(
             booking_id=booking.id,
@@ -89,7 +93,12 @@ class NotificationService:
             reminder=client_reminder.id,
         )
 
-    async def update_booking_notifications(self, booking: Booking) -> None:
+        return manager_notification, client_reminder
+
+    async def update_booking_notifications(
+        self,
+        booking: Booking,
+    ) -> tuple[BookingNotification, BookingNotification | None]:
         """Уведомление + напоминание при изменении бронирования."""
         now = datetime.now(timezone.utc)
 
@@ -128,3 +137,5 @@ class NotificationService:
             notification=manager_notification.id,
             reminder=client_reminder.id if client_reminder else 'Отсутствует/Отмена брони',
         )
+
+        return manager_notification, client_reminder or None

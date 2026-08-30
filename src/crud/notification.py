@@ -52,6 +52,7 @@ class NotificationCRUD:
             )
             .values(status=NotificationStatus.CANCELED),
         )
+        await session.flush()
 
     async def get_due_notifications(
         self,

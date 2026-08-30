@@ -5,9 +5,9 @@ from typing import Sequence
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from crud.booking import booking_crud
 from crud.notification import notification_crud
 from models import BookingNotification, NotificationStatus, NotificationType, StatusBooking
-from services.booking import get_managers_by_booking
 from tasks import celery_app
 from tasks.base import RetryableTask, async_task
 from tasks.channels.email import EmailChannel
@@ -123,7 +123,7 @@ async def _dispatch_notification(
         await channel.send(recipient_id=booking.user_id, subject=subject, body=body)
         return
 
-    managers_ids = await get_managers_by_booking(booking.id, session)
+    managers_ids = await booking_crud.get_managers_by_booking(booking.id, session)
 
     if not managers_ids:
         logger.warning(
