@@ -138,10 +138,12 @@ async def update_dish(
 
     Только для администраторов и менеджеров.
     """
+    current_cafes_id = [cafe.id for cafe in dish.cafes]
+    ensure_manager_cafe_access(current_user, current_cafes_id)
     new_cafes_id = (
         dish_update.cafes_id
         if dish_update.cafes_id is not None
-        else [cafe.id for cafe in dish.cafes]
+        else current_cafes_id
     )
     ensure_manager_cafe_access(current_user, new_cafes_id)
     await ensure_cafes_exist(new_cafes_id, session)
