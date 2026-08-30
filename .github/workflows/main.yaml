@@ -207,6 +207,11 @@ jobs:
           source: "./infra/deploy/docker-compose.dev.yml"
           target: "/opt/booking-seats"
           strip_components: 3
+      - name: Login to Docker
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_TUZ }}
+          password: ${{ secrets.DOCKER_TUZ_PASSWORD }}
       - name: Executing remote ssh commands to deploy
         uses: appleboy/ssh-action@v1.0.3
         env:
