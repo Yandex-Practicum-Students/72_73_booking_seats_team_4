@@ -198,6 +198,36 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Determine Deploy Tag
+        id: get_tag
+        run: |
+          # Обеспечиваем получение всех тегов из истории
+          git fetch --tags --force
+
+          # ПРОВЕРКА: Если тегов в репозитории вообще нет
+          TOTAL_TAGS=$(git tag | wc -l)
+          if [ "$TOTAL_TAGS" -eq 0 ]; then
+            echo "В репозитории вообще нет тегов. Используем значение по умолчанию."
+            DEPLOY_TAG="latest"
+          else
+
+            # Проверяем, указывает ли текущий коммит на тег
+            CURRENT_TAG=$(git tag --points-at HEAD | head -n 1)
+
+            if [ -n "$CURRENT_TAG" ]; then
+              echo "Найдена новая версия (тег при коммите): $CURRENT_TAG"
+              DEPLOY_TAG=$CURRENT_TAG
+            else
+              # Если тега на коммите нет, берем самый последний тег из истории
+              LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "latest")
+              echo "Тег при коммите не найден. Используем старый (последний) тег: $LATEST_TAG"
+              DEPLOY_TAG=$LATEST_TAG
+            fi
+          fi
+          # Сохраняем результат в переменную шага для использования дальше
+          echo "tag=$DEPLOY_TAG" >> $GITHUB_OUTPUT
       - name: Copy docker-compose.yml via ssh
         uses: appleboy/scp-action@master
         with:
@@ -240,6 +270,7 @@ jobs:
             REDIS_URL=${{ secrets.REDIS_URL }}
             FLOWER_BASIC_AUTH=${{ secrets.FLOWER_BASIC_AUTH }}
             RABBITMQ_ERLANG_COOKIE=${{ secrets.RABBITMQ_ERLANG_COOKIE }}
+            VERSION=${{ steps.get_tag.outputs.tag }}
             EOF
 
             docker compose -f docker-compose.dev.yml pull
