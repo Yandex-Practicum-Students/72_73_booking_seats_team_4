@@ -45,6 +45,22 @@ class CeleryInfrastructureTests(TestCase):
         self.assertTrue(celery_app.conf.task_send_sent_event)
         self.assertTrue(celery_app.conf.worker_send_task_events)
         self.assertTrue(celery_app.conf.broker_connection_retry_on_startup)
+        self.assertTrue(
+            celery_app.conf.worker_cancel_long_running_tasks_on_connection_loss,
+        )
+
+    def test_notification_tasks_are_registered(self) -> None:
+        """Worker обнаруживает задачи отправки и диспетчер напоминаний."""
+        celery_app.loader.import_default_modules()
+
+        self.assertIn(
+            'booking.notifications.send_notification',
+            celery_app.tasks,
+        )
+        self.assertIn(
+            'booking.notifications.process_pending_due_notifications',
+            celery_app.tasks,
+        )
 
     def test_healthcheck_task_is_registered_and_returns_ok(self) -> None:
         """Проверочная задача доступна worker и выполняется без брокера."""
@@ -61,3 +77,10 @@ class CeleryInfrastructureTests(TestCase):
             'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB',
             compose,
         )
+
+    def test_compose_starts_celery_beat(self) -> None:
+        """Compose запускает отдельный планировщик отложенных напоминаний."""
+        compose = (PROJECT_ROOT / 'infra' / 'docker-compose.yaml').read_text()
+
+        self.assertIn('celery-beat:', compose)
+        self.assertIn('      - beat\n', compose)

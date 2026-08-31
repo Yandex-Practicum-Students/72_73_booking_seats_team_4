@@ -6,36 +6,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from api.dependencies.dish import get_dish_or_404
 from api.dependencies.permissions import CurrentUser, StaffUser
 from api.responses import error_responses
+from api.responses.statuses import CREATED, RESOURCE_CREATE, RESOURCE_DETAIL, RESOURCE_UPDATE
 from crud.dish import dish_crud
 from models.dish import Dish
 from models.user import UserRole
 from schemas.dish import DishCreate, DishInfo, DishUpdate
-from services.dish import ensure_cafes_exist, ensure_manager_cafe_access
+from services.dish import create_dish as create_dish_service
+from services.dish import update_dish as update_dish_service
 
 from core.core_dependencies import redis_dep
 from core.db import DBSession
-
-GET_RESPONSES = (
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_404_NOT_FOUND,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-)
-
-POST_RESPONSES = (
-    status.HTTP_400_BAD_REQUEST,
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-)
-
-PATCH_RESPONSES = (
-    status.HTTP_400_BAD_REQUEST,
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_403_FORBIDDEN,
-    status.HTTP_404_NOT_FOUND,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-)
 
 router = APIRouter()
 
@@ -43,7 +23,7 @@ router = APIRouter()
 @router.get(
     '',
     response_model=list[DishInfo],
-    responses=error_responses(*GET_RESPONSES),
+    responses=error_responses(*RESOURCE_DETAIL),
     summary='Список блюд',
 )
 async def get_all_dishes(
@@ -75,8 +55,8 @@ async def get_all_dishes(
 @router.post(
     '',
     response_model=DishInfo,
-    status_code=status.HTTP_201_CREATED,
-    responses=error_responses(*POST_RESPONSES),
+    status_code=CREATED,
+    responses=error_responses(*RESOURCE_CREATE),
     summary='Создание нового блюда',
 )
 async def create_dish(
@@ -89,15 +69,13 @@ async def create_dish(
 
     Только для администраторов и менеджеров.
     """
-    ensure_manager_cafe_access(current_user, dish_create.cafes_id)
-    await ensure_cafes_exist(dish_create.cafes_id, session)
-    return await dish_crud.create(dish_create, session, redis)
+    return await create_dish_service(dish_create, current_user, session, redis)
 
 
 @router.get(
     '/{dish_id}',
     response_model=DishInfo,
-    responses=error_responses(*GET_RESPONSES),
+    responses=error_responses(*RESOURCE_DETAIL),
     summary='Информация о блюде по его ID',
 )
 async def get_dish_by_id(
@@ -123,7 +101,7 @@ async def get_dish_by_id(
 @router.patch(
     '/{dish_id}',
     response_model=DishInfo,
-    responses=error_responses(*PATCH_RESPONSES),
+    responses=error_responses(*RESOURCE_UPDATE),
     summary='Обновление информации о блюде по его ID',
 )
 async def update_dish(
@@ -138,11 +116,4 @@ async def update_dish(
 
     Только для администраторов и менеджеров.
     """
-    new_cafes_id = (
-        dish_update.cafes_id
-        if dish_update.cafes_id is not None
-        else [cafe.id for cafe in dish.cafes]
-    )
-    ensure_manager_cafe_access(current_user, new_cafes_id)
-    await ensure_cafes_exist(new_cafes_id, session)
-    return await dish_crud.update(dish, dish_update, session, redis)
+    return await update_dish_service(dish, dish_update, current_user, session, redis)

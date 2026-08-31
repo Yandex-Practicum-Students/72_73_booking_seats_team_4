@@ -10,7 +10,9 @@ ARG USER_ID=1000
 ARG GROUP_ID=1000
 
 RUN groupadd -g ${GROUP_ID} devuser \
-    && useradd -u ${USER_ID} -g devuser -m -s /bin/bash devuser
+    && useradd -u ${USER_ID} -g devuser -m -s /bin/bash devuser \
+    && mkdir -p /logs \
+    && chown -R ${USER_ID}:${GROUP_ID} /logs
 
 USER devuser
 

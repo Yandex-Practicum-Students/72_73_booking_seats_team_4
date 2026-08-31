@@ -1,6 +1,5 @@
 import uuid
 
-from crud.cafe import cafe_crud
 from models.slots import Slot
 from services.slot import get_slot_in_cafe_or_raise
 
@@ -13,4 +12,4 @@ async def get_slot_in_cafe(
     session: DBSession,
 ) -> Slot:
     """FastAPI-зависимость для получения слота указанного кафе."""
-    return await get_slot_in_cafe_or_raise(cafe_id, slot_id, session, cafe_crud)
+    return await get_slot_in_cafe_or_raise(cafe_id, slot_id, session)

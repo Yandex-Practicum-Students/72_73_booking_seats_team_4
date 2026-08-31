@@ -4,10 +4,13 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crud.action import action_crud
-from crud.cafe import cafe_crud
 from models.action import Action
-from models.user import User, UserRole
-from services.errors import EntityNotFoundError, PermissionDeniedError
+from models.user import User
+from schemas.action import ActionCreate, ActionUpdate
+from services.cafe import ensure_cafes_exist, ensure_manager_cafes_access
+from services.errors import EntityNotFoundError
+
+from core.core_dependencies import redis_dep
 
 
 async def get_action_or_raise(
@@ -24,23 +27,33 @@ async def get_action_or_raise(
     return action
 
 
-async def ensure_cafes_exist(
-    cafe_ids: list[uuid.UUID],
+async def create_action(
+    action_create: ActionCreate,
+    current_user: User,
     session: AsyncSession,
-) -> None:
-    """Проверяет существование всех кафе из списка."""
-    for cafe_id in cafe_ids:
-        if await cafe_crud.get(cafe_id, session) is None:
-            logger.warning('Кафе не найдено: cafe_id={}', cafe_id)
-            raise EntityNotFoundError('Кафе не найдено')
+    redis: redis_dep,
+) -> Action:
+    """Проверяет права и связи, затем создаёт акцию."""
+    ensure_manager_cafes_access(current_user, action_create.cafes_id)
+    await ensure_cafes_exist(action_create.cafes_id, session)
+    return await action_crud.create(action_create, session, redis)
 
 
-def ensure_manager_cafe_access(
-    user: User,
-    cafe_ids: list[uuid.UUID],
-) -> None:
-    """Не позволяет менеджеру управлять акциями других кафе."""
-    if user.role == UserRole.MANAGER and not set(cafe_ids).issubset({user.cafe_id}):
-        logger.warning('Доступ запрещён менеджеру: user_id={}', user.id)
-        raise PermissionDeniedError('Менеджер может управлять только своим кафе')
-    logger.info('Доступ разрешён: user_id={}', user.id)
+async def update_action(
+    action: Action,
+    action_update: ActionUpdate,
+    current_user: User,
+    session: AsyncSession,
+    redis: redis_dep,
+) -> Action:
+    """Проверяет старые и новые связи, затем обновляет акцию."""
+    current_cafe_ids = [cafe.id for cafe in action.cafes]
+    ensure_manager_cafes_access(current_user, current_cafe_ids)
+    new_cafe_ids = (
+        action_update.cafes_id
+        if action_update.cafes_id is not None
+        else current_cafe_ids
+    )
+    ensure_manager_cafes_access(current_user, new_cafe_ids)
+    await ensure_cafes_exist(new_cafe_ids, session)
+    return await action_crud.update(action, action_update, session, redis)

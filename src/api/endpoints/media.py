@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.dependencies.permissions import StaffUser
+from api.responses.statuses import CREATED
 from crud.media import MediaCRUD
 from schemas.media import MediaInfo
 
@@ -16,7 +17,7 @@ router = APIRouter()
 @router.post(
     '',
     response_model=MediaInfo,
-    status_code=status.HTTP_201_CREATED,
+    status_code=CREATED,
     summary='Загрузка изображения',
 )
 async def upload_media(
