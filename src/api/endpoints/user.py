@@ -25,10 +25,12 @@ from models.user import User, UserRole
 from schemas.user import AuthData, AuthToken, UserCreate, UserInfo, UserUpdate
 from services.user import ensure_user_update_allowed
 
+from core.core_dependencies import redis_dep
 from core.db import get_session
 from core.user import (
     DUMMY_PASSWORD_HASH,
     create_access_token,
+    register_access_token,
     verify_password,
 )
 
@@ -48,6 +50,7 @@ users_router = APIRouter(prefix='/users', tags=['Пользователи'])
 )
 async def login(
     credentials: AuthData,
+    redis: redis_dep,
     session: AsyncSession = Depends(get_session),
 ) -> AuthToken:
     """Аутентифицирует пользователя по email или телефону."""
@@ -62,8 +65,10 @@ async def login(
             if updated_hash is not None:
                 user.hashed_password = updated_hash
                 await session.commit()
+            access_token = create_access_token(user.id)
+            await register_access_token(access_token, redis)
             return AuthToken(
-                access_token=create_access_token(user.id),
+                access_token=access_token,
                 token_type='bearer',
             )
 

@@ -27,6 +27,7 @@ from main import app  # noqa: E402
 from models.user import UserRole  # noqa: E402
 
 from core.db import get_session  # noqa: E402
+from core.redis import get_redis_session  # noqa: E402
 
 
 def _make_user(
@@ -80,7 +81,11 @@ class UserAPITests(IsolatedAsyncioTestCase):
         async def session_override() -> AsyncGenerator[AsyncSession, None]:
             yield self.session
 
+        async def redis_override() -> AsyncGenerator[AsyncMock, None]:
+            yield AsyncMock()
+
         app.dependency_overrides[get_session] = session_override
+        app.dependency_overrides[get_redis_session] = redis_override
         self.client = AsyncClient(
             transport=ASGITransport(app=app),
             base_url='http://test',
