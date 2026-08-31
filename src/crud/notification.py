@@ -38,6 +38,43 @@ class NotificationCRUD:
         await session.flush()
         return notification
 
+    async def get_for_booking(
+        self,
+        booking_id: uuid.UUID,
+        session: AsyncSession,
+        type_: NotificationType | None = None,
+        status_: NotificationStatus | None = None,
+    ) -> Sequence[BookingNotification]:
+        """Получить уведомления бронирования с необязательной фильтрацией."""
+        query = select(self.model).where(self.model.booking_id == booking_id)
+        if type_ is not None:
+            query = query.where(self.model.type == type_)
+        if status_ is not None:
+            query = query.where(self.model.status == status_)
+        query = query.order_by(
+            self.model.created_at.desc(),
+            self.model.id.desc(),
+        )
+        result = await session.execute(query)
+        return result.scalars().all()
+
+    async def get_by_id_for_booking(
+        self,
+        notification_id: uuid.UUID,
+        booking_id: uuid.UUID,
+        session: AsyncSession,
+        for_update: bool = False,
+    ) -> Optional[BookingNotification]:
+        """Получить уведомление, принадлежащее указанному бронированию."""
+        query = select(self.model).where(
+            self.model.id == notification_id,
+            self.model.booking_id == booking_id,
+        )
+        if for_update:
+            query = query.with_for_update()
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
+
     async def cancel_pending_for_booking(
         self,
         booking_id: uuid.UUID,

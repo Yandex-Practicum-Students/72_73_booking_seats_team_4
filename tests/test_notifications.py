@@ -151,6 +151,7 @@ class NotificationServiceTests(TestCase):
         booking_date = date.today() + timedelta(days=2)
         booking = SimpleNamespace(
             booking_date=booking_date,
+            reminder_minutes_before=60,
             tables_slots=[
                 SimpleNamespace(slot=SimpleNamespace(start_time=time(15, 0))),
                 SimpleNamespace(slot=SimpleNamespace(start_time=time(10, 30))),
@@ -164,8 +165,37 @@ class NotificationServiceTests(TestCase):
             reminder_time,
             datetime.combine(
                 booking_date,
-                time(7, 30, tzinfo=timezone.utc),
+                time(9, 30, tzinfo=timezone.utc),
             ),
+        )
+
+
+class NotificationPlanningTests(IsolatedAsyncioTestCase):
+    """Проверяет создание настраиваемых напоминаний."""
+
+    async def test_disabled_reminder_creates_only_manager_notification(self) -> None:
+        """Null в настройке брони отключает клиентское напоминание."""
+        session = AsyncMock(spec=AsyncSession)
+        notification_crud = AsyncMock()
+        manager_notification = SimpleNamespace(id=uuid.uuid4())
+        notification_crud.create_for_booking.return_value = manager_notification
+        booking = SimpleNamespace(
+            id=uuid.uuid4(),
+            reminder_minutes_before=None,
+        )
+        service = NotificationService(
+            session=session,
+            notification_crud=notification_crud,
+        )
+
+        manager, reminder = await service.create_booking_notifications(booking)
+
+        self.assertIs(manager, manager_notification)
+        self.assertIsNone(reminder)
+        notification_crud.create_for_booking.assert_awaited_once()
+        self.assertEqual(
+            notification_crud.create_for_booking.await_args.kwargs['type_'],
+            NotificationType.CREATED,
         )
 
 
