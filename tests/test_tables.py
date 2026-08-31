@@ -522,24 +522,16 @@ class TableDependencyTests(IsolatedAsyncioTestCase):
         table_id = uuid.uuid4()
         session = AsyncMock()
         get_by_cafe_and_id = AsyncMock(return_value=None)
-        get_cafe = AsyncMock(return_value=_make_cafe(cafe_id=cafe_id))
 
-        with (
-            patch('services.table.cafe_crud.get', new=get_cafe),
-            patch(
-                'services.table.table_crud.get_by_cafe_and_id',
-                new=get_by_cafe_and_id,
-            ),
+        with patch(
+            'services.table.table_crud.get_by_cafe_and_id',
+            new=get_by_cafe_and_id,
         ):
             with self.assertRaises(EntityNotFoundError) as raised:
                 await get_table_in_cafe(cafe_id, table_id, session)
 
-        get_cafe.assert_awaited_once_with(cafe_id, session)
         get_by_cafe_and_id.assert_awaited_once_with(cafe_id, table_id, session)
-        self.assertEqual(
-            str(raised.exception),
-            f'Стол не найден в кафе с ID "{cafe_id}"',
-        )
+        self.assertEqual(str(raised.exception), 'Стол не найден в этом кафе')
 
     async def test_get_table_in_cafe_returns_matching_table(self) -> None:
         """Стол своего кафе возвращается зависимостью."""
@@ -548,17 +540,12 @@ class TableDependencyTests(IsolatedAsyncioTestCase):
         session = AsyncMock()
         table = Mock(id=table_id, cafe_id=cafe_id)
         get_by_cafe_and_id = AsyncMock(return_value=table)
-        get_cafe = AsyncMock(return_value=_make_cafe(cafe_id=cafe_id))
 
-        with (
-            patch('services.table.cafe_crud.get', new=get_cafe),
-            patch(
-                'services.table.table_crud.get_by_cafe_and_id',
-                new=get_by_cafe_and_id,
-            ),
+        with patch(
+            'services.table.table_crud.get_by_cafe_and_id',
+            new=get_by_cafe_and_id,
         ):
             result = await get_table_in_cafe(cafe_id, table_id, session)
 
-        get_cafe.assert_awaited_once_with(cafe_id, session)
         get_by_cafe_and_id.assert_awaited_once_with(cafe_id, table_id, session)
         self.assertIs(result, table)
