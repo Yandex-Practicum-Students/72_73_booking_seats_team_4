@@ -6,7 +6,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase, TestCase
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,14 +23,9 @@ from api.errors import APIError  # noqa: E402
 from main import app  # noqa: E402
 from models.booking import StatusBooking  # noqa: E402
 from models.user import UserRole  # noqa: E402
-from schemas.booking import BookingTableSlot, BookingUpdate  # noqa: E402
-from services.booking import (  # noqa: E402
-    check_booking_status,
-    check_only_is_active_changes,
-    check_role_user_cant_not_changed_is_active,
-    check_user_permission,
-    split_tables_slots,
-)
+from schemas.booking import BookingCreate, BookingTableSlot, BookingUpdate  # noqa: E402
+from services.booking import BookingService  # noqa: E402
+from services.dependencies import get_booking_service  # noqa: E402
 
 from core.db import get_session  # noqa: E402
 
@@ -144,6 +139,8 @@ class BookingAPITests(IsolatedAsyncioTestCase):
             yield self.session
 
         app.dependency_overrides[get_session] = session_override
+        self.booking_service = AsyncMock(spec=BookingService)
+        app.dependency_overrides[get_booking_service] = lambda: self.booking_service
         self.current_user = _make_user(UserRole.ADMIN)
         self._set_user(self.current_user)
         self.client = AsyncClient(
@@ -281,22 +278,16 @@ class BookingAPITests(IsolatedAsyncioTestCase):
     async def test_get_booking_checks_access_before_returning_it(self) -> None:
         """GET отдельной брони выполняет поиск и проверку прав."""
         booking = _make_booking()
-        get_booking = AsyncMock(return_value=booking)
-        check_permission = AsyncMock()
+        self.booking_service.get_booking_or_raise.return_value = booking
 
-        with (
-            patch('api.endpoints.booking.get_booking_or_raise', new=get_booking),
-            patch('api.endpoints.booking.check_user_permission', new=check_permission),
-        ):
-            response = await self.client.get(f'/booking/{booking.id}')
+        response = await self.client.get(f'/booking/{booking.id}')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['id'], str(booking.id))
-        get_booking.assert_awaited_once_with(
+        self.booking_service.get_booking_or_raise.assert_awaited_once_with(
             booking_id=booking.id,
-            session=self.session,
         )
-        check_permission.assert_awaited_once_with(
+        self.booking_service.check_user_permission.assert_awaited_once_with(
             booking=booking,
             user=self.current_user,
         )
@@ -306,89 +297,52 @@ class BookingAPITests(IsolatedAsyncioTestCase):
         user = _make_user(UserRole.USER)
         booking = _make_booking(user_id=uuid.uuid4())
         self._set_user(user)
+        self.booking_service.get_booking_or_raise.return_value = booking
+        self.booking_service.check_user_permission.side_effect = APIError(
+            status_code=403,
+            message='Доступ запрещен.',
+        )
 
-        with patch(
-            'api.endpoints.booking.get_booking_or_raise',
-            new=AsyncMock(return_value=booking),
-        ):
-            response = await self.client.get(f'/booking/{booking.id}')
+        response = await self.client.get(f'/booking/{booking.id}')
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json(), {'code': 403, 'message': 'Доступ запрещен.'})
 
-    async def test_create_runs_all_checks_and_returns_created_booking(self) -> None:
-        """POST выполняет проверки в нужном порядке и возвращает 201."""
+    async def test_create_delegates_to_service_and_enqueues_notification(self) -> None:
+        """POST делегирует создание сервису и ставит уведомление в очередь."""
         booking = _make_booking(user_id=self.current_user.id)
         payload = _booking_payload(booking)
-        calls: list[str] = []
+        notification_id = uuid.uuid4()
+        self.booking_service.create_booking_with_notifications.return_value = (
+            booking,
+            notification_id,
+        )
+        enqueue = Mock()
 
-        async def record(name: str, result: object = None) -> object:
-            calls.append(name)
-            return result
-
-        async def record_cafe(**_: object) -> object:
-            return await record('cafe')
-
-        async def record_tables_slots(**_: object) -> object:
-            return await record('tables_slots')
-
-        async def record_double_booking(**_: object) -> object:
-            return await record('double_booking')
-
-        async def record_user_slot(**_: object) -> object:
-            return await record('user_slot')
-
-        async def record_seats(**_: object) -> object:
-            return await record('seats')
-
-        async def record_create(**_: object) -> object:
-            return await record('create', booking)
-
-        get_cafe = AsyncMock(side_effect=record_cafe)
-        check_cafe = AsyncMock(side_effect=record_tables_slots)
-        check_double = AsyncMock(side_effect=record_double_booking)
-        check_user_slot = AsyncMock(side_effect=record_user_slot)
-        check_seats = AsyncMock(side_effect=record_seats)
-        create = AsyncMock(side_effect=record_create)
-
-        with (
-            patch('api.endpoints.booking.get_cafe_or_404', new=get_cafe),
-            patch('api.endpoints.booking.check_cafe_has_tables_slots', new=check_cafe),
-            patch('api.endpoints.booking.check_double_booking_exsist', new=check_double),
-            patch('api.endpoints.booking.check_user_have_same_slot', new=check_user_slot),
-            patch(
-                'api.endpoints.booking.check_number_geusts_not_more_seat_number',
-                new=check_seats,
-            ),
-            patch('api.endpoints.booking.booking_crud.create', new=create),
-        ):
+        with patch('api.endpoints.booking.send_booking_notification.delay', new=enqueue):
             response = await self.client.post('/booking', json=payload)
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()['id'], str(booking.id))
-        self.assertEqual(
-            calls,
-            ['cafe', 'tables_slots', 'double_booking', 'user_slot', 'seats', 'create'],
+        self.booking_service.create_booking_with_notifications.assert_awaited_once()
+        current_user, new_booking = (
+            self.booking_service.create_booking_with_notifications.await_args.args
         )
-        create.assert_awaited_once()
-        self.assertEqual(create.await_args.kwargs['obj_in'].cafe_id, booking.cafe_id)
-        self.assertIs(create.await_args.kwargs['session'], self.session)
-        self.assertIs(create.await_args.kwargs['current_user'], self.current_user)
+        self.assertIs(current_user, self.current_user)
+        self.assertEqual(new_booking.cafe_id, booking.cafe_id)
+        enqueue.assert_called_once_with(str(notification_id))
 
     async def test_create_rejects_past_booking_date_before_business_checks(self) -> None:
         """Дата в прошлом отклоняется схемой до обращения к сервисам."""
         booking = _make_booking(booking_date=date.today() - timedelta(days=1))
-        create = AsyncMock()
-
-        with patch('api.endpoints.booking.booking_crud.create', new=create):
-            response = await self.client.post('/booking', json=_booking_payload(booking))
+        response = await self.client.post('/booking', json=_booking_payload(booking))
 
         self.assertEqual(response.status_code, 422)
         self.assertIn('Дата бронирования не может быть меньше текущей даты', response.json()['message'])
-        create.assert_not_awaited()
+        self.booking_service.create_booking_with_notifications.assert_not_awaited()
 
-    async def test_patch_without_tables_updates_booking_directly(self) -> None:
-        """Простое изменение примечания не запускает проверки столов и слотов."""
+    async def test_patch_delegates_to_service_and_enqueues_notification(self) -> None:
+        """PATCH делегирует обновление сервису и ставит уведомление в очередь."""
         booking = _make_booking()
         updated_booking = _make_booking(
             booking_id=booking.id,
@@ -396,21 +350,14 @@ class BookingAPITests(IsolatedAsyncioTestCase):
             cafe_id=booking.cafe_id,
             note='Тихое место',
         )
-        get_booking = AsyncMock(return_value=booking)
-        update = AsyncMock(return_value=updated_booking)
-        check_tables = AsyncMock()
-        check_seats = AsyncMock()
+        notification_id = uuid.uuid4()
+        self.booking_service.update_booking_with_notifications.return_value = (
+            updated_booking,
+            notification_id,
+        )
+        enqueue = Mock()
 
-        with (
-            patch('api.endpoints.booking.get_booking_or_raise', new=get_booking),
-            patch('api.endpoints.booking.check_user_permission', new=AsyncMock()),
-            patch('api.endpoints.booking.check_cafe_has_tables_slots', new=check_tables),
-            patch(
-                'api.endpoints.booking.check_number_geusts_not_more_seat_number',
-                new=check_seats,
-            ),
-            patch('api.endpoints.booking.booking_crud.update', new=update),
-        ):
+        with patch('api.endpoints.booking.send_booking_notification.delay', new=enqueue):
             response = await self.client.patch(
                 f'/booking/{booking.id}',
                 json={'note': 'Тихое место'},
@@ -418,39 +365,26 @@ class BookingAPITests(IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['note'], 'Тихое место')
-        check_tables.assert_not_awaited()
-        check_seats.assert_not_awaited()
-        update.assert_awaited_once()
-        self.assertIs(update.await_args.kwargs['db_booking'], booking)
-        self.assertEqual(update.await_args.kwargs['obj_in'].note, 'Тихое место')
+        self.booking_service.update_booking_with_notifications.assert_awaited_once()
+        call = self.booking_service.update_booking_with_notifications.await_args.kwargs
+        self.assertIs(call['current_user'], self.current_user)
+        self.assertEqual(call['booking_id'], booking.id)
+        self.assertEqual(call['update_data'].note, 'Тихое место')
+        enqueue.assert_called_once_with(str(notification_id))
 
-    async def test_patch_tables_and_guests_revalidates_booking(self) -> None:
-        """Новые столы, слоты, дата и гости проходят полный набор проверок."""
+    async def test_patch_passes_tables_guests_and_date_to_service(self) -> None:
+        """PATCH передаёт сервису новые столы, слоты, дату и число гостей."""
         booking = _make_booking()
         table_id = uuid.uuid4()
         slot_id = uuid.uuid4()
         booking_date = date.today() + timedelta(days=2)
-        update = AsyncMock(return_value=booking)
-        check_cafe = AsyncMock()
-        check_double = AsyncMock()
-        check_user_slot = AsyncMock()
-        check_seats = AsyncMock()
+        notification_id = uuid.uuid4()
+        self.booking_service.update_booking_with_notifications.return_value = (
+            booking,
+            notification_id,
+        )
 
-        with (
-            patch(
-                'api.endpoints.booking.get_booking_or_raise',
-                new=AsyncMock(return_value=booking),
-            ),
-            patch('api.endpoints.booking.check_user_permission', new=AsyncMock()),
-            patch('api.endpoints.booking.check_cafe_has_tables_slots', new=check_cafe),
-            patch('api.endpoints.booking.check_double_booking_exsist', new=check_double),
-            patch('api.endpoints.booking.check_user_have_same_slot', new=check_user_slot),
-            patch(
-                'api.endpoints.booking.check_number_geusts_not_more_seat_number',
-                new=check_seats,
-            ),
-            patch('api.endpoints.booking.booking_crud.update', new=update),
-        ):
+        with patch('api.endpoints.booking.send_booking_notification.delay'):
             response = await self.client.patch(
                 f'/booking/{booking.id}',
                 json={
@@ -463,51 +397,30 @@ class BookingAPITests(IsolatedAsyncioTestCase):
             )
 
         self.assertEqual(response.status_code, 200)
-        check_cafe.assert_awaited_once_with(
-            session=self.session,
-            cafe_id=booking.cafe_id,
-            table_ids=[table_id],
-            slot_ids=[slot_id],
+        update_data = (
+            self.booking_service.update_booking_with_notifications.await_args.kwargs[
+                'update_data'
+            ]
         )
-        check_double.assert_awaited_once_with(
-            session=self.session,
-            cafe_id=booking.cafe_id,
-            booking_date=booking_date,
-            table_slot_ids=[(table_id, slot_id)],
-            booking_id=booking.id,
-        )
-        check_user_slot.assert_awaited_once_with(
-            session=self.session,
-            booking_date=booking_date,
-            user_id=booking.user_id,
-            slot_ids=[slot_id],
-            booking_id=booking.id,
-        )
-        check_seats.assert_awaited_once_with(
-            session=self.session,
-            guest_number=3,
-            table_ids=[table_id],
-        )
-        update.assert_awaited_once()
+        self.assertEqual(update_data.booking_date, booking_date)
+        self.assertEqual(update_data.guest_number, 3)
+        self.assertEqual(update_data.tables_slots[0].table_id, table_id)
+        self.assertEqual(update_data.tables_slots[0].slot_id, slot_id)
 
     async def test_user_cannot_deactivate_booking(self) -> None:
         """Обычный пользователь не может менять is_active."""
         user = _make_user(UserRole.USER)
         booking = _make_booking(user_id=user.id)
         self._set_user(user)
-        update = AsyncMock()
+        self.booking_service.update_booking_with_notifications.side_effect = APIError(
+            status_code=400,
+            message='Пользовтель не может реадктировать поле is_active.',
+        )
 
-        with (
-            patch(
-                'api.endpoints.booking.get_booking_or_raise',
-                new=AsyncMock(return_value=booking),
-            ),
-            patch('api.endpoints.booking.booking_crud.update', new=update),
-        ):
-            response = await self.client.patch(
-                f'/booking/{booking.id}',
-                json={'is_active': False},
-            )
+        response = await self.client.patch(
+            f'/booking/{booking.id}',
+            json={'is_active': False},
+        )
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
@@ -517,25 +430,20 @@ class BookingAPITests(IsolatedAsyncioTestCase):
                 'message': 'Пользовтель не может реадктировать поле is_active.',
             },
         )
-        update.assert_not_awaited()
+        self.booking_service.update_booking_with_notifications.assert_awaited_once()
 
     async def test_active_booking_cannot_be_updated(self) -> None:
         """Статус ACTIVE блокирует изменение бронирования для любой роли."""
         booking = _make_booking(status=StatusBooking.ACTIVE)
-        update = AsyncMock()
+        self.booking_service.update_booking_with_notifications.side_effect = APIError(
+            status_code=400,
+            message='Статус бронирования не допускает внесение изменений.',
+        )
 
-        with (
-            patch(
-                'api.endpoints.booking.get_booking_or_raise',
-                new=AsyncMock(return_value=booking),
-            ),
-            patch('api.endpoints.booking.check_user_permission', new=AsyncMock()),
-            patch('api.endpoints.booking.booking_crud.update', new=update),
-        ):
-            response = await self.client.patch(
-                f'/booking/{booking.id}',
-                json={'note': 'Новое примечание'},
-            )
+        response = await self.client.patch(
+            f'/booking/{booking.id}',
+            json={'note': 'Новое примечание'},
+        )
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
@@ -545,22 +453,169 @@ class BookingAPITests(IsolatedAsyncioTestCase):
                 'message': 'Статус бронирования не допускает внесение изменений.',
             },
         )
-        update.assert_not_awaited()
+        self.booking_service.update_booking_with_notifications.assert_awaited_once()
 
 
 class BookingRulesTests(IsolatedAsyncioTestCase):
     """Проверяет правила доступа и изменения бронирований без HTTP слоя."""
+
+    def setUp(self) -> None:
+        """Создаёт сервис с изолированными зависимостями."""
+        self.service = BookingService(
+            session=AsyncMock(spec=AsyncSession),
+            notification_service=AsyncMock(),
+            booking_crud=AsyncMock(),
+        )
 
     def test_split_tables_slots_keeps_pairs_and_collects_ids(self) -> None:
         """Пары стол слот не теряются при подготовке сервисных проверок."""
         first = BookingTableSlot(table_id=uuid.uuid4(), slot_id=uuid.uuid4())
         second = BookingTableSlot(table_id=uuid.uuid4(), slot_id=uuid.uuid4())
 
-        pairs, table_ids, slot_ids = split_tables_slots([first, second])
+        pairs, table_ids, slot_ids = self.service.split_tables_slots([first, second])
 
         self.assertEqual(pairs, [(first.table_id, first.slot_id), (second.table_id, second.slot_id)])
         self.assertEqual(table_ids, [first.table_id, second.table_id])
         self.assertEqual(slot_ids, [first.slot_id, second.slot_id])
+
+    async def test_create_runs_business_checks_and_persists_notifications(self) -> None:
+        """Сервис проверяет новую бронь и сохраняет её вместе с уведомлениями."""
+        user = _make_user(UserRole.USER)
+        booking = _make_booking(user_id=user.id)
+        new_booking = BookingCreate.model_validate(_booking_payload(booking))
+        table_slot = new_booking.tables_slots[0]
+        notification_id = uuid.uuid4()
+
+        self.service.check_cafe_has_tables_slots = AsyncMock()
+        self.service.check_double_booking_exsist = AsyncMock()
+        self.service.check_user_have_same_slot = AsyncMock()
+        self.service.check_number_geusts_not_more_seat_number = AsyncMock()
+        self.service.crud.create.return_value = booking
+        self.service.notification_service.create_booking_notifications.return_value = (
+            SimpleNamespace(id=notification_id),
+            SimpleNamespace(),
+        )
+
+        with patch('services.booking.get_cafe_or_404', new=AsyncMock()) as get_cafe:
+            result, result_notification_id = (
+                await self.service.create_booking_with_notifications(user, new_booking)
+            )
+
+        self.assertIs(result, booking)
+        self.assertEqual(result_notification_id, notification_id)
+        get_cafe.assert_awaited_once_with(
+            cafe_id=booking.cafe_id,
+            session=self.service.session,
+        )
+        self.service.check_cafe_has_tables_slots.assert_awaited_once_with(
+            cafe_id=booking.cafe_id,
+            table_ids=[table_slot.table_id],
+            slot_ids=[table_slot.slot_id],
+        )
+        self.service.check_double_booking_exsist.assert_awaited_once_with(
+            cafe_id=booking.cafe_id,
+            booking_date=booking.booking_date,
+            table_slot_ids=[(table_slot.table_id, table_slot.slot_id)],
+        )
+        self.service.check_user_have_same_slot.assert_awaited_once_with(
+            booking_date=booking.booking_date,
+            user_id=user.id,
+            slot_ids=[table_slot.slot_id],
+        )
+        self.service.check_number_geusts_not_more_seat_number.assert_awaited_once_with(
+            guest_number=booking.guest_number,
+            table_ids=[table_slot.table_id],
+        )
+        self.service.crud.create.assert_awaited_once_with(
+            obj_in=new_booking,
+            session=self.service.session,
+            current_user=user,
+        )
+        self.service.notification_service.create_booking_notifications.assert_awaited_once_with(
+            booking,
+        )
+        self.service.session.commit.assert_awaited_once_with()
+        self.service.session.refresh.assert_awaited_once_with(booking)
+
+    async def test_update_revalidates_tables_guests_and_persists_notifications(self) -> None:
+        """Сервис повторно проверяет изменённые столы, слоты и число гостей."""
+        user = _make_user(UserRole.ADMIN)
+        booking = _make_booking()
+        table_slot = BookingTableSlot(table_id=uuid.uuid4(), slot_id=uuid.uuid4())
+        booking_date = date.today() + timedelta(days=2)
+        update_data = BookingUpdate(
+            tables_slots=[table_slot],
+            booking_date=booking_date,
+            guest_number=3,
+        )
+        updated_booking = _make_booking(
+            booking_id=booking.id,
+            user_id=booking.user_id,
+            cafe_id=booking.cafe_id,
+            booking_date=booking_date,
+            guest_number=3,
+        )
+        notification_id = uuid.uuid4()
+
+        self.service.get_booking_or_raise = AsyncMock(return_value=booking)
+        self.service.check_user_permission = AsyncMock()
+        self.service.check_booking_status = Mock()
+        self.service.check_only_is_active_changes = Mock()
+        self.service.check_cafe_has_tables_slots = AsyncMock()
+        self.service.check_double_booking_exsist = AsyncMock()
+        self.service.check_user_have_same_slot = AsyncMock()
+        self.service.check_number_geusts_not_more_seat_number = AsyncMock()
+        self.service.check_role_user_cant_not_changed_is_active = Mock()
+        self.service.crud.update.return_value = updated_booking
+        self.service.notification_service.update_booking_notifications.return_value = (
+            SimpleNamespace(id=notification_id),
+            SimpleNamespace(),
+        )
+
+        result, result_notification_id = await self.service.update_booking_with_notifications(
+            current_user=user,
+            booking_id=booking.id,
+            update_data=update_data,
+        )
+
+        self.assertIs(result, updated_booking)
+        self.assertEqual(result_notification_id, notification_id)
+        self.service.get_booking_or_raise.assert_awaited_once_with(booking_id=booking.id)
+        self.service.check_user_permission.assert_awaited_once_with(
+            booking=booking,
+            user=user,
+        )
+        self.service.check_cafe_has_tables_slots.assert_awaited_once_with(
+            cafe_id=booking.cafe_id,
+            table_ids=[table_slot.table_id],
+            slot_ids=[table_slot.slot_id],
+        )
+        self.service.check_double_booking_exsist.assert_awaited_once_with(
+            cafe_id=booking.cafe_id,
+            booking_date=booking_date,
+            table_slot_ids=[(table_slot.table_id, table_slot.slot_id)],
+            booking_id=booking.id,
+        )
+        self.service.check_user_have_same_slot.assert_awaited_once_with(
+            booking_date=booking_date,
+            user_id=booking.user_id,
+            slot_ids=[table_slot.slot_id],
+            booking_id=booking.id,
+        )
+        self.service.check_number_geusts_not_more_seat_number.assert_awaited_once_with(
+            guest_number=3,
+            table_ids=[table_slot.table_id],
+        )
+        self.service.crud.update.assert_awaited_once_with(
+            session=self.service.session,
+            db_booking=booking,
+            obj_in=update_data,
+        )
+        self.service.notification_service.update_booking_notifications.assert_awaited_once_with(
+            updated_booking,
+        )
+        self.service.session.commit.assert_awaited_once_with()
+        self.service.session.refresh.assert_awaited_once_with(updated_booking)
 
     async def test_manager_can_access_booking_of_assigned_cafe(self) -> None:
         """Менеджеру доступна бронь другого пользователя в своём кафе."""
@@ -568,7 +623,7 @@ class BookingRulesTests(IsolatedAsyncioTestCase):
         manager = _make_user(UserRole.MANAGER, cafe_id=cafe_id)
         booking = _make_booking(user_id=uuid.uuid4(), cafe_id=cafe_id)
 
-        await check_user_permission(booking, manager)
+        await self.service.check_user_permission(booking, manager)
 
     async def test_manager_cannot_access_booking_of_another_cafe(self) -> None:
         """Менеджеру запрещена бронь чужого кафе."""
@@ -576,7 +631,7 @@ class BookingRulesTests(IsolatedAsyncioTestCase):
         booking = _make_booking(user_id=uuid.uuid4(), cafe_id=uuid.uuid4())
 
         with self.assertRaises(APIError) as raised:
-            await check_user_permission(booking, manager)
+            await self.service.check_user_permission(booking, manager)
 
         self.assertEqual(raised.exception.status_code, 403)
 
@@ -585,7 +640,7 @@ class BookingRulesTests(IsolatedAsyncioTestCase):
         update = BookingUpdate(is_active=False, note='Одновременно')
 
         with self.assertRaises(APIError) as raised:
-            check_only_is_active_changes(update)
+            self.service.check_only_is_active_changes(update)
 
         self.assertEqual(raised.exception.status_code, 400)
 
@@ -594,7 +649,7 @@ class BookingRulesTests(IsolatedAsyncioTestCase):
         booking = _make_booking(status=StatusBooking.COMPLETED)
 
         with self.assertRaises(APIError) as raised:
-            check_booking_status(booking)
+            self.service.check_booking_status(booking)
 
         self.assertEqual(raised.exception.status_code, 400)
 
@@ -604,6 +659,6 @@ class BookingRulesTests(IsolatedAsyncioTestCase):
         update = BookingUpdate(is_active=True)
 
         with self.assertRaises(APIError) as raised:
-            check_role_user_cant_not_changed_is_active(update, user)
+            self.service.check_role_user_cant_not_changed_is_active(update, user)
 
         self.assertEqual(raised.exception.status_code, 400)
