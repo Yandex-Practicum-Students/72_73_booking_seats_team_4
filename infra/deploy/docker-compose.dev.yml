@@ -1,0 +1,160 @@
+name: booking-seats
+
+services:
+  app:
+    image: ${DOCKER_TUZ}/cafes_backend:latest
+    env_file:
+      - ./.env
+    environment:
+      PYTHONPATH: /app:/app/src
+    working_dir: /app
+    ports:
+      - "8000"
+    volumes:
+      - /home/yc-user/booking_seats/logs/app:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  celery-worker:
+    image: ${DOCKER_TUZ}/cafes_backend:latest
+    env_file:
+      - ./.env
+    environment:
+      PYTHONPATH: /app:/app/src
+    working_dir: /app
+    entrypoint:
+      - celery
+      - -A
+      - src.tasks.celery_app:celery_app
+      - worker
+      - --loglevel=INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  celery-beat:
+    image: ${DOCKER_TUZ}/cafes_backend:latest
+    env_file:
+      - ./.env
+    environment:
+      PYTHONPATH: /app:/app/src
+    working_dir: /app
+    entrypoint:
+      - celery
+      - -A
+      - src.tasks.celery_app:celery_app
+      - beat
+      - --loglevel=INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  flower:
+    image: ${DOCKER_TUZ}/cafes_backend:latest
+    env_file:
+      - ./.env
+    environment:
+      PYTHONPATH: /app:/app/src
+    working_dir: /app
+    entrypoint:
+      - celery
+      - -A
+      - src.tasks.celery_app:celery_app
+      - flower
+      - --address=0.0.0.0
+      - --port=5555
+    ports:
+      - "5555"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      celery-worker:
+        condition: service_started
+    restart: unless-stopped
+
+  rabbitmq:
+    image: ${DOCKER_TUZ}/rabbitmq:latest
+    hostname: rabbitmq
+    env_file:
+      - ./.env
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE}
+    ports:
+      - "15672:15672"
+    volumes:
+      - "rabbitmq_data:/var/lib/rabbitmq"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: ${DOCKER_TUZ}/redis:latest
+    env_file:
+      - ./.env
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PORT: ${REDIS_PORT}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "${REDIS_PORT}", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  db:
+    image: ${DOCKER_TUZ}/postgres17:latest
+    env_file:
+      - ./.env
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - "pgdata:/var/lib/postgresql/data/pgdata"
+      - /home/yc-user/booking_seats/logs/postgres:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+  gateway:
+    image: ${DOCKER_TUZ}/nginx-booking-seats:latest
+    env_file:
+      - ./.env
+    ports:
+      - 8000:80
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    depends_on:
+        app:
+          condition: service_started
+
+volumes:
+  pgdata:
+  rabbitmq_data:
+  redis_data:

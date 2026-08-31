@@ -15,3 +15,6 @@ wheels/
 .pre-commit-config.yaml
 ruff.toml
 Makefile
+
+logs
+media
