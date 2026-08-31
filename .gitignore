@@ -14,4 +14,6 @@ logs/
 .vscode
 .idea/
 
+# Локально собраные файлы
+docs/index.html
 media/

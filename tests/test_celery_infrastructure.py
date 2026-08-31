@@ -31,6 +31,7 @@ class CeleryInfrastructureTests(TestCase):
             jwt_secret='01234567890123456789012345678901',
             rabbitmq_user='test user',
             rabbitmq_password='p@ss/word',
+            rabbitmq_server='localhost',
         )
 
         self.assertEqual(
