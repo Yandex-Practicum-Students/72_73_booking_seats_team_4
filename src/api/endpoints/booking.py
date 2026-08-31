@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter
 from loguru import logger
 
 from api.dependencies.permissions import CurrentUser
