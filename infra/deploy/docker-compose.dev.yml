@@ -41,6 +41,26 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  celery-beat:
+    image: ${DOCKER_TUZ}/cafes_backend:latest
+    env_file:
+      - ./.env
+    environment:
+      PYTHONPATH: /app:/app/src
+    working_dir: /app
+    entrypoint:
+      - celery
+      - -A
+      - src.tasks.celery_app:celery_app
+      - beat
+      - --loglevel=INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
   flower:
     image: ${DOCKER_TUZ}/cafes_backend:latest
     env_file:
