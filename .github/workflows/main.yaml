@@ -3,7 +3,7 @@ name: booking-seats workflow
 on:
   push:
     branches:
-      - feature/deploy
+      - develop
   workflow_run:
     workflows: ["sytle_check"]
     types:
