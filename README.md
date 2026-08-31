@@ -4,6 +4,7 @@
 - [Очередь фоновых задач](#очередь-фоновых-задач)
 - [Документация проекта](#документация-проекта)
 - [Стек](#стек)
+- [Команда проекта](#команда-проекта)
 
 
 -----------------------------------
@@ -88,3 +89,13 @@
 
 # Документация проекта
 Документация доступна без разворачивания проекта по [ссылке](https://yandex-practicum-students.github.io/72_73_booking_seats_team_4/)
+
+# Команда проекта
+- **[Andrei Mezer](https://github.com/AnMezer)** - Backend Developer / Team Lead
+- **[Curiosity](https://github.com/BondarenkoMaximSergeevich)** - Backend Developer
+- **[NataEditor](https://github.com/NataEditor)** - Backend Developer
+- **[veronikaTatar](https://github.com/veronikaTatar)** - Backend Developer
+- **[Roman Papenov](https://github.com/roman82direct)** - Backend Developer
+- **[KvazyModa00](https://github.com/KvazyModa00)** - Backend Developer
+- **[GalinaLody](https://github.com/GalinaLody)** - Backend Developer
+- **[Alexei](https://github.com/Alek20s)** - Backend Developer
