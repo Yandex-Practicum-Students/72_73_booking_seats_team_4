@@ -3,8 +3,8 @@ import io
 import uuid
 from pathlib import Path
 
-from fastapi import HTTPException, UploadFile, status
 from PIL import Image, UnidentifiedImageError
+from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
