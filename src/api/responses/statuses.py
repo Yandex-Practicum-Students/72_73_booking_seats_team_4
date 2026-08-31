@@ -1,0 +1,64 @@
+from fastapi import status
+
+# Успешные ответы.
+OK = status.HTTP_200_OK
+CREATED = status.HTTP_201_CREATED
+
+# Общие наборы ответов для CRUD-ресурсов.
+RESOURCE_LIST = (
+    status.HTTP_401_UNAUTHORIZED,
+    status.HTTP_403_FORBIDDEN,
+    status.HTTP_422_UNPROCESSABLE_CONTENT,
+)
+RESOURCE_DETAIL = (
+    status.HTTP_401_UNAUTHORIZED,
+    status.HTTP_403_FORBIDDEN,
+    status.HTTP_404_NOT_FOUND,
+    status.HTTP_422_UNPROCESSABLE_CONTENT,
+)
+RESOURCE_CREATE = (
+    status.HTTP_400_BAD_REQUEST,
+    status.HTTP_401_UNAUTHORIZED,
+    status.HTTP_403_FORBIDDEN,
+    status.HTTP_422_UNPROCESSABLE_CONTENT,
+)
+RESOURCE_CREATE_WITH_PARENT = RESOURCE_CREATE[:3] + (
+    status.HTTP_404_NOT_FOUND,
+    status.HTTP_422_UNPROCESSABLE_CONTENT,
+)
+RESOURCE_UPDATE = (
+    status.HTTP_400_BAD_REQUEST,
+    status.HTTP_401_UNAUTHORIZED,
+    status.HTTP_403_FORBIDDEN,
+    status.HTTP_404_NOT_FOUND,
+    status.HTTP_422_UNPROCESSABLE_CONTENT,
+)
+
+# Наборы, отличающиеся от стандартного CRUD-контракта.
+BOOKING_LIST = (
+    status.HTTP_401_UNAUTHORIZED,
+    status.HTTP_422_UNPROCESSABLE_CONTENT,
+)
+BOOKING_CREATE = (
+    status.HTTP_400_BAD_REQUEST,
+    status.HTTP_401_UNAUTHORIZED,
+    status.HTTP_422_UNPROCESSABLE_CONTENT,
+)
+LOGIN = (status.HTTP_422_UNPROCESSABLE_CONTENT,)
+LOGIN_DESCRIPTIONS = {
+    status.HTTP_422_UNPROCESSABLE_CONTENT: 'Неверные имя пользователя или пароль',
+}
+USER_CREATE = (
+    status.HTTP_400_BAD_REQUEST,
+    status.HTTP_422_UNPROCESSABLE_CONTENT,
+)
+USER_LIST = (
+    status.HTTP_401_UNAUTHORIZED,
+    status.HTTP_403_FORBIDDEN,
+)
+USER_ME = (status.HTTP_403_FORBIDDEN,)
+USER_UPDATE_ME = (
+    status.HTTP_400_BAD_REQUEST,
+    status.HTTP_403_FORBIDDEN,
+    status.HTTP_422_UNPROCESSABLE_CONTENT,
+)

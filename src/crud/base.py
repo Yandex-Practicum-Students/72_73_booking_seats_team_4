@@ -20,8 +20,9 @@ ResponseSchemaType = TypeVar('ResponseSchemaType', bound=BaseModel)
 
 
 class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
-    """Базовый клаcc CRUD. При наследовании требуется указать типизацию.
+    """Базовый клаcc CRUD.
 
+    При наследовании требуется указать типизацию.
     Модель, схему создания, схему обновления.
     Пример:
     CafeCRUD(CRUDBase[Cafe, CreateCafeScheme, UpdateCafeScheme])
@@ -69,6 +70,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             query = select(self.model).where(self.model.id == obj_id)
             if options:
                 query = query.options(*options)
+                query = query.execution_options(populate_existing=True)
             result = await session.execute(query)
             result = result.scalar_one_or_none()
             if result is None:
