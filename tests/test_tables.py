@@ -94,9 +94,9 @@ class TableAPIContractTests(TestCase):
         """Коллекция и объект столов публикуют заявленные методы."""
         paths = app.openapi()['paths']
 
-        self.assertEqual(set(paths['/cafes/{cafe_id}/tables']), {'get', 'post'})
+        self.assertEqual(set(paths['/api/v1/cafes/{cafe_id}/tables']), {'get', 'post'})
         self.assertEqual(
-            set(paths['/cafes/{cafe_id}/tables/{table_id}']),
+            set(paths['/api/v1/cafes/{cafe_id}/tables/{table_id}']),
             {'get', 'patch'},
         )
 
@@ -165,7 +165,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.tables.table_crud.get_by_cafe', new=get_by_cafe):
             response = await self.client.get(
-                f'/cafes/{self.cafe_id}/tables',
+                f'/api/v1/cafes/{self.cafe_id}/tables',
                 params={'show_active': 'false'},
             )
 
@@ -184,7 +184,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
         get_by_cafe = AsyncMock()
 
         with patch('api.endpoints.tables.table_crud.get_by_cafe', new=get_by_cafe):
-            response = await self.client.get(f'/cafes/{self.cafe_id}/tables')
+            response = await self.client.get(f'/api/v1/cafes/{self.cafe_id}/tables')
 
         self.assertEqual(response.status_code, 401)
         self.assertEqual(
@@ -204,7 +204,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.tables.table_crud.get_by_cafe', new=get_by_cafe):
             response = await self.client.get(
-                f'/cafes/{self.cafe_id}/tables',
+                f'/api/v1/cafes/{self.cafe_id}/tables',
                 params={'show_active': 'false'},
             )
 
@@ -222,7 +222,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.tables.table_crud.get_by_cafe', new=get_by_cafe):
             response = await self.client.get(
-                f'/cafes/{self.cafe_id}/tables',
+                f'/api/v1/cafes/{self.cafe_id}/tables',
                 params={'show_active': 'false'},
             )
 
@@ -240,7 +240,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.tables.table_crud.create_with_cafe', new=create):
             response = await self.client.post(
-                f'/cafes/{self.cafe_id}/tables',
+                f'/api/v1/cafes/{self.cafe_id}/tables',
                 json={'seat_number': 4, 'description': 'Стол у окна'},
             )
 
@@ -260,7 +260,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.tables.table_crud.create_with_cafe', new=create):
             response = await self.client.post(
-                f'/cafes/{self.cafe_id}/tables',
+                f'/api/v1/cafes/{self.cafe_id}/tables',
                 json={'seat_number': 4},
             )
 
@@ -275,7 +275,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.tables.table_crud.create_with_cafe', new=create):
             response = await self.client.post(
-                f'/cafes/{self.cafe_id}/tables',
+                f'/api/v1/cafes/{self.cafe_id}/tables',
                 json={'seat_number': 4},
             )
 
@@ -293,7 +293,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.tables.table_crud.create_with_cafe', new=create):
             response = await self.client.post(
-                f'/cafes/{self.cafe_id}/tables',
+                f'/api/v1/cafes/{self.cafe_id}/tables',
                 json={'seat_number': 4},
             )
 
@@ -307,7 +307,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
         table = _make_table(cafe_id=self.cafe_id)
         self._set_table(table)
 
-        response = await self.client.get(f'/cafes/{self.cafe_id}/tables/{table.id}')
+        response = await self.client.get(f'/api/v1/cafes/{self.cafe_id}/tables/{table.id}')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['id'], str(table.id))
@@ -318,7 +318,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
         table = _make_table(cafe_id=self.cafe_id, is_active=False)
         self._set_table(table)
 
-        response = await self.client.get(f'/cafes/{self.cafe_id}/tables/{table.id}')
+        response = await self.client.get(f'/api/v1/cafes/{self.cafe_id}/tables/{table.id}')
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json(), {'code': 404, 'message': 'Стол не найден'})
@@ -331,7 +331,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
 
         app.dependency_overrides[get_table_in_cafe] = missing_table
         response = await self.client.get(
-            f'/cafes/{self.cafe_id}/tables/{uuid.uuid4()}',
+            f'/api/v1/cafes/{self.cafe_id}/tables/{uuid.uuid4()}',
         )
 
         self.assertEqual(response.status_code, 404)
@@ -346,7 +346,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
         table = _make_table(cafe_id=self.cafe_id)
         self._set_table(table)
 
-        response = await self.client.get(f'/cafes/{self.cafe_id}/tables/{table.id}')
+        response = await self.client.get(f'/api/v1/cafes/{self.cafe_id}/tables/{table.id}')
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(
@@ -368,7 +368,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.tables.table_crud.update', new=update):
             response = await self.client.patch(
-                f'/cafes/{self.cafe_id}/tables/{table.id}',
+                f'/api/v1/cafes/{self.cafe_id}/tables/{table.id}',
                 json={'seat_number': 6},
             )
 
@@ -390,7 +390,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.tables.table_crud.update', new=update):
             response = await self.client.patch(
-                f'/cafes/{self.cafe_id}/tables/{table.id}',
+                f'/api/v1/cafes/{self.cafe_id}/tables/{table.id}',
                 json={'seat_number': 6},
             )
 
@@ -407,7 +407,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.tables.table_crud.update', new=update):
             response = await self.client.patch(
-                f'/cafes/{self.cafe_id}/tables/{table.id}',
+                f'/api/v1/cafes/{self.cafe_id}/tables/{table.id}',
                 json={'seat_number': 6},
             )
 
@@ -426,7 +426,7 @@ class TableAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.tables.table_crud.update', new=update):
             response = await self.client.patch(
-                f'/cafes/{self.cafe_id}/tables/{table.id}',
+                f'/api/v1/cafes/{self.cafe_id}/tables/{table.id}',
                 json={'seat_number': 0},
             )
 

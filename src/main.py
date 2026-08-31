@@ -24,7 +24,7 @@ from api.exceptions import (
     user_already_exists_handler,
     user_not_found_handler,
 )
-from api.routers import api_router
+from api.routers import v1_api_router
 from crud.action import ActionAlreadyExistsError
 from crud.dish import DishAlreadyExistsError
 from crud.user import UserAlreadyExistsError, UserNotFoundError
@@ -90,7 +90,7 @@ app.add_exception_handler(RequestValidationError, request_validation_error_handl
 app.add_exception_handler(ManagerNotFoundError, manager_not_found_handler)
 app.add_exception_handler(ManagerRoleError, manager_role_error_handler)
 app.add_exception_handler(ManagerAlreadyAssignedError, manager_already_assigned_handler)
-app.include_router(api_router)
+app.include_router(v1_api_router)
 
 
 @app.get(

@@ -71,8 +71,8 @@ class CafeAPIContractTests(TestCase):
         """Коллекция и объект кафе публикуют только заявленные методы."""
         paths = app.openapi()['paths']
 
-        self.assertEqual(set(paths['/cafes']), {'get', 'post'})
-        self.assertEqual(set(paths['/cafes/{cafe_id}']), {'get', 'patch'})
+        self.assertEqual(set(paths['/api/v1/cafes']), {'get', 'post'})
+        self.assertEqual(set(paths['/api/v1/cafes/{cafe_id}']), {'get', 'patch'})
 
 
 class CafeAPITests(IsolatedAsyncioTestCase):
@@ -126,7 +126,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
         get_all = AsyncMock(return_value=[cafe])
 
         with patch('api.endpoints.cafe.cafe_crud.get_all', new=get_all):
-            response = await self.client.get('/cafes', params={'show_active': 'false'})
+            response = await self.client.get('/api/v1/cafes', params={'show_active': 'false'})
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()[0]['id'], str(cafe.id))
@@ -142,7 +142,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
         get_all = AsyncMock()
 
         with patch('api.endpoints.cafe.cafe_crud.get_all', new=get_all):
-            response = await self.client.get('/cafes')
+            response = await self.client.get('/api/v1/cafes')
 
         self.assertEqual(response.status_code, 401)
         self.assertEqual(
@@ -162,7 +162,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
         get_all = AsyncMock(return_value=[cafe])
 
         with patch('api.endpoints.cafe.cafe_crud.get_all', new=get_all):
-            response = await self.client.get('/cafes', params={'show_active': 'false'})
+            response = await self.client.get('/api/v1/cafes', params={'show_active': 'false'})
 
         self.assertEqual(response.status_code, 200)
         get_all.assert_awaited_once_with(
@@ -181,7 +181,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
             'api.endpoints.cafe.get_manager_cafes',
             new=get_manager_cafes,
         ):
-            response = await self.client.get('/cafes')
+            response = await self.client.get('/api/v1/cafes')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()[0]['id'], str(manager.cafe_id))
@@ -203,7 +203,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
         }
 
         with patch('api.endpoints.cafe.create_cafe_service', new=create):
-            response = await self.client.post('/cafes', json=payload)
+            response = await self.client.post('/api/v1/cafes', json=payload)
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()['name'], cafe.name)
@@ -221,7 +221,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.cafe.create_cafe_service', new=create):
             response = await self.client.post(
-                '/cafes',
+                '/api/v1/cafes',
                 json={
                     'name': 'Новое кафе',
                     'address': 'Москва, Новая улица, 1',
@@ -240,7 +240,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
         self._set_user(_make_user(UserRole.USER))
         self._set_cafe(cafe)
 
-        response = await self.client.get(f'/cafes/{cafe.id}')
+        response = await self.client.get(f'/api/v1/cafes/{cafe.id}')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['id'], str(cafe.id))
@@ -251,7 +251,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
         self._set_user(_make_user(UserRole.USER))
         self._set_cafe(cafe)
 
-        response = await self.client.get(f'/cafes/{cafe.id}')
+        response = await self.client.get(f'/api/v1/cafes/{cafe.id}')
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json(), {'code': 404, 'message': 'Кафе не найдено'})
@@ -264,7 +264,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
 
         app.dependency_overrides[get_cafe_or_404] = missing_cafe
 
-        response = await self.client.get(f'/cafes/{uuid.uuid4()}')
+        response = await self.client.get(f'/api/v1/cafes/{uuid.uuid4()}')
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json(), {'code': 404, 'message': 'Кафе не найдено'})
@@ -276,7 +276,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
         self._set_user(_make_user(UserRole.MANAGER, cafe_id=own_cafe_id))
         self._set_cafe(foreign_cafe)
 
-        response = await self.client.get(f'/cafes/{foreign_cafe.id}')
+        response = await self.client.get(f'/api/v1/cafes/{foreign_cafe.id}')
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(
@@ -296,7 +296,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.cafe.update_cafe_service', new=update):
             response = await self.client.patch(
-                f'/cafes/{cafe_id}',
+                f'/api/v1/cafes/{cafe_id}',
                 json={'name': updated_cafe.name},
             )
 
@@ -318,7 +318,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.cafe.update_cafe_service', new=update):
             response = await self.client.patch(
-                f'/cafes/{cafe.id}',
+                f'/api/v1/cafes/{cafe.id}',
                 json={'name': 'Недоступное обновление'},
             )
 
@@ -334,7 +334,7 @@ class CafeAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.cafe.update_cafe_service', new=update):
             response = await self.client.patch(
-                f'/cafes/{cafe.id}',
+                f'/api/v1/cafes/{cafe.id}',
                 json={'name': None},
             )
 

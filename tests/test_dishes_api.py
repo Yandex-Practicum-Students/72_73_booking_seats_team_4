@@ -69,8 +69,8 @@ class DishAPIContractTests(TestCase):
         """Коллекция и объект блюда публикуют только заявленные методы."""
         paths = app.openapi()['paths']
 
-        self.assertEqual(set(paths['/dishes']), {'get', 'post'})
-        self.assertEqual(set(paths['/dishes/{dish_id}']), {'get', 'patch'})
+        self.assertEqual(set(paths['/api/v1/dishes']), {'get', 'post'})
+        self.assertEqual(set(paths['/api/v1/dishes/{dish_id}']), {'get', 'patch'})
 
 
 class DishAPITests(IsolatedAsyncioTestCase):
@@ -124,7 +124,7 @@ class DishAPITests(IsolatedAsyncioTestCase):
         get_all = AsyncMock(return_value=[dish])
 
         with patch('api.endpoints.dish.dish_crud.get_all', new=get_all):
-            response = await self.client.get('/dishes', params={'show_active': 'false'})
+            response = await self.client.get('/api/v1/dishes', params={'show_active': 'false'})
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()[0]['id'], str(dish.id))
@@ -141,7 +141,7 @@ class DishAPITests(IsolatedAsyncioTestCase):
         get_all = AsyncMock()
 
         with patch('api.endpoints.dish.dish_crud.get_all', new=get_all):
-            response = await self.client.get('/dishes')
+            response = await self.client.get('/api/v1/dishes')
 
         self.assertEqual(response.status_code, 401)
         get_all.assert_not_awaited()
@@ -153,7 +153,7 @@ class DishAPITests(IsolatedAsyncioTestCase):
         get_all = AsyncMock(return_value=[dish])
 
         with patch('api.endpoints.dish.dish_crud.get_all', new=get_all):
-            response = await self.client.get('/dishes', params={'show_active': 'false'})
+            response = await self.client.get('/api/v1/dishes', params={'show_active': 'false'})
 
         self.assertEqual(response.status_code, 200)
         get_all.assert_awaited_once_with(
@@ -170,7 +170,7 @@ class DishAPITests(IsolatedAsyncioTestCase):
         get_all = AsyncMock(return_value=[dish])
 
         with patch('api.endpoints.dish.dish_crud.get_all', new=get_all):
-            response = await self.client.get('/dishes')
+            response = await self.client.get('/api/v1/dishes')
 
         self.assertEqual(response.status_code, 200)
         get_all.assert_awaited_once_with(
@@ -193,7 +193,7 @@ class DishAPITests(IsolatedAsyncioTestCase):
         }
 
         with patch('api.endpoints.dish.create_dish_service', new=create):
-            response = await self.client.post('/dishes', json=payload)
+            response = await self.client.post('/api/v1/dishes', json=payload)
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()['name'], dish.name)
@@ -212,7 +212,7 @@ class DishAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.dish.create_dish_service', new=create):
             response = await self.client.post(
-                '/dishes',
+                '/api/v1/dishes',
                 json={
                     'name': 'Новое блюдо',
                     'price': '100.00',
@@ -229,7 +229,7 @@ class DishAPITests(IsolatedAsyncioTestCase):
         self._set_user(_make_user(UserRole.USER))
         self._set_dish(dish)
 
-        response = await self.client.get(f'/dishes/{dish.id}')
+        response = await self.client.get(f'/api/v1/dishes/{dish.id}')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['id'], str(dish.id))
@@ -240,7 +240,7 @@ class DishAPITests(IsolatedAsyncioTestCase):
         self._set_user(_make_user(UserRole.USER))
         self._set_dish(dish)
 
-        response = await self.client.get(f'/dishes/{dish.id}')
+        response = await self.client.get(f'/api/v1/dishes/{dish.id}')
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(
@@ -256,7 +256,7 @@ class DishAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.dish.update_dish_service', new=update):
             response = await self.client.patch(
-                f'/dishes/{dish.id}',
+                f'/api/v1/dishes/{dish.id}',
                 json={'name': 'Новый борщ'},
             )
 
@@ -279,7 +279,7 @@ class DishAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.dish.update_dish_service', new=update):
             response = await self.client.patch(
-                f'/dishes/{dish.id}',
+                f'/api/v1/dishes/{dish.id}',
                 json={'name': 'Новый борщ'},
             )
 
