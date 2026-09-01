@@ -65,6 +65,14 @@ class BookingCreate(BookingBase):
     cafe_id: uuid.UUID
     tables_slots: List[BookingTableSlot]
     booking_date: BookinDateNotPast
+    reminder_minutes_before: Optional[PositiveInt] = Field(
+        180,
+        description=(
+            'За сколько минут до первого слота отправить напоминание. '
+            'Null отключает напоминание; если рассчитанное время уже прошло, '
+            'уведомление будет запланировано немедленно.'
+        ),
+    )
 
 
 class BookingUpdate(BookingBase):
@@ -76,6 +84,13 @@ class BookingUpdate(BookingBase):
 
     status: Optional[StatusBooking] = Field(None)
     is_active: Optional[bool] = Field(None)
+    reminder_minutes_before: Optional[PositiveInt] = Field(
+        None,
+        description=(
+            'За сколько минут до первого слота отправить напоминание. '
+            'Null отключает напоминание.'
+        ),
+    )
 
 
 class BookingInfo(IdScheme, BookingBase, BaseInfoScheme):
@@ -85,3 +100,4 @@ class BookingInfo(IdScheme, BookingBase, BaseInfoScheme):
     cafe: CafeShortInfo
     tables_slots: List[BookingTableSlotShortInfo]
     status: StatusBooking
+    reminder_minutes_before: Optional[PositiveInt]
