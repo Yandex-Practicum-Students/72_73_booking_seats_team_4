@@ -3,7 +3,7 @@ from datetime import date
 from enum import StrEnum
 from typing import List, Optional
 
-from sqlalchemy import UUID, Date, Enum, ForeignKey, Index, Integer, String
+from sqlalchemy import UUID, CheckConstraint, Date, Enum, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.base_model import Base
@@ -71,6 +71,12 @@ class Booking(Base):
         server_default=StatusBooking.BOOKING.value,
         index=True,
     )
+    reminder_minutes_before: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+        default=180,
+        server_default='180',
+    )
     tables_slots: Mapped[List['BookingTablesSlots']] = relationship(
         'BookingTablesSlots',
         back_populates='booking',
@@ -82,4 +88,10 @@ class Booking(Base):
         lazy='selectin',
     )
 
-    __table_args__ = (Index('user_booking_date', 'user_id', 'booking_date'),)
+    __table_args__ = (
+        CheckConstraint(
+            'reminder_minutes_before IS NULL OR reminder_minutes_before > 0',
+            name='check_booking_reminder_minutes_positive',
+        ),
+        Index('user_booking_date', 'user_id', 'booking_date'),
+    )

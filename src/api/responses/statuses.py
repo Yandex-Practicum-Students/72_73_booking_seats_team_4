@@ -3,6 +3,7 @@ from fastapi import status
 # Успешные ответы.
 OK = status.HTTP_200_OK
 CREATED = status.HTTP_201_CREATED
+ACCEPTED = status.HTTP_202_ACCEPTED
 
 # Общие наборы ответов для CRUD-ресурсов.
 RESOURCE_LIST = (
@@ -44,6 +45,8 @@ BOOKING_CREATE = (
     status.HTTP_401_UNAUTHORIZED,
     status.HTTP_422_UNPROCESSABLE_CONTENT,
 )
+NOTIFICATION_DETAIL = RESOURCE_DETAIL
+NOTIFICATION_RETRY = RESOURCE_UPDATE
 LOGIN = (status.HTTP_422_UNPROCESSABLE_CONTENT,)
 LOGIN_DESCRIPTIONS = {
     status.HTTP_422_UNPROCESSABLE_CONTENT: 'Неверные имя пользователя или пароль',

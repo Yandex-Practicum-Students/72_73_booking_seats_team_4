@@ -58,6 +58,7 @@ def _make_booking(
     note: str | None = 'Стол у окна',
     status: StatusBooking = StatusBooking.BOOKING,
     is_active: bool = True,
+    reminder_minutes_before: int | None = 180,
 ) -> SimpleNamespace:
     """Создаёт объект, совместимый с BookingInfo."""
     booking_user = _make_user(UserRole.USER, user_id=user_id)
@@ -92,6 +93,7 @@ def _make_booking(
         guest_number=guest_number,
         note=note,
         status=status,
+        reminder_minutes_before=reminder_minutes_before,
         tables_slots=[SimpleNamespace(table=table, slot=slot)],
         is_active=is_active,
         created_at=now,
@@ -107,6 +109,7 @@ def _booking_payload(booking: SimpleNamespace) -> dict[str, object]:
         'booking_date': booking.booking_date.isoformat(),
         'guest_number': booking.guest_number,
         'note': booking.note,
+        'reminder_minutes_before': booking.reminder_minutes_before,
         'tables_slots': [
             {
                 'table_id': str(table_slot.table.id),
@@ -310,7 +313,10 @@ class BookingAPITests(IsolatedAsyncioTestCase):
 
     async def test_create_delegates_to_service_and_enqueues_notification(self) -> None:
         """POST делегирует создание сервису и ставит уведомление в очередь."""
-        booking = _make_booking(user_id=self.current_user.id)
+        booking = _make_booking(
+            user_id=self.current_user.id,
+            reminder_minutes_before=45,
+        )
         payload = _booking_payload(booking)
         notification_id = uuid.uuid4()
         self.booking_service.create_booking_with_notifications.return_value = (
@@ -330,6 +336,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
         )
         self.assertIs(current_user, self.current_user)
         self.assertEqual(new_booking.cafe_id, booking.cafe_id)
+        self.assertEqual(new_booking.reminder_minutes_before, 45)
         enqueue.assert_called_once_with(str(notification_id))
 
     async def test_create_rejects_past_booking_date_before_business_checks(self) -> None:
@@ -339,6 +346,17 @@ class BookingAPITests(IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 422)
         self.assertIn('Дата бронирования не может быть меньше текущей даты', response.json()['message'])
+        self.booking_service.create_booking_with_notifications.assert_not_awaited()
+
+    async def test_create_rejects_non_positive_reminder_interval(self) -> None:
+        """Интервал напоминания должен быть положительным или null."""
+        booking = _make_booking()
+        payload = _booking_payload(booking)
+        payload['reminder_minutes_before'] = 0
+
+        response = await self.client.post('/api/v1/booking', json=payload)
+
+        self.assertEqual(response.status_code, 422)
         self.booking_service.create_booking_with_notifications.assert_not_awaited()
 
     async def test_patch_delegates_to_service_and_enqueues_notification(self) -> None:

@@ -6,6 +6,7 @@ from api import (
     cafe_router,
     dish_router,
     media_router,
+    notification_router,
     slots_router,
     tables_router,
     users_router,
@@ -33,6 +34,12 @@ v1_api_router.include_router(
     booking_router,
     prefix='/booking',
     tags=['Бронирования'],
+)
+
+v1_api_router.include_router(
+    notification_router,
+    prefix='/booking',
+    tags=['Уведомления'],
 )
 
 v1_api_router.include_router(
