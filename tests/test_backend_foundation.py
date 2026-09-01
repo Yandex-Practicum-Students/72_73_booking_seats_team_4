@@ -244,3 +244,20 @@ class BackendFoundationTests(IsolatedAsyncioTestCase):
         dish_fields = specification['components']['schemas']['DishInfo']['properties']
         self.assertIn('cafes', dish_fields)
         self.assertNotIn('cafes_id', dish_fields)
+
+    def test_openapi_uses_project_metadata_and_versioned_paths(self) -> None:
+        """Документация содержит данные проекта и публикует API v1."""
+        specification = app.openapi()
+
+        self.assertEqual(
+            specification['info']['title'],
+            'Система бронирования мест в кафе',
+        )
+        self.assertEqual(specification['info']['version'], '0.0.3')
+        self.assertTrue(specification['info']['description'])
+        self.assertTrue(
+            all(
+                path == '/' or path.startswith('/api/v1/')
+                for path in specification['paths']
+            ),
+        )

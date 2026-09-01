@@ -12,53 +12,55 @@ from api import (
     users_router,
 )
 
-api_router = APIRouter()
+from core.settings import settings
 
-api_router.include_router(users_router)
+v1_api_router = APIRouter(prefix=settings.api_v1_prefix)
 
-api_router.include_router(
+v1_api_router.include_router(users_router)
+
+v1_api_router.include_router(
     action_router,
     prefix='/actions',
     tags=['Акции'],
 )
 
-api_router.include_router(
+v1_api_router.include_router(
     cafe_router,
     prefix='/cafes',
     tags=['Кафе'],
 )
 
-api_router.include_router(
+v1_api_router.include_router(
     booking_router,
     prefix='/booking',
     tags=['Бронирования'],
 )
 
-api_router.include_router(
+v1_api_router.include_router(
     notification_router,
     prefix='/booking',
     tags=['Уведомления'],
 )
 
-api_router.include_router(
+v1_api_router.include_router(
     tables_router,
     prefix='/cafes/{cafe_id}/tables',
     tags=['Столы'],
 )
 
-api_router.include_router(
+v1_api_router.include_router(
     slots_router,
     prefix='/cafes/{cafe_id}/time_slots',
     tags=['Временные слоты'],
 )
 
-api_router.include_router(
+v1_api_router.include_router(
     dish_router,
     prefix='/dishes',
     tags=['Блюда'],
 )
 
-api_router.include_router(
+v1_api_router.include_router(
     media_router,
     prefix='/media',
     tags=['Изображения'],

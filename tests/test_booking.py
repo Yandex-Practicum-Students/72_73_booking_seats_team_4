@@ -127,8 +127,8 @@ class BookingAPIContractTests(TestCase):
         """Коллекция и отдельная бронь публикуют только заявленные методы."""
         paths = app.openapi()['paths']
 
-        self.assertEqual(set(paths['/booking']), {'get', 'post'})
-        self.assertEqual(set(paths['/booking/{booking_id}']), {'get', 'patch'})
+        self.assertEqual(set(paths['/api/v1/booking']), {'get', 'post'})
+        self.assertEqual(set(paths['/api/v1/booking/{booking_id}']), {'get', 'patch'})
 
 
 class BookingAPITests(IsolatedAsyncioTestCase):
@@ -176,7 +176,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
         get_all = AsyncMock()
 
         with patch('api.endpoints.booking.booking_crud.get_all', new=get_all):
-            response = await self.client.get('/booking')
+            response = await self.client.get('/api/v1/booking')
 
         self.assertEqual(response.status_code, 401)
         self.assertEqual(
@@ -197,7 +197,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.booking.booking_crud.get_all', new=get_all):
             response = await self.client.get(
-                '/booking',
+                '/api/v1/booking',
                 params={
                     'show_active': 'false',
                     'cafe_id': str(cafe_id),
@@ -225,7 +225,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.booking.booking_crud.get_all', new=get_all):
             response = await self.client.get(
-                '/booking',
+                '/api/v1/booking',
                 params={
                     'show_active': 'false',
                     'cafe_id': str(cafe_id),
@@ -250,7 +250,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.booking.booking_crud.get_all', new=get_all):
             response = await self.client.get(
-                '/booking',
+                '/api/v1/booking',
                 params={'cafe_id': str(uuid.uuid4())},
             )
 
@@ -271,7 +271,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.booking.booking_crud.get_all', new=get_all):
             response = await self.client.get(
-                '/booking',
+                '/api/v1/booking',
                 params={'show_active': 'false'},
             )
 
@@ -288,7 +288,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
         booking = _make_booking()
         self.booking_service.get_booking_or_raise.return_value = booking
 
-        response = await self.client.get(f'/booking/{booking.id}')
+        response = await self.client.get(f'/api/v1/booking/{booking.id}')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['id'], str(booking.id))
@@ -311,7 +311,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
             message='Доступ запрещен.',
         )
 
-        response = await self.client.get(f'/booking/{booking.id}')
+        response = await self.client.get(f'/api/v1/booking/{booking.id}')
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json(), {'code': 403, 'message': 'Доступ запрещен.'})
@@ -331,7 +331,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
         enqueue = Mock()
 
         with patch('api.endpoints.booking.send_booking_notification.delay', new=enqueue):
-            response = await self.client.post('/booking', json=payload)
+            response = await self.client.post('/api/v1/booking', json=payload)
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()['id'], str(booking.id))
@@ -347,7 +347,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
     async def test_create_rejects_past_booking_date_before_business_checks(self) -> None:
         """Дата в прошлом отклоняется схемой до обращения к сервисам."""
         booking = _make_booking(booking_date=date.today() - timedelta(days=1))
-        response = await self.client.post('/booking', json=_booking_payload(booking))
+        response = await self.client.post('/api/v1/booking', json=_booking_payload(booking))
 
         self.assertEqual(response.status_code, 422)
         self.assertIn('Дата бронирования не может быть меньше текущей даты', response.json()['message'])
@@ -359,7 +359,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
         payload = _booking_payload(booking)
         payload['reminder_minutes_before'] = 0
 
-        response = await self.client.post('/booking', json=payload)
+        response = await self.client.post('/api/v1/booking', json=payload)
 
         self.assertEqual(response.status_code, 422)
         self.booking_service.create_booking_with_notifications.assert_not_awaited()
@@ -382,7 +382,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.booking.send_booking_notification.delay', new=enqueue):
             response = await self.client.patch(
-                f'/booking/{booking.id}',
+                f'/api/v1/booking/{booking.id}',
                 json={'note': 'Тихое место'},
             )
 
@@ -409,7 +409,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.booking.send_booking_notification.delay'):
             response = await self.client.patch(
-                f'/booking/{booking.id}',
+                f'/api/v1/booking/{booking.id}',
                 json={
                     'tables_slots': [
                         {'table_id': str(table_id), 'slot_id': str(slot_id)},
@@ -441,7 +441,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
         )
 
         response = await self.client.patch(
-            f'/booking/{booking.id}',
+            f'/api/v1/booking/{booking.id}',
             json={'is_active': False},
         )
 
@@ -464,7 +464,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
         )
 
         response = await self.client.patch(
-            f'/booking/{booking.id}',
+            f'/api/v1/booking/{booking.id}',
             json={'note': 'Новое примечание'},
         )
 

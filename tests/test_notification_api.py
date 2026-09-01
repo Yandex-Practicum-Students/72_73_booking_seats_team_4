@@ -130,7 +130,7 @@ class NotificationAPITests(IsolatedAsyncioTestCase):
         ]
 
         response = await self.client.get(
-            f'/booking/{booking_id}/notifications',
+            f'/api/v1/booking/{booking_id}/notifications',
             params={
                 'type': NotificationType.REMINDER_CLIENT.value,
                 'status': NotificationStatus.FAILED.value,
@@ -161,7 +161,7 @@ class NotificationAPITests(IsolatedAsyncioTestCase):
         )
 
         response = await self.client.get(
-            f'/booking/{booking_id}/notifications/{notification_id}',
+            f'/api/v1/booking/{booking_id}/notifications/{notification_id}',
         )
 
         self.assertEqual(response.status_code, 403)
@@ -174,7 +174,7 @@ class NotificationAPITests(IsolatedAsyncioTestCase):
         notification_id = uuid.uuid4()
 
         response = await self.client.post(
-            f'/booking/{booking_id}/notifications/{notification_id}/retry',
+            f'/api/v1/booking/{booking_id}/notifications/{notification_id}/retry',
         )
 
         self.assertEqual(response.status_code, 403)
@@ -200,7 +200,7 @@ class NotificationAPITests(IsolatedAsyncioTestCase):
             new=enqueue,
         ):
             response = await self.client.post(
-                f'/booking/{booking_id}/notifications/{notification.id}/retry',
+                f'/api/v1/booking/{booking_id}/notifications/{notification.id}/retry',
             )
 
         self.assertEqual(response.status_code, 202)

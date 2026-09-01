@@ -30,9 +30,12 @@ class Settings(BaseSettings):
     """Настройки приложения."""
 
     # Общие настройки
-    title: str = 'Базовый набор FastAPI+SQLAlchemy+Postgres'
-    version: str = '0.0.1'
-    description: str = 'Основа для приложения'
+    title: str = 'Система бронирования мест в кафе'
+    version: str = '0.0.3'
+    description: str = (
+        'API для управления кафе, пользователями, меню и бронированиями.'
+    )
+    api_v1_prefix: str = '/api/v1'
     environment: Environment = Environment.DEVELOPMENT
 
     # Настройки подключения к БД

@@ -65,8 +65,8 @@ class SlotAPIContractTests(TestCase):
         """Коллекция и объект слотов публикуют только заявленные методы."""
         paths = app.openapi()['paths']
 
-        self.assertEqual(set(paths['/cafes/{cafe_id}/time_slots']), {'get', 'post'})
-        self.assertEqual(set(paths['/cafes/{cafe_id}/time_slots/{slot_id}']), {'get', 'patch'})
+        self.assertEqual(set(paths['/api/v1/cafes/{cafe_id}/time_slots']), {'get', 'post'})
+        self.assertEqual(set(paths['/api/v1/cafes/{cafe_id}/time_slots/{slot_id}']), {'get', 'patch'})
 
 
 class SlotAPITests(IsolatedAsyncioTestCase):
@@ -129,7 +129,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.slots.slot_crud.get_by_cafe', new=get_by_cafe):
             response = await self.client.get(
-                f'/cafes/{self.cafe_id}/time_slots',
+                f'/api/v1/cafes/{self.cafe_id}/time_slots',
                 params={'show_active': 'false'},
             )
 
@@ -149,7 +149,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.slots.slot_crud.get_by_cafe', new=get_by_cafe):
             response = await self.client.get(
-                f'/cafes/{self.cafe_id}/time_slots',
+                f'/api/v1/cafes/{self.cafe_id}/time_slots',
             )
 
         self.assertEqual(response.status_code, 401)
@@ -171,7 +171,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.slots.slot_crud.get_by_cafe', new=get_by_cafe):
             response = await self.client.get(
-                f'/cafes/{self.cafe_id}/time_slots',
+                f'/api/v1/cafes/{self.cafe_id}/time_slots',
                 params={'show_active': 'false'},
             )
 
@@ -191,7 +191,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.slots.slot_crud.get_by_cafe', new=get_by_cafe):
             response = await self.client.get(
-                f'/cafes/{self.cafe_id}/time_slots',
+                f'/api/v1/cafes/{self.cafe_id}/time_slots',
             )
 
         self.assertEqual(response.status_code, 200)
@@ -210,7 +210,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.slots.slot_crud.get_by_cafe', new=get_by_cafe):
             response = await self.client.get(
-                f'/cafes/{self.cafe_id}/time_slots',
+                f'/api/v1/cafes/{self.cafe_id}/time_slots',
                 params={'show_active': 'false'},
             )
 
@@ -236,7 +236,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
             new=create_with_cafe,
         ):
             response = await self.client.post(
-                f'/cafes/{self.cafe_id}/time_slots',
+                f'/api/v1/cafes/{self.cafe_id}/time_slots',
                 json=payload,
             )
 
@@ -258,7 +258,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
                 new=create_with_cafe,
         ):
             response = await self.client.post(
-                f'/cafes/{self.cafe_id}/time_slots',
+                f'/api/v1/cafes/{self.cafe_id}/time_slots',
                 json={
                     'start_time': '12:00',
                     'end_time': '10:00',
@@ -282,7 +282,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
             new=create_with_cafe,
         ):
             response = await self.client.post(
-                f'/cafes/{self.cafe_id}/time_slots',
+                f'/api/v1/cafes/{self.cafe_id}/time_slots',
                 json={
                     'start_time': '10:00',
                     'end_time': '12:00',
@@ -303,7 +303,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
         self._set_slot(slot)
 
         response = await self.client.get(
-            f'/cafes/{self.cafe_id}/time_slots/{slot.id}',
+            f'/api/v1/cafes/{self.cafe_id}/time_slots/{slot.id}',
         )
 
         self.assertEqual(response.status_code, 200)
@@ -316,7 +316,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
         self._set_slot(slot)
 
         response = await self.client.get(
-            f'/cafes/{self.cafe_id}/time_slots/{slot.id}',
+            f'/api/v1/cafes/{self.cafe_id}/time_slots/{slot.id}',
         )
 
         self.assertEqual(response.status_code, 404)
@@ -331,7 +331,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
         self._set_slot(slot)
 
         response = await self.client.get(
-            f'/cafes/{self.cafe_id}/time_slots/{slot.id}',
+            f'/api/v1/cafes/{self.cafe_id}/time_slots/{slot.id}',
         )
 
         self.assertEqual(response.status_code, 200)
@@ -346,7 +346,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
         app.dependency_overrides[get_cafe_or_404] = missing_cafe
 
         response = await self.client.get(
-            f'/cafes/{uuid.uuid4()}/time_slots',
+            f'/api/v1/cafes/{uuid.uuid4()}/time_slots',
         )
 
         self.assertEqual(response.status_code, 404)
@@ -365,7 +365,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
         self._set_slot(slot)
 
         response = await self.client.get(
-            f'/cafes/{foreign_cafe_id}/time_slots/{slot.id}',
+            f'/api/v1/cafes/{foreign_cafe_id}/time_slots/{slot.id}',
         )
 
         self.assertEqual(response.status_code, 403)
@@ -388,7 +388,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.slots.slot_crud.create_with_cafe', new=create_with_cafe):
             response = await self.client.post(
-                f'/cafes/{self.cafe_id}/time_slots',
+                f'/api/v1/cafes/{self.cafe_id}/time_slots',
                 json=payload,
             )
 
@@ -412,7 +412,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.slots.slot_crud.update', new=update):
             response = await self.client.patch(
-                f'/cafes/{self.cafe_id}/time_slots/{slot.id}',
+                f'/api/v1/cafes/{self.cafe_id}/time_slots/{slot.id}',
                 json={
                     'start_time': '14:00',
                     'end_time': '16:00',
@@ -438,7 +438,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.slots.slot_crud.update', new=update):
             response = await self.client.patch(
-                f'/cafes/{self.cafe_id}/time_slots/{slot.id}',
+                f'/api/v1/cafes/{self.cafe_id}/time_slots/{slot.id}',
                 json={
                     'start_time': '14:00',
                     'end_time': '16:00',
@@ -467,7 +467,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.slots.slot_crud.update', new=update):
             response = await self.client.patch(
-                f'/cafes/{self.cafe_id}/time_slots/{slot.id}',
+                f'/api/v1/cafes/{self.cafe_id}/time_slots/{slot.id}',
                 json={'description': 'Недоступное обновление'},
             )
 
@@ -490,7 +490,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.slots.slot_crud.update', new=update):
             response = await self.client.patch(
-                f'/cafes/{foreign_cafe_id}/time_slots/{slot.id}',
+                f'/api/v1/cafes/{foreign_cafe_id}/time_slots/{slot.id}',
                 json={'description': 'Недоступное обновление'},
             )
 

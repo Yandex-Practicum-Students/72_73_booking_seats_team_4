@@ -85,7 +85,7 @@ class LayeringTests(TestCase):
                         )
             self.assertEqual(inline_statuses, [], source_path.name)
 
-        action_responses = app.openapi()['paths']['/actions']['post']['responses']
+        action_responses = app.openapi()['paths']['/api/v1/actions']['post']['responses']
         self.assertEqual(set(action_responses), {'201', '400', '401', '403', '422'})
 
 

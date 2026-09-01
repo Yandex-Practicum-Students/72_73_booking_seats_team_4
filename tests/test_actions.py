@@ -57,8 +57,8 @@ class ActionSchemaTests(TestCase):
     def test_generated_openapi_matches_actions_contract(self) -> None:
         """OpenAPI содержит нужные ручки и возвращает кафе объектами."""
         specification = app.openapi()
-        collection_methods = specification['paths']['/actions']
-        detail_methods = specification['paths']['/actions/{action_id}']
+        collection_methods = specification['paths']['/api/v1/actions']
+        detail_methods = specification['paths']['/api/v1/actions/{action_id}']
 
         self.assertEqual(set(collection_methods), {'get', 'post'})
         self.assertEqual(set(detail_methods), {'get', 'patch'})

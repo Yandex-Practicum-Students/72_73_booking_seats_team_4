@@ -49,7 +49,7 @@ class AuthAPIContractTests(TestCase):
         """Авторизация публикует только POST /auth/login."""
         paths = app.openapi()['paths']
 
-        self.assertEqual(set(paths['/auth/login']), {'post'})
+        self.assertEqual(set(paths['/api/v1/auth/login']), {'post'})
 
 
 class AuthAPITests(IsolatedAsyncioTestCase):
@@ -95,7 +95,7 @@ class AuthAPITests(IsolatedAsyncioTestCase):
             ) as verify,
         ):
             response = await self.client.post(
-                '/auth/login',
+                '/api/v1/auth/login',
                 json={
                     'login': '  TESTER@EXAMPLE.COM  ',
                     'password': 'correct-password',
@@ -141,7 +141,7 @@ class AuthAPITests(IsolatedAsyncioTestCase):
             ),
         ):
             response = await self.client.post(
-                '/auth/login',
+                '/api/v1/auth/login',
                 json={
                     'login': '+7 999 123-45-67',
                     'password': 'correct-password',
@@ -169,7 +169,7 @@ class AuthAPITests(IsolatedAsyncioTestCase):
             ),
         ):
             response = await self.client.post(
-                '/auth/login',
+                '/api/v1/auth/login',
                 json={
                     'login': 'tester@example.com',
                     'password': 'correct-password',
@@ -195,7 +195,7 @@ class AuthAPITests(IsolatedAsyncioTestCase):
             ),
         ):
             response = await self.client.post(
-                '/auth/login',
+                '/api/v1/auth/login',
                 json={
                     'login': 'tester@example.com',
                     'password': 'wrong-password',
@@ -226,7 +226,7 @@ class AuthAPITests(IsolatedAsyncioTestCase):
             verify as verify_password,
         ):
             response = await self.client.post(
-                '/auth/login',
+                '/api/v1/auth/login',
                 json={
                     'login': 'missing@example.com',
                     'password': 'any-password',
@@ -254,7 +254,7 @@ class AuthAPITests(IsolatedAsyncioTestCase):
             ),
         ):
             response = await self.client.post(
-                '/auth/login',
+                '/api/v1/auth/login',
                 json={
                     'login': 'inactive@example.com',
                     'password': 'correct-password',
@@ -273,7 +273,7 @@ class AuthAPITests(IsolatedAsyncioTestCase):
             new=get_by_login,
         ):
             response = await self.client.post(
-                '/auth/login',
+                '/api/v1/auth/login',
                 json={
                     'login': '123',
                     'password': 'password',
