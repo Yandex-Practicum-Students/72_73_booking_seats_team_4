@@ -80,7 +80,7 @@ class DishCRUD(CRUDBase[Dish, DishCreate, DishUpdate]):
             query = query.join(Dish.cafes).where(Cafe.id == cafe_id)
         query = query.options(selectinload(Dish.cafes))
         result = await session.execute(query)
-        dishes = list(result.scalars().all())
+        dishes = result.scalars().all()
         logger.info('Найдено {} блюд', len(dishes))
         return dishes
 

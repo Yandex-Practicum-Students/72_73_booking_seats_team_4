@@ -1,9 +1,6 @@
-import os
-import sys
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import date, datetime, time, timedelta, timezone
-from pathlib import Path
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import AsyncMock, Mock, patch
@@ -11,24 +8,17 @@ from unittest.mock import AsyncMock, Mock, patch
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-os.environ.setdefault('POSTGRES_USER', 'test')
-os.environ.setdefault('POSTGRES_PASSWORD', 'test')
-os.environ.setdefault('POSTGRES_DB', 'test')
-os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
-os.environ.setdefault('REDIS_PASSWORD', 'test')
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+from api.dependencies.logging import get_current_user_with_logging
+from api.errors import APIError
+from main import app
+from models.booking import StatusBooking
+from models.user import UserRole
+from schemas.booking import BookingCreate, BookingTableSlot, BookingUpdate
+from services.booking import BookingService
+from services.dependencies import get_booking_service
 
-from api.dependencies.logging import get_current_user_with_logging  # noqa: E402
-from api.errors import APIError  # noqa: E402
-from main import app  # noqa: E402
-from models.booking import StatusBooking  # noqa: E402
-from models.user import UserRole  # noqa: E402
-from schemas.booking import BookingCreate, BookingTableSlot, BookingUpdate  # noqa: E402
-from services.booking import BookingService  # noqa: E402
-from services.dependencies import get_booking_service  # noqa: E402
-
-from core.db import get_session  # noqa: E402
-from core.redis import get_redis_session  # noqa: E402
+from core.db import get_session
+from core.redis import get_redis_session
 
 
 def _make_user(
@@ -336,9 +326,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()['id'], str(booking.id))
         self.booking_service.create_booking_with_notifications.assert_awaited_once()
-        current_user, new_booking = (
-            self.booking_service.create_booking_with_notifications.await_args.args
-        )
+        current_user, new_booking = self.booking_service.create_booking_with_notifications.await_args.args
         self.assertIs(current_user, self.current_user)
         self.assertEqual(new_booking.cafe_id, booking.cafe_id)
         self.assertEqual(new_booking.reminder_minutes_before, 45)
@@ -420,11 +408,7 @@ class BookingAPITests(IsolatedAsyncioTestCase):
             )
 
         self.assertEqual(response.status_code, 200)
-        update_data = (
-            self.booking_service.update_booking_with_notifications.await_args.kwargs[
-                'update_data'
-            ]
-        )
+        update_data = self.booking_service.update_booking_with_notifications.await_args.kwargs['update_data']
         self.assertEqual(update_data.booking_date, booking_date)
         self.assertEqual(update_data.guest_number, 3)
         self.assertEqual(update_data.tables_slots[0].table_id, table_id)
@@ -520,8 +504,9 @@ class BookingRulesTests(IsolatedAsyncioTestCase):
         )
 
         with patch('services.booking.get_cafe_or_404', new=AsyncMock()) as get_cafe:
-            result, result_notification_id = (
-                await self.service.create_booking_with_notifications(user, new_booking)
+            result, result_notification_id = await self.service.create_booking_with_notifications(
+                user,
+                new_booking,
             )
 
         self.assertIs(result, booking)

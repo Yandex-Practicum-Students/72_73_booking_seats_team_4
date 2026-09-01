@@ -80,7 +80,7 @@ class ActionCRUD(CRUDBase[Action, ActionCreate, ActionUpdate]):
             query = query.join(Action.cafes).where(Cafe.id == cafe_id)
         query = query.options(selectinload(Action.cafes))
         result = await session.execute(query)
-        actions = list(result.scalars().all())
+        actions = result.scalars().all()
         logger.info('Найдено {} акций', len(actions))
         return actions
 

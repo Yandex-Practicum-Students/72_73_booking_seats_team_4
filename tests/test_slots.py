@@ -1,9 +1,6 @@
-import os
-import sys
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime, time, timezone
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Never
 from unittest import IsolatedAsyncioTestCase, TestCase
@@ -12,26 +9,18 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-os.environ.setdefault('POSTGRES_USER', 'test')
-os.environ.setdefault('POSTGRES_PASSWORD', 'test')
-os.environ.setdefault('POSTGRES_DB', 'test')
-os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
-os.environ.setdefault('REDIS_PASSWORD', 'test')
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+from api.dependencies.cafe import get_cafe_or_404
+from api.dependencies.logging import get_current_user_with_logging
+from api.dependencies.slots import get_slot_in_cafe
+from crud.slot import slot_crud
+from main import app
+from models.user import UserRole
+from schemas.slots import TimeSlotCreate
+from services.errors import EntityNotFoundError
+from tests.test_cafes_api import _make_cafe, _make_user
 
-from test_cafes_api import _make_cafe, _make_user
-
-from api.dependencies.cafe import get_cafe_or_404  # noqa: E402
-from api.dependencies.logging import get_current_user_with_logging  # noqa: E402
-from api.dependencies.slots import get_slot_in_cafe  # noqa: E402
-from crud.slot import slot_crud  # noqa: E402
-from main import app  # noqa: E402
-from models.user import UserRole  # noqa: E402
-from schemas.slots import TimeSlotCreate  # noqa: E402
-from services.errors import EntityNotFoundError  # noqa: E402
-
-from core.db import get_session  # noqa: E402
-from core.redis import get_redis_session  # noqa: E402
+from core.db import get_session
+from core.redis import get_redis_session
 
 
 def _make_slot(
@@ -101,6 +90,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
 
     def _set_user(self, user: SimpleNamespace) -> None:
         """Подменяет текущего пользователя для следующего запроса."""
+
         async def user_override() -> AsyncGenerator[SimpleNamespace, None]:
             yield user
 
@@ -109,6 +99,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
     @staticmethod
     def _set_cafe(cafe: SimpleNamespace) -> None:
         """Подменяет получение кафе по идентификатору."""
+
         async def cafe_override() -> SimpleNamespace:
             return cafe
 
@@ -117,6 +108,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
     @staticmethod
     def _set_slot(slot: SimpleNamespace) -> None:
         """Подменяет получение слота по идентификатору."""
+
         async def slot_override() -> SimpleNamespace:
             return slot
 
@@ -254,8 +246,8 @@ class SlotAPITests(IsolatedAsyncioTestCase):
         create_with_cafe = AsyncMock()
 
         with patch(
-                'api.endpoints.slots.slot_crud.create_with_cafe',
-                new=create_with_cafe,
+            'api.endpoints.slots.slot_crud.create_with_cafe',
+            new=create_with_cafe,
         ):
             response = await self.client.post(
                 f'/api/v1/cafes/{self.cafe_id}/time_slots',
@@ -340,6 +332,7 @@ class SlotAPITests(IsolatedAsyncioTestCase):
 
     async def test_missing_cafe_uses_custom_error_response(self) -> None:
         """Неизвестный UUID возвращает единый формат ошибки 404."""
+
         async def missing_cafe() -> Never:
             raise EntityNotFoundError('Кафе не найдено')
 

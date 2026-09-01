@@ -178,8 +178,12 @@ async def set_managers(
         managers = result.scalars().all()
         for manager in managers:
             if manager.cafe_id is not None and manager.cafe_id != cafe.id:
-                logger.info('Переназначаем менеджера {} из кафе {} в кафе {}',
-                            manager.username, manager.cafe_id, cafe.id)
+                logger.info(
+                    'Переназначаем менеджера {} из кафе {} в кафе {}',
+                    manager.username,
+                    manager.cafe_id,
+                    cafe.id,
+                )
             manager.cafe_id = cafe.id
             session.add(manager)
 
@@ -187,7 +191,7 @@ async def set_managers(
         result = await session.execute(
             select(User).where(User.id.in_(manager_ids)),
         )
-        cafe.managers = list(result.scalars().all())
+        cafe.managers = result.scalars().all()
     else:
         cafe.managers = []
 

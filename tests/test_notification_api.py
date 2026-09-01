@@ -1,9 +1,6 @@
-import os
-import sys
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock, patch
@@ -11,30 +8,23 @@ from unittest.mock import AsyncMock, Mock, patch
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-os.environ.setdefault('POSTGRES_USER', 'test')
-os.environ.setdefault('POSTGRES_PASSWORD', 'test')
-os.environ.setdefault('POSTGRES_DB', 'test')
-os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
-os.environ.setdefault('REDIS_PASSWORD', 'test')
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-
-from api.dependencies.logging import get_current_user_with_logging  # noqa: E402
-from api.errors import APIError  # noqa: E402
-from crud.notification import NotificationCRUD  # noqa: E402
-from main import app  # noqa: E402
-from models import NotificationStatus, NotificationType  # noqa: E402
-from models.user import UserRole  # noqa: E402
-from services.booking import BookingService  # noqa: E402
-from services.dependencies import (  # noqa: E402
+from api.dependencies.logging import get_current_user_with_logging
+from api.errors import APIError
+from crud.notification import NotificationCRUD
+from main import app
+from models import NotificationStatus, NotificationType
+from models.user import UserRole
+from services.booking import BookingService
+from services.dependencies import (
     get_booking_service,
     get_notification_service,
 )
-from services.notification import (  # noqa: E402
+from services.notification import (
     NotificationRetryNotAllowedError,
     NotificationService,
 )
 
-from core.db import get_session  # noqa: E402
+from core.db import get_session
 
 
 def _make_user(

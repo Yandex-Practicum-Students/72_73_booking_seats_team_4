@@ -1,26 +1,16 @@
-import os
-import sys
 import uuid
 from datetime import date, datetime, time, timedelta, timezone
-from pathlib import Path
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import AsyncMock, Mock, patch
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-os.environ.setdefault('POSTGRES_USER', 'test')
-os.environ.setdefault('POSTGRES_PASSWORD', 'test')
-os.environ.setdefault('POSTGRES_DB', 'test')
-os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
-os.environ.setdefault('REDIS_PASSWORD', 'test')
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-
-from models import NotificationStatus, NotificationType, StatusBooking  # noqa: E402
-from services.notification import NotificationService  # noqa: E402
-from tasks.base import shutdown_worker_event_loop  # noqa: E402
-from tasks.channels.email import EmailChannel  # noqa: E402
-from tasks.notifications import (  # noqa: E402
+from models import NotificationStatus, NotificationType, StatusBooking
+from services.notification import NotificationService
+from tasks.base import shutdown_worker_event_loop
+from tasks.channels.email import EmailChannel
+from tasks.notifications import (
     _dispatch_notification,
     process_pending_due_notifications,
     send_booking_notification,

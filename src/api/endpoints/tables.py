@@ -1,16 +1,15 @@
 import uuid
-from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends
 
 from api.dependencies.cafe import get_cafe_or_404
-from api.dependencies.permissions import CurrentUser, StaffUser
+from api.dependencies.filters import Boolean, resolve_show_active
+from api.dependencies.permissions import CurrentUser, StaffUser, ensure_active_resource_visible
 from api.dependencies.tables import get_table_in_cafe
 from api.responses import error_responses
 from api.responses.statuses import CREATED, RESOURCE_CREATE_WITH_PARENT, RESOURCE_DETAIL, RESOURCE_UPDATE
 from crud.table import table_crud
 from models import Cafe, Table
-from models.user import UserRole
 from schemas.table import TableCreate, TableInfo, TableUpdate
 from services.cafe import ensure_manager_cafe_access
 
@@ -30,7 +29,7 @@ async def get_tables_by_cafe(
     cafe_id: uuid.UUID,
     current_user: CurrentUser,
     session: DBSession,
-    show_active: Optional[bool] = Query(None),
+    show_active: Boolean = None,
     _cafe: Cafe = Depends(get_cafe_or_404),
 ) -> list[Table]:
     """Получение списка доступных для бронирования столов в кафе.
@@ -38,17 +37,11 @@ async def get_tables_by_cafe(
     Для администраторов - все столы (учитываем параметр show_active),
     для менеджеров и пользователей - только активные.
     """
-    if current_user.role == UserRole.ADMIN:
-        return await table_crud.get_by_cafe(
-            cafe_id=cafe_id,
-            session=session,
-            show_active=show_active,
-        )
-
+    show_active = resolve_show_active(current_user, show_active)
     return await table_crud.get_by_cafe(
         cafe_id=cafe_id,
         session=session,
-        show_active=True,
+        show_active=show_active,
     )
 
 
@@ -95,11 +88,7 @@ async def get_table_by_id(
     """
     ensure_manager_cafe_access(current_user, cafe_id)
 
-    if current_user.role == UserRole.USER and not table.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Стол не найден',
-        )
+    ensure_active_resource_visible(current_user, table, 'Стол не найден')
 
     return table
 

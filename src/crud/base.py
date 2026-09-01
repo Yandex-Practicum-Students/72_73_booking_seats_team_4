@@ -225,7 +225,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                     query = select(related_model).where(related_model.id.in_(input_data[pydantic_field]))
                     result = await session.execute(query)
 
-                    setattr(db_obj, sqlalchemy_field, list(result.scalars().all()))
+                    setattr(db_obj, sqlalchemy_field, result.scalars().all())
 
             for field, value in input_data.items():
                 if field in self.rel_map or field in self.rel_map.values():
@@ -268,7 +268,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                     if value:
                         query = select(related_model).where(related_model.id.in_(value))
                         result = await session.execute(query)
-                        setattr(db_obj, sqlalchemy_field, list(result.scalars().all()))
+                        setattr(db_obj, sqlalchemy_field, result.scalars().all())
                     else:
                         setattr(db_obj, sqlalchemy_field, [])
 

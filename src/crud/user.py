@@ -64,7 +64,7 @@ class UserCRUD(CRUDBase[User, UserCreate, UserUpdate]):
     async def get_all(self, session: AsyncSession) -> list[User]:
         """Возвращает всех пользователей."""
         users = await session.scalars(select(User).order_by(User.created_at))
-        return list(users.all())
+        return users.all()
 
     async def create(self, user_create: UserCreate, session: AsyncSession) -> User:
         """Создаёт пользователя и сохраняет только хеш пароля."""

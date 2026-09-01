@@ -83,7 +83,7 @@ jobs:
         REDIS_URL: redis://localhost:6379
         DB_HOST: 127.0.0.1
         DB_PORT: 5432
-      run: uv run python -m unittest discover -s tests
+      run: uv run python -m unittest discover -s tests -t .
   build_app_and_push_to_docker_hub:
     name: Push Docker image to DockerHub
     runs-on: ubuntu-latest

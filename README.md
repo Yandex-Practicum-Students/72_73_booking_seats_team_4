@@ -77,7 +77,7 @@ uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 ```bash
 uv run ruff check .
-uv run python -m unittest discover -s tests
+uv run python -m unittest discover -s tests -t .
 ```
 
 ## Фоновые задачи

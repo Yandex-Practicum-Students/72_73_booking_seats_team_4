@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter
 from loguru import logger
 
+from api.dependencies.filters import Boolean, resolve_show_active
 from api.dependencies.permissions import CurrentUser
 from api.responses import error_responses
 from api.responses.statuses import (
@@ -37,6 +38,7 @@ async def get_all_bookings(
     current_user: CurrentUser,
     session: DBSession,
     filters: FilterParam,
+    show_active: Boolean = None,
 ) -> list[Booking]:
     """Получение списка бронирований.
 
@@ -45,16 +47,18 @@ async def get_all_bookings(
     Для пользователей - только свои активные бронирования(параметры игнорируются, кроме ID кафе).
     """
     logger.info('Фильтрует параметры в зависимости от роли пользователя для получения списка бронирований.')
+    show_active = resolve_show_active(
+        current_user,
+        show_active,
+        manager_can_filter=True,
+    )
     if current_user.role == UserRole.USER:
-        filters.show_active = True
         filters.user_id = current_user.id
     elif current_user.role == UserRole.MANAGER:
-        if filters.show_active is None:
-            filters.show_active = True
         filters.cafe_id = current_user.cafe_id
     return await booking_crud.get_all(
         session=session,
-        show_active=filters.show_active,
+        show_active=show_active,
         cafe_id=filters.cafe_id,
         user_id=filters.user_id,
     )
