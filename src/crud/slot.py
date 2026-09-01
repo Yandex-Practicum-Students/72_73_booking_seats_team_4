@@ -57,7 +57,7 @@ class SlotCRUD(CRUDBase[Slot, TimeSlotCreate, TimeSlotUpdate]):
 
         query = query.options(selectinload(Slot.cafe))
         result = await session.execute(query)
-        slots = list(result.scalars().all())
+        slots = result.scalars().all()
         logger.info('Найдено {} слотов для кафе {}', len(slots), cafe_id)
         return slots
 
@@ -69,10 +69,14 @@ class SlotCRUD(CRUDBase[Slot, TimeSlotCreate, TimeSlotUpdate]):
     ) -> Slot | None:
         """Возвращает слот по ID, принадлежащий указанному кафе."""
         logger.info('Получение слота по cafe_id={} и slot_id={}', cafe_id, slot_id)
-        query = select(Slot).where(
-            Slot.id == slot_id,
-            Slot.cafe_id == cafe_id,
-        ).options(selectinload(Slot.cafe))
+        query = (
+            select(Slot)
+            .where(
+                Slot.id == slot_id,
+                Slot.cafe_id == cafe_id,
+            )
+            .options(selectinload(Slot.cafe))
+        )
         result = await session.execute(query)
         slot = result.scalar_one_or_none()
 

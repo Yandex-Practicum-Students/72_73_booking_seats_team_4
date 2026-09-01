@@ -1,8 +1,5 @@
-import os
-import sys
 import uuid
 from collections.abc import AsyncGenerator
-from pathlib import Path
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import AsyncMock, patch
@@ -12,19 +9,12 @@ from fastapi.security import HTTPAuthorizationCredentials
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-os.environ.setdefault('POSTGRES_USER', 'test')
-os.environ.setdefault('POSTGRES_PASSWORD', 'test')
-os.environ.setdefault('POSTGRES_DB', 'test')
-os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
-os.environ.setdefault('REDIS_PASSWORD', 'test')
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+from main import app
 
-from main import app  # noqa: E402
-
-from core.db import get_session  # noqa: E402
-from core.redis import get_redis_session  # noqa: E402
-from core.settings import settings  # noqa: E402
-from core.user import (  # noqa: E402
+from core.db import get_session
+from core.redis import get_redis_session
+from core.settings import settings
+from core.user import (
     DUMMY_PASSWORD_HASH,
     TOKEN_SESSION_KEY_PREFIX,
     create_access_token,

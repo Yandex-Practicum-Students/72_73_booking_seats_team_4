@@ -80,13 +80,12 @@ class NotificationService:
         status_: NotificationStatus | None = None,
     ) -> list[BookingNotification]:
         """Возвращает историю уведомлений и напоминаний бронирования."""
-        notifications = await self.notification_crud.get_for_booking(
+        return await self.notification_crud.get_for_booking(
             booking_id=booking_id,
             session=self.session,
             type_=type_,
             status_=status_,
         )
-        return list(notifications)
 
     async def get_notification_or_raise(
         self,

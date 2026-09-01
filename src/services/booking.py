@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 from api.dependencies.cafe import get_cafe_or_404
 from api.dependencies.permissions import CurrentUser
 from api.errors import APIError
+from api.responses.errors import BookingAlreadyExistsError, BookingNotFoundError, CrossSlotsExistsError
 from crud.booking import BookingCRUD, booking_crud
 from models.booking import Booking, BookingTablesSlots, StatusBooking
 from models.slots import Slot
@@ -22,44 +23,10 @@ from services.notification import NotificationService
 from core.db import DBSession
 
 
-class BookingNotFoundError(APIError):
-    """Бронирование не найдено."""
-
-    def __init__(self) -> None:
-        """Бронирование не найдено."""
-        super().__init__(
-            status_code=status.HTTP_404_NOT_FOUND,
-            message='Бронирование не найдено.',
-        )
-
-
-class BookingAlreadyExistsError(APIError):
-    """Бронирование уже существует."""
-
-    def __init__(self) -> None:
-        """Бронирование уже существует."""
-        super().__init__(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message='Бронирование уже существует.',
-        )
-
-
-class CrossSlotsExistsError(APIError):
-    """Существует бронирование с пересекающимися слотами."""
-
-    def __init__(self) -> None:
-        """Существует бронирование с пересекающимися слотами."""
-        super().__init__(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message='У пользователя есть бронирования с пересекающимися слотами.',
-        )
-
-
 @dataclass
 class QueryParamFilter:
     """Фильтр query-параметров."""
 
-    show_active: Optional[bool] = None
     cafe_id: Optional[uuid.UUID] = None
     user_id: Optional[uuid.UUID] = None
 

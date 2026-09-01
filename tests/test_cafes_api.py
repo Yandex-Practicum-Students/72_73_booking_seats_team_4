@@ -1,9 +1,6 @@
-import os
-import sys
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Never
 from unittest import IsolatedAsyncioTestCase, TestCase
@@ -12,21 +9,14 @@ from unittest.mock import AsyncMock, patch
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-os.environ.setdefault('POSTGRES_USER', 'test')
-os.environ.setdefault('POSTGRES_PASSWORD', 'test')
-os.environ.setdefault('POSTGRES_DB', 'test')
-os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
-os.environ.setdefault('REDIS_PASSWORD', 'test')
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+from api.dependencies.cafe import get_cafe_or_404
+from api.dependencies.logging import get_current_user_with_logging
+from main import app
+from models.user import UserRole
+from services.errors import EntityNotFoundError
 
-from api.dependencies.cafe import get_cafe_or_404  # noqa: E402
-from api.dependencies.logging import get_current_user_with_logging  # noqa: E402
-from main import app  # noqa: E402
-from models.user import UserRole  # noqa: E402
-from services.errors import EntityNotFoundError  # noqa: E402
-
-from core.db import get_session  # noqa: E402
-from core.redis import get_redis_session  # noqa: E402
+from core.db import get_session
+from core.redis import get_redis_session
 
 
 def _make_user(

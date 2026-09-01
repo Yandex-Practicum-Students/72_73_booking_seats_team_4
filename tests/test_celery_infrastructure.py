@@ -1,19 +1,10 @@
-import os
-import sys
 from pathlib import Path
 from unittest import TestCase
 
-os.environ.setdefault('POSTGRES_USER', 'test')
-os.environ.setdefault('POSTGRES_PASSWORD', 'test')
-os.environ.setdefault('POSTGRES_DB', 'test')
-os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
-os.environ.setdefault('REDIS_PASSWORD', 'test')
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+from tasks.celery_app import celery_app
+from tasks.system import healthcheck
 
-from tasks.celery_app import celery_app  # noqa: E402
-from tasks.system import healthcheck  # noqa: E402
-
-from core.settings import Settings  # noqa: E402
+from core.settings import Settings
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 

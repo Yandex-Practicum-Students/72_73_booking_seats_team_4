@@ -1,6 +1,6 @@
-from typing import Annotated
+from typing import Annotated, Protocol
 
-from fastapi import Depends, status
+from fastapi import Depends, HTTPException, status
 
 from api.dependencies.logging import get_current_user_with_logging, get_me_user_with_logging
 from api.errors import APIError
@@ -33,3 +33,22 @@ async def get_admin_user(user: CurrentUser) -> User:
 
 StaffUser = Annotated[User, Depends(get_staff_user)]
 AdminUser = Annotated[User, Depends(get_admin_user)]
+
+
+class ActiveResource(Protocol):
+    """Ресурс, доступность которого определяется флагом активности."""
+
+    is_active: bool
+
+
+def ensure_active_resource_visible(
+    user: User,
+    resource: ActiveResource,
+    not_found_detail: str,
+) -> None:
+    """Скрывает неактивный ресурс от обычного пользователя."""
+    if user.role == UserRole.USER and not resource.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=not_found_detail,
+        )

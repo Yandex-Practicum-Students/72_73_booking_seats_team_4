@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import io
 import uuid
 from pathlib import Path
@@ -10,15 +10,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.media import Media
 
-MEDIA_ROOT = Path('media')
-
-# Лимит согласован с командой: 5 МБ (было 10 МБ)
-MAX_FILE_SIZE = 5 * 1024 * 1024
-CHUNK_SIZE = 1024 * 1024
-
-# Разрешённые форматы изображений на входе
-ALLOWED_CONTENT_TYPES = {'image/jpeg', 'image/png'}
-JPEG_QUALITY = 90
+from core.constants import (
+    ALLOWED_MEDIA_CONTENT_TYPES as ALLOWED_CONTENT_TYPES,
+)
+from core.constants import (
+    MAX_MEDIA_FILE_SIZE as MAX_FILE_SIZE,
+)
+from core.constants import (
+    MEDIA_CHUNK_SIZE as CHUNK_SIZE,
+)
+from core.constants import (
+    MEDIA_JPEG_QUALITY as JPEG_QUALITY,
+)
+from core.constants import (
+    MEDIA_ROOT,
+)
 
 
 class MediaCRUD:

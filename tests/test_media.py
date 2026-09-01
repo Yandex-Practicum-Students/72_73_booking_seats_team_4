@@ -1,6 +1,4 @@
 import io
-import os
-import sys
 import uuid
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -11,16 +9,9 @@ from PIL import Image
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-os.environ.setdefault('POSTGRES_USER', 'test')
-os.environ.setdefault('POSTGRES_PASSWORD', 'test')
-os.environ.setdefault('POSTGRES_DB', 'test')
-os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
-os.environ.setdefault('REDIS_PASSWORD', 'test')
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-
-import crud.media as media_module  # noqa: E402
-from crud.media import MediaCRUD  # noqa: E402
-from models.media import Media  # noqa: E402
+import crud.media as media_module
+from crud.media import MediaCRUD
+from models.media import Media
 
 
 def _make_png_bytes(color: tuple = (255, 0, 0)) -> bytes:
@@ -110,7 +101,9 @@ class MediaCRUDTests(IsolatedAsyncioTestCase):
         session = _make_session()
         crud = MediaCRUD(session)
         upload = _make_upload(
-            _make_jpeg_bytes(), filename='photo.jpg', content_type='image/jpeg',
+            _make_jpeg_bytes(),
+            filename='photo.jpg',
+            content_type='image/jpeg',
         )
 
         media = await crud.save_file(upload)
@@ -124,7 +117,9 @@ class MediaCRUDTests(IsolatedAsyncioTestCase):
         session = _make_session()
         crud = MediaCRUD(session)
         upload = _make_upload(
-            b'fake gif content', filename='pic.gif', content_type='image/gif',
+            b'fake gif content',
+            filename='pic.gif',
+            content_type='image/gif',
         )
 
         with self.assertRaises(HTTPException) as raised:

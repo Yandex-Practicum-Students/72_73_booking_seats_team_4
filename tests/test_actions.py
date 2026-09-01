@@ -1,7 +1,4 @@
-import os
-import sys
 import uuid
-from pathlib import Path
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import ANY, AsyncMock, Mock, patch
@@ -11,29 +8,22 @@ from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-os.environ.setdefault('POSTGRES_USER', 'test')
-os.environ.setdefault('POSTGRES_PASSWORD', 'test')
-os.environ.setdefault('POSTGRES_DB', 'test')
-os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
-os.environ.setdefault('REDIS_PASSWORD', 'test')
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-
-from api.endpoints.action import (  # noqa: E402
+from api.endpoints.action import (
     create_action,
     get_action_by_id,
     get_all_actions,
     update_action,
 )
-from crud.action import ActionAlreadyExistsError, action_crud  # noqa: E402
-from crud.base import CRUDBase  # noqa: E402
-from main import app  # noqa: E402
-from models.cafe import Cafe  # noqa: E402
-from models.user import UserRole  # noqa: E402
-from schemas.action import ActionCreate, ActionUpdate  # noqa: E402
-from services.action import get_action_or_raise  # noqa: E402
-from services.action import update_action as update_action_in_service  # noqa: E402
-from services.cafe import ensure_manager_cafes_access  # noqa: E402
-from services.errors import EntityNotFoundError, PermissionDeniedError  # noqa: E402
+from crud.action import ActionAlreadyExistsError, action_crud
+from crud.base import CRUDBase
+from main import app
+from models.cafe import Cafe
+from models.user import UserRole
+from schemas.action import ActionCreate, ActionUpdate
+from services.action import get_action_or_raise
+from services.action import update_action as update_action_in_service
+from services.cafe import ensure_manager_cafes_access
+from services.errors import EntityNotFoundError, PermissionDeniedError
 
 
 class ActionSchemaTests(TestCase):
