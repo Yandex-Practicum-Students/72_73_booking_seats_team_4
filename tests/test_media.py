@@ -7,8 +7,8 @@ from tempfile import TemporaryDirectory
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock
 
-from fastapi import HTTPException, UploadFile
 from PIL import Image
+from fastapi import HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 os.environ.setdefault('POSTGRES_USER', 'test')

@@ -28,6 +28,7 @@ from services.booking import BookingService  # noqa: E402
 from services.dependencies import get_booking_service  # noqa: E402
 
 from core.db import get_session  # noqa: E402
+from core.redis import get_redis_session  # noqa: E402
 
 
 def _make_user(
@@ -141,7 +142,11 @@ class BookingAPITests(IsolatedAsyncioTestCase):
         async def session_override() -> AsyncGenerator[AsyncSession, None]:
             yield self.session
 
+        async def redis_override() -> AsyncGenerator[AsyncMock, None]:
+            yield AsyncMock()
+
         app.dependency_overrides[get_session] = session_override
+        app.dependency_overrides[get_redis_session] = redis_override
         self.booking_service = AsyncMock(spec=BookingService)
         app.dependency_overrides[get_booking_service] = lambda: self.booking_service
         self.current_user = _make_user(UserRole.ADMIN)
