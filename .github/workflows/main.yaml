@@ -300,6 +300,13 @@ jobs:
 
             sleep 5
             docker image prune -f
+      - name: Wait and Check Health
+        uses: jasonmccreary/url-health-check@v3
+        with:
+          url: 'https://bookingseatsteam4.myddns.me/docs'
+          allowed-status-codes: 200
+          max-attempts: 3
+          retry-delay: 5
   send_message:
     runs-on: ubuntu-latest
     needs: deploy
