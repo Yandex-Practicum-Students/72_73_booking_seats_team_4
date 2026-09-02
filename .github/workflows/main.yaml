@@ -284,6 +284,11 @@ jobs:
             FLOWER_BASIC_AUTH=${{ secrets.FLOWER_BASIC_AUTH }}
             RABBITMQ_ERLANG_COOKIE=${{ secrets.RABBITMQ_ERLANG_COOKIE }}
             VERSION=${{ steps.get_tag.outputs.tag }}
+            SMTP_HOST=${{ secrets.SMTP_HOST }}
+            SMTP_PORT=${{ secrets.SMTP_PORT }}
+            SMTP_USER=${{ secrets.SMTP_USER }}
+            SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+            SMTP_FROM_EMAIL=${{ secrets.SMTP_FROM_EMAIL }}
             EOF
 
             docker compose -f docker-compose.dev.yml pull
