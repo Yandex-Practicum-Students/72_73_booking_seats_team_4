@@ -301,7 +301,7 @@ jobs:
             sleep 5
             docker image prune -f
       - name: Wait and Check Health
-        uses: jasonmccreary/url-health-check@v3
+        uses: shub08/url-health-check
         with:
           url: 'https://bookingseatsteam4.myddns.me/docs'
           allowed-status-codes: 200
