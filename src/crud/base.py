@@ -20,7 +20,7 @@ UpdateSchemaType = TypeVar('UpdateSchemaType', bound=BaseModel)
 ResponseSchemaType = TypeVar('ResponseSchemaType', bound=BaseModel)
 
 
-class DuplicateError(ValueError):
+class BadRequestError(ValueError):
     """Объект с одним из уникальных полей уже существует."""
 
 
@@ -252,7 +252,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             await session.rollback()
             logger.error(f'Нарушение целостности БД при создании {self.model.__tablename__}: {e}')
             message = f'{self.model.__tablename__} с такими параметрами уже существует'
-            raise DuplicateError(message) from e
+            raise BadRequestError(message) from e
         except Exception as e:
             logger.error(f'Ошибка при сохранении объекта: {db_obj}.\n {e}')
             raise
@@ -302,7 +302,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             await session.rollback()
             logger.error(f'Нарушение целостности БД при изменении {self.model.__tablename__}: {e}')
             message = f'{self.model.__tablename__} с такими параметрами уже существует'
-            raise DuplicateError(message) from e
+            raise BadRequestError(message) from e
         except Exception as e:
             logger.error(f'Ошибка при обновлении объекта "{db_obj}":\n {e}')
             raise

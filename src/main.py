@@ -27,7 +27,7 @@ from api.exceptions import (
 )
 from api.routers import v1_api_router
 from crud.action import ActionAlreadyExistsError
-from crud.base import DuplicateError
+from crud.base import BadRequestError
 from crud.dish import DishAlreadyExistsError
 from crud.user import UserAlreadyExistsError, UserNotFoundError
 from services.errors import (
@@ -85,7 +85,7 @@ app.add_exception_handler(EntityNotFoundError, entity_not_found_handler)
 app.add_exception_handler(PermissionDeniedError, permission_denied_handler)
 app.add_exception_handler(ActionAlreadyExistsError, action_already_exists_handler)
 app.add_exception_handler(DishAlreadyExistsError, dish_already_exists_handler)
-app.add_exception_handler(DuplicateError, duplicate_error_handler)
+app.add_exception_handler(BadRequestError, duplicate_error_handler)
 app.add_exception_handler(UserAlreadyExistsError, user_already_exists_handler)
 app.add_exception_handler(UserNotFoundError, user_not_found_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
