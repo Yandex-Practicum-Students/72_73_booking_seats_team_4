@@ -4,19 +4,18 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 
 from api.dependencies.dish import get_dish_or_404
-from api.dependencies.filters import Boolean, resolve_show_active
+from api.dependencies.filters import Boolean, filter_user_role_manager_for_cafe_id, resolve_show_active
 from api.dependencies.permissions import CurrentUser, StaffUser, ensure_active_resource_visible
 from api.responses import error_responses
 from api.responses.statuses import CREATED, RESOURCE_CREATE, RESOURCE_DETAIL, RESOURCE_UPDATE
 from crud.dish import dish_crud
 from models.dish import Dish
-from models.user import UserRole
 from schemas.dish import DishCreate, DishInfo, DishUpdate
 from services.dish import create_dish as create_dish_service
 from services.dish import update_dish as update_dish_service
 
-from core.core_dependencies import redis_dep
 from core.db import DBSession
+from core.redis import redis_dep
 
 router = APIRouter()
 
@@ -39,16 +38,12 @@ async def get_all_dishes(
     для менеджеров и пользователей - только активные.
     """
     show_active = resolve_show_active(current_user, show_active)
-
-    # Менеджер видит только блюда своего кафе
-    effective_cafe_id = cafe_id
-    if current_user.role == UserRole.MANAGER:
-        effective_cafe_id = current_user.cafe_id
+    cafe_id = filter_user_role_manager_for_cafe_id(current_user, cafe_id)
 
     return await dish_crud.get_all(
         session=session,
         is_active=show_active,
-        cafe_id=effective_cafe_id,
+        cafe_id=cafe_id,
     )
 
 

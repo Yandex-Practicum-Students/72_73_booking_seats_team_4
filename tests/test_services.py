@@ -2,6 +2,7 @@ import uuid
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import AsyncMock, Mock, patch
 
+from exceptions.common import EntityNotFoundError, PermissionDeniedError
 from models.user import UserRole
 from services.cafe import (
     ensure_cafes_exist,
@@ -10,7 +11,6 @@ from services.cafe import (
     get_cafe_or_raise,
     get_manager_cafes,
 )
-from services.errors import EntityNotFoundError, PermissionDeniedError
 from services.slot import get_slot_in_cafe_or_raise
 
 

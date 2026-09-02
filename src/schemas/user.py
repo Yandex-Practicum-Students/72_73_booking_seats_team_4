@@ -72,6 +72,8 @@ class UserCreate(UserBase):
             raise ValueError('Поле email или поле phone должно быть заполнено')
         return self
 
+    check_not_null_fields = field_validator('username', 'password')(field_cannot_be_null)
+
 
 class UserShortInfo(IdScheme, UserBase):
     """Краткая информация о пользователе."""

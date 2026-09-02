@@ -9,10 +9,10 @@ from redis.exceptions import RedisError
 from sqlalchemy.exc import SQLAlchemyError
 
 from api.dependencies.permissions import get_staff_user
-from api.errors import APIError
 from api.exceptions import api_error_handler
 from crud.cafe import cafe_crud
 from crud.user import user_crud
+from exceptions.base import APIError
 from main import app
 from models.user import User, UserRole
 from schemas.cafe import CafeCreate

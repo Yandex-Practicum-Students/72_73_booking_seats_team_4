@@ -6,18 +6,17 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crud.cafe import cafe_crud
+from exceptions.cafe import (
+    ManagerNotFoundError,
+    ManagerRoleError,
+)
+from exceptions.common import EntityNotFoundError, PermissionDeniedError
 from models.cafe import Cafe
 from models.user import User, UserRole
 from schemas.cafe import CafeCreate, CafeUpdate
-from services.errors import (
-    EntityNotFoundError,
-    ManagerNotFoundError,
-    ManagerRoleError,
-    PermissionDeniedError,
-)
 from services.media import get_media_or_raise
 
-from core.core_dependencies import redis_dep
+from core.redis import redis_dep
 
 
 class CafeReader(Protocol):

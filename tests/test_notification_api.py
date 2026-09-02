@@ -8,21 +8,17 @@ from unittest.mock import AsyncMock, Mock, patch
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.dependencies.booking import get_booking_service
 from api.dependencies.logging import get_current_user_with_logging
-from api.errors import APIError
+from api.dependencies.notification import get_notification_service
 from crud.notification import NotificationCRUD
+from exceptions.base import APIError
+from exceptions.notification import NotificationRetryNotAllowedError
 from main import app
 from models import NotificationStatus, NotificationType
 from models.user import UserRole
 from services.booking import BookingService
-from services.dependencies import (
-    get_booking_service,
-    get_notification_service,
-)
-from services.notification import (
-    NotificationRetryNotAllowedError,
-    NotificationService,
-)
+from services.notification import NotificationService
 
 from core.db import get_session
 

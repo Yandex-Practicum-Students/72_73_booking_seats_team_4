@@ -1,18 +1,17 @@
 import uuid
-from dataclasses import dataclass
 from datetime import date
-from typing import Annotated, Optional
+from typing import Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import HTTPException, status
 from loguru import logger
 from sqlalchemy import and_, or_, select, tuple_
 from sqlalchemy.orm import selectinload
 
 from api.dependencies.cafe import get_cafe_or_404
 from api.dependencies.permissions import CurrentUser
-from api.errors import APIError
-from api.responses.errors import BookingAlreadyExistsError, BookingNotFoundError, CrossSlotsExistsError
 from crud.booking import BookingCRUD, booking_crud
+from exceptions.base import APIError
+from exceptions.booking import BookingAlreadyExistsError, BookingNotFoundError, CrossSlotsExistsError
 from models.booking import Booking, BookingTablesSlots, StatusBooking
 from models.slots import Slot
 from models.table import Table
@@ -21,17 +20,6 @@ from schemas.booking import BookingCreate, BookingUpdate
 from services.notification import NotificationService
 
 from core.db import DBSession
-
-
-@dataclass
-class QueryParamFilter:
-    """Фильтр query-параметров."""
-
-    cafe_id: Optional[uuid.UUID] = None
-    user_id: Optional[uuid.UUID] = None
-
-
-FilterParam = Annotated[QueryParamFilter, Depends(QueryParamFilter)]
 
 
 class BookingService:

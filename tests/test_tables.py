@@ -13,10 +13,10 @@ from api.dependencies.cafe import get_cafe_or_404
 from api.dependencies.logging import get_current_user_with_logging
 from api.dependencies.tables import get_table_in_cafe
 from crud.table import table_crud
+from exceptions.common import EntityNotFoundError
 from main import app
 from models.user import UserRole
 from schemas.table import TableCreate
-from services.errors import EntityNotFoundError
 
 from core.db import get_session
 from core.redis import get_redis_session

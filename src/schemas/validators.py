@@ -43,7 +43,9 @@ def normalize_login(value: Any) -> Any:
     value = value.strip()
     if '@' in value:
         return value.lower()
-    return normalize_phone(value)
+    if any(char.isdecimal() for char in value):
+        return normalize_phone(value)
+    raise ValueError('В login необходимо указать email или телефон.')
 
 
 def normalize_time(value: Any) -> Any:

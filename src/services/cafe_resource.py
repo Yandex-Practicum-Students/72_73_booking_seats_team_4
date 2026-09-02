@@ -3,7 +3,7 @@ from typing import Protocol, TypeVar
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from services.errors import EntityNotFoundError
+from exceptions.common import EntityNotFoundError
 
 from core.base_model import Base
 

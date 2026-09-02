@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import interfaces
 
 from core.base_model import Base
-from core.core_dependencies import redis_dep
+from core.redis import redis_dep
 from core.settings import settings
 
 ModelType = TypeVar('ModelType', bound=Base)
