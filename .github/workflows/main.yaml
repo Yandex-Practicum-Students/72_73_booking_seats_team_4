@@ -289,7 +289,7 @@ jobs:
             docker compose -f docker-compose.dev.yml pull
             docker compose -f docker-compose.dev.yml down
             docker compose -f docker-compose.dev.yml up -d
-            docker compose -f docker-compose.dev.yml exec app alembic upgrade head
+            docker compose -f docker-compose.dev.yml exec app alembic -c src/alembic.ini upgrade head
 
             mv .env.bak .env
 
