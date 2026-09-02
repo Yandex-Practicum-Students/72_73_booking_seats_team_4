@@ -1,29 +1,21 @@
 import ast
-import os
-import sys
 import uuid
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import AsyncMock, patch
 
-os.environ.setdefault('POSTGRES_USER', 'test')
-os.environ.setdefault('POSTGRES_PASSWORD', 'test')
-os.environ.setdefault('POSTGRES_DB', 'test')
-os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
-os.environ.setdefault('REDIS_PASSWORD', 'test')
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / 'src'))
+from main import app
+from models.user import UserRole
+from schemas.action import ActionCreate
+from schemas.cafe import CafeCreate
+from schemas.dish import DishCreate, DishUpdate
+from services.action import create_action
+from services.cafe import create_cafe
+from services.dish import create_dish, update_dish
+from services.errors import PermissionDeniedError
 
-from main import app  # noqa: E402
-from models.user import UserRole  # noqa: E402
-from schemas.action import ActionCreate  # noqa: E402
-from schemas.cafe import CafeCreate  # noqa: E402
-from schemas.dish import DishCreate, DishUpdate  # noqa: E402
-from services.action import create_action  # noqa: E402
-from services.cafe import create_cafe  # noqa: E402
-from services.dish import create_dish, update_dish  # noqa: E402
-from services.errors import PermissionDeniedError  # noqa: E402
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 class LayeringTests(TestCase):
@@ -43,9 +35,7 @@ class LayeringTests(TestCase):
                     service_imports.append(node.module)
                 elif isinstance(node, ast.Import):
                     service_imports.extend(
-                        alias.name
-                        for alias in node.names
-                        if alias.name.startswith('services')
+                        alias.name for alias in node.names if alias.name.startswith('services')
                     )
             self.assertEqual(service_imports, [], source_path.name)
 
@@ -57,18 +47,14 @@ class LayeringTests(TestCase):
                 target.id
                 for node in tree.body
                 if isinstance(node, (ast.Assign, ast.AnnAssign))
-                for target in (
-                    node.targets if isinstance(node, ast.Assign) else [node.target]
-                )
+                for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
                 if isinstance(target, ast.Name) and target.id.endswith('_RESPONSES')
             ]
             self.assertEqual(response_assignments, [], source_path.name)
 
             inline_statuses = []
             for function in (
-                node
-                for node in tree.body
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
             ):
                 for decorator in function.decorator_list:
                     if not isinstance(decorator, ast.Call):
@@ -85,7 +71,7 @@ class LayeringTests(TestCase):
                         )
             self.assertEqual(inline_statuses, [], source_path.name)
 
-        action_responses = app.openapi()['paths']['/actions']['post']['responses']
+        action_responses = app.openapi()['paths']['/api/v1/actions']['post']['responses']
         self.assertEqual(set(action_responses), {'201', '400', '401', '403', '422'})
 
 

@@ -1,10 +1,11 @@
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query
 
 from api.dependencies.action import get_action_or_404
-from api.dependencies.permissions import CurrentUser, StaffUser
+from api.dependencies.filters import Boolean, resolve_show_active
+from api.dependencies.permissions import CurrentUser, StaffUser, ensure_active_resource_visible
 from api.responses import error_responses
 from api.responses.statuses import CREATED, RESOURCE_CREATE, RESOURCE_DETAIL, RESOURCE_UPDATE
 from crud.action import action_crud
@@ -29,19 +30,20 @@ router = APIRouter()
 async def get_all_actions(
     current_user: CurrentUser,
     session: DBSession,
-    show_active: Optional[bool] = Query(None),
+    show_active: Boolean = None,
     cafe_id: Optional[uuid.UUID] = Query(None),
 ) -> list[Action]:
     """Получение списка акций с учётом роли пользователя."""
     effective_cafe_id = cafe_id
-    if current_user.role == UserRole.USER:
-        show_active = True
-    elif current_user.role == UserRole.MANAGER:
+    show_active = resolve_show_active(
+        current_user,
+        show_active,
+        manager_can_filter=True,
+    )
+    if current_user.role == UserRole.MANAGER:
         if current_user.cafe_id is None:
             return []
         effective_cafe_id = current_user.cafe_id
-        if show_active is None:
-            show_active = True
 
     return await action_crud.get_all(
         session=session,
@@ -80,11 +82,7 @@ async def get_action_by_id(
     action: Action = Depends(get_action_or_404),
 ) -> Action:
     """Получение акции по ID с проверкой её доступности пользователю."""
-    if current_user.role == UserRole.USER and not action.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Акция не найдена',
-        )
+    ensure_active_resource_visible(current_user, action, 'Акция не найдена')
     return action
 
 

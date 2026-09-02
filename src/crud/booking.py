@@ -88,7 +88,7 @@ class BookingCRUD(CRUDBase[Booking, BookingCreate, BookingUpdate]):
                 User.role == UserRole.MANAGER,
             ),
         )
-        return list(result.scalars().all())
+        return result.scalars().all()
 
     async def create(
         self,

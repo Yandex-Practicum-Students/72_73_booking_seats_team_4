@@ -57,7 +57,7 @@ class TableCRUD(CRUDBase[Table, TableCreate, TableUpdate]):
 
         query = query.options(selectinload(Table.cafe))
         result = await session.execute(query)
-        tables = list(result.scalars().all())
+        tables = result.scalars().all()
         logger.info('Найдено {} столов для кафе {}', len(tables), cafe_id)
         return tables
 

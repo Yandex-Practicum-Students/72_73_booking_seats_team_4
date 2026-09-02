@@ -1,166 +1,109 @@
-# Содержание
+# Бронирование мест в кафе
 
-- [Перед началом работы](#перед-началом-работы)
-- [Создание DevContainer и ещё немного подготовки](#создание-devcontainer-и-ещё-немного-подготовки)
-  - [Создание DevContainer](#создание-devcontainer)
-  - [И ещё немного подготовки](#и-ещё-немного-подготовки)
-- [Можно работать](#можно-работать)
-  - [В режиме отладки](#в-режиме-отладки)
-  - [Запустить локально](#запустить-локально)
-  - [Запустить в контейнере](#запустить-в-контейнере)
+Backend API для выбора кафе, просмотра меню и акций, бронирования столов и управления заведениями. Проект разработан командой студентов Яндекс Практикума.
 
------------------------------------
+## Возможности
 
-# Базовый шаблон для разработки приложений на FastAPI с использованием SQLAlchemy и PostgeSQL
+- регистрация и авторизация пользователей по JWT;
+- роли `ADMIN`, `MANAGER` и `USER` с разграничением прав;
+- управление кафе, столами, временными слотами, блюдами и акциями;
+- создание, просмотр и изменение бронирований;
+- загрузка изображений JPG и PNG размером до 5 МБ с сохранением в JPG;
+- email уведомления персоналу и напоминания клиентам;
+- фоновые задачи и повторная отправка уведомлений через Celery и RabbitMQ;
+- кэширование и хранение активных JWT сессий в Redis;
+- интерактивная документация OpenAPI.
 
-Базовый шаблон для начала разработки приложений с использованием фреймфорков FastAPI и SQLAlchemy и СУБД PostgreSQL.
+Все прикладные маршруты опубликованы с префиксом `/api/v1`.
 
-Разработка ведется в DevConteiner VSCode.
+## Запущенный проект
 
-В проекте используется Python 3.12 (как наиболее стабильная версия на момент создания шаблона).
+- [API](https://bookingseatsteam4.myddns.me/)
+- [Swagger UI](https://bookingseatsteam4.myddns.me/docs)
+- [ReDoc](https://bookingseatsteam4.myddns.me/redoc)
+- [Статическая документация](https://yandex-practicum-students.github.io/72_73_booking_seats_team_4/)
 
-В качестве менеджера пакетов используется uv ([Что за зверь?](https://docs.astral.sh/uv/getting-started/installation/))
+## Быстрый запуск через Docker Compose
 
-В качестве стилизатора кода используется [Ruff](https://astral.sh/ruff). Для автоматической проверки стилистики перед коммитами исхользуется [Pre-Commit](https://pre-commit.com).
+Понадобятся Git и Docker с поддержкой Compose.
 
-Все необходимы плагины для VSCode будут установлены в процессе развертывания DevContainer.
-
-Шаблон имеет следующую стурктуру:
-
-```
-├── .devcontainer                   Настройки DevContainer
-│   ├── devcontainer.json           Основной настроечный файл
-│   ├── devcontainer-lock.json
-│   ├── docker-compose.yml          Файл сборки DevContainer и PostgreSQL с помощью Docker Compose
-│   ├── Dockerfile                  Файл для билда основного образа DevContainer
-│   └── test_tools.sh               Вспомогательный файл
-├── .vscode                         Настройки VSCode
-│   └── launch.json                 Настройки для запуска отладки кода
-├── infra                           Настройки для формирования Product инфраструктуры
-│   ├── docker-compose.yaml         Файл для сборки окружения
-│   └── .env.example                Файл с настройками
-├── src                             Основное место для кода проекта
-│   ├── core                        Базовые функции и методы
-│   │   ├── alembic_models.py       Сборка всех моделей в одном месте для выполнения миграций Alembic
-│   │   ├── base_model.py           Базовая модель данных с обязательными полями
-│   │   ├── db.py                   Настройки для взаимодействия с СУБД
-│   │   ├── __init__.py
-│   │   └── settings.py             Основные настройки проекта
-│   ├── migrations                  Миграции Alembic
-│   │   ├── env.py
-│   │   ├── README
-│   │   └── script.py.mako
-│   ├── alembic.ini                 Настроечный файл Alembic
-│   └── main.py                     Главный файл запуска проекта
-├── .dockerignore                   Что игнорировать при сборке Docker-образа проекта
-├── .gitignore                      Что игнорировать при коммитах
-├── .pre-commit-config.yaml         Настройки для проверки стилизации перед коммитом (для pre-commit)
-├── .python-version                 Задает версию Python, используемую в проекте (для менеджера UV)
-├── Dockerfile                      Файл для сборки Docker-образа проекта
-├── entrypoint.sh                   Файл, выполняемый при старте контейнера с образом проекта
-├── Makefile                        Вспомогательный файл для настройки DevContainer
-├── pyproject.toml                  Основной файл настроек для менеджера UV
-├── README.md                       Это сейчас читаем 😎
-├── ruff.toml                       Настройки для стилизатора Ruff
-└── uv.lock                         Зафиксированные версии пакетов (менеджер UV)
-
-
+```bash
+git clone https://github.com/Yandex-Practicum-Students/72_73_booking_seats_team_4.git
+cd 72_73_booking_seats_team_4
+cp infra/.env.example infra/.env
 ```
 
-## Перед началом работы
+Заполните значения в `infra/.env`. Для `JWT_SECRET` используйте случайную строку длиной не менее 32 символов. Файл `.env` нельзя добавлять в Git.
 
-1. Перед началом работы необходимо убедиться, что у вас установлено:
-   - Docker ([Скачать](https://www.docker.com/products/docker-desktop/))
-   - Плагин Dev Containers для VSCode ([Скачать](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers))
+```bash
+cd infra
+docker compose up --build
+```
 
-2. В папке `infra` на основе файла `.env.example` создать файл `.env` и заполнить его.
-   - `POSTGRES_USER` - Имя пользователя
-   - `POSTGRES_PASSWORD` - Пароль пользователя
-   - `POSTGRES_DB` - Название базы данных
-   - `POSTGRES_SERVER` - Название или IP сервера базы данных (см раздел о настройке docker-compose.yaml)
-   - `POSTGRES_PORT` - Порт базы данных (по умолчанию сервер запускается на порту 5432)
+После запуска доступны:
 
-3. В файле `.devcontainer/docker-compose.yml` задать нужные значения для следующих параметров:
-   - `name` из основного блока
-   - `PROJECT_NAME` из блока `remoteEnv`
+- API и Swagger UI на `http://localhost:8000` и `http://localhost:8000/docs`;
+- Flower на `http://localhost:5555`;
+- интерфейс RabbitMQ на `http://localhost:15672`.
 
-4. Настройка `docker-compose.yaml`
+Compose поднимает приложение, PostgreSQL, Redis, RabbitMQ, Celery worker, Celery beat и Flower. Миграции Alembic применяются автоматически при старте контейнера приложения.
 
-    В файлах `.devcontainer/docker-compose.yml` и `infra/docker-compose.yaml` в разделе `services` присутствет блок команд и настроек для сборки контейнера с СУБД PostgreSQL.
+Для остановки:
 
-    По умолчанию этот блок называется `db`. Именно это имя надо указать для параметра `POSTGRES_SERVER` файла `infra/.env.example`, что бы при работе в DevContainer можно было подключаться к базе данных.
+```bash
+docker compose down
+```
 
-5. Изменение версии Python
+Добавьте `-v`, только если вместе с контейнерами нужно удалить локальные тома с данными.
 
-   Хотя изменение версии Python не рекомендуется (еще не все пакеты переведены на версии >3.12), но никто не мешает эксперементировать.
+## Запуск для разработки
 
-   Задание версии Python необходимо выполнить в двух местах:
-   - файл `.devcontainer/devcontainer.json` параметр `PYTHON_VERSION`
-   - файл `Dockerfile` в строке `FROM` после `:` указать ту же версию, что указана в параметре `PYTHON_VERSION`
+Проект использует Python 3.12 и [uv](https://docs.astral.sh/uv/).
 
-   **Важно**: Эти версии должны быть одинаковые. *(но никто не мешает разрабатывать в одной, а на прод выкладывать в другой версии)*
+```bash
+uv sync
+cd src
+uv run alembic upgrade head
+uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
 
+Для локального запуска должны быть доступны PostgreSQL, Redis и RabbitMQ, а их параметры должны быть указаны в `infra/.env`.
 
-## Создание DevContainer и ещё немного подготовки
+Также репозиторий содержит готовую конфигурацию Dev Containers. В VS Code можно выполнить команду `Dev Containers: Reopen in Container`, после чего зависимости установятся автоматически.
 
-### Создание DevContainer
+## Проверки
 
-Для запуска создания DevContainer выполнить следующие действия:
-- Нажать `Ctrl+Shift+P` для открытия панели команд
-- Ввести `Dev Containers: Reopen in Container`
-- Выбрать найденный пункт
+Из корня репозитория:
 
-Начнется сборка контейнера. Наблюдать за процессом можно в логах.
+```bash
+uv run ruff check .
+uv run python -m unittest discover -s tests -t .
+```
 
-В процессе создания будут скачаны (при необходимости) нужные образы контейнеров, установлен менеджер пакетов UV, настроено виртуальное окружение проекта, установлены базовые зависимости.
+## Фоновые задачи
 
-**Обратите внимание:** Линтеры в VSCode не всегда сразу определяют, какие пакеты установлены, и помечают их как не известные. Нужно или подождать немного (или много, тут как повезёт) или перезапустить VSCode не отключаясь от DevContainer (при запуске она сама к нему подключится).
+Celery worker обрабатывает очередь `booking_notifications`. Celery beat запускает периодическую проверку напоминаний, RabbitMQ используется как брокер, Redis участвует в кэшировании и хранении JWT сессий, а Flower позволяет наблюдать за задачами.
 
-### И ещё немного подготовки
+Параметры RabbitMQ, Redis, SMTP и Flower задаются в `infra/.env`. Для проверки worker предусмотрена задача `booking_seats.system.healthcheck`.
 
-Так как разработка и запуск проекта теперь будет вестить внутри контейнера, то общаться с GitHub-ом сразу не получится. Ведь в контейнере он еще не настроен, ключи доступа не прописаны.
+## Стек
 
-Что делаем:
-1. Настраиваем Git
-   - открываем терминал в VSCode
-   - выполняем команду `git config --global user.name <Ваше имя>`
-   - выполняем команду `git config --global user.email <Ваш email на github-е>`
+- Python 3.12, FastAPI, Pydantic;
+- SQLAlchemy, Alembic, PostgreSQL;
+- Redis;
+- Celery, RabbitMQ, Flower;
+- Pillow;
+- Docker и Docker Compose;
+- uv, Ruff, unittest;
+- GitHub Actions, Nginx, Loguru.
 
-2. Настраиваем SSH ключи:
-   - *вариант 1*: копируем публичный и закрытый ключи (с которыми подключаетесь к GitHub) с хоста в контейнер (в папку `/home/vscode/.ssh`). После этого проверить права доступа к файлам ключей - должно быть `-rw-------` у закрытого ключа и `-rw-r--r--` у открытого ключа. При необходимости поменять права командой `chmod`.
-   - *вариант 2*: создаем в контейнере новую пару ключей и прописываем открытый ключ на GitHub в разделе `Settings->SSH and GPG keys` своего профиля.
+## Команда
 
-
-# Можно работать.
-
-Запустить проект проект можно следующим образом:
-
-- **В режиме отладки**
-
-   - находясь в VSCode нажать `F5` или перейти на вкладку `Run and Debug (Ctrl+Shift+D)` и нажать на зеленую стрелочку.
-   - Проект запустится на 8000 порту (можно поменять в файле `.vscode/launch.json`) в рамках DevContainer.
-
-- **Запустить локально**
-
-   - находясь в VSCode открыть терминал, дождаться активации виртуального окружения
-   - перейти в папку `src` (`cd src`)
-   - выполнить команду `python main.py`.
-   - Проект запустится на 8000 порту (можно поменять в файле `main.py` в строке `uvicorn.run(app, host='0.0.0.0', port=8000)`)
-
-- **Запустить в контейнере**
-
-   - выйти из DevContainer (ну или установить внутри него Docker Engine 😎). Для этого войти в командную панель (`Ctrl+Shift+P`) и выполнить команду `Dev containers: Reopen Folder Locally`. (или открыть папку проекта на хосте).
-   - Открыть терминал, перейти в папку `infra`.
-   - Выполнить команду `docker compose up --build`. Для запуска в режиме демона добавить ключ `-d`. Дождаться запуска контейнера.
-   - Проект запустится на 8000 порту.
-
-## Очередь фоновых задач
-
-При запуске через `infra/docker-compose.yaml` вместе с приложением поднимаются:
-
-* RabbitMQ на портах `5672` и `15672`;
-* Celery worker с очередью `booking_notifications`;
-* Flower на порту `5555`.
-
-Параметры подключения задаются в `infra/.env`. Для быстрой проверки worker можно отправить
-задачу `booking_seats.system.healthcheck`.
+- [Andrei Mezer](https://github.com/AnMezer), Team Lead, Backend Developer
+- [Curiosity](https://github.com/BondarenkoMaximSergeevich), Backend Developer
+- [NataEditor](https://github.com/NataEditor), Backend Developer
+- [veronikaTatar](https://github.com/veronikaTatar), Backend Developer
+- [Roman Papenov](https://github.com/roman82direct), Backend Developer
+- [KvazyModa00](https://github.com/KvazyModa00), Backend Developer
+- [GalinaLody](https://github.com/GalinaLody), Backend Developer
+- [Alexei](https://github.com/Alek20s), Backend Developer

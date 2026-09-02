@@ -1,8 +1,5 @@
 import json
-import os
-import sys
 import uuid
-from pathlib import Path
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock, patch
@@ -11,25 +8,18 @@ from fastapi import HTTPException
 from redis.exceptions import RedisError
 from sqlalchemy.exc import SQLAlchemyError
 
-os.environ.setdefault('POSTGRES_USER', 'test')
-os.environ.setdefault('POSTGRES_PASSWORD', 'test')
-os.environ.setdefault('POSTGRES_DB', 'test')
-os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
-os.environ.setdefault('REDIS_PASSWORD', 'test')
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+from api.dependencies.permissions import get_staff_user
+from api.errors import APIError
+from api.exceptions import api_error_handler
+from crud.cafe import cafe_crud
+from crud.user import user_crud
+from main import app
+from models.user import User, UserRole
+from schemas.cafe import CafeCreate
+from schemas.user import UserCreate
 
-from api.dependencies.permissions import get_staff_user  # noqa: E402
-from api.errors import APIError  # noqa: E402
-from api.exceptions import api_error_handler  # noqa: E402
-from crud.cafe import cafe_crud  # noqa: E402
-from crud.user import user_crud  # noqa: E402
-from main import app  # noqa: E402
-from models.user import User, UserRole  # noqa: E402
-from schemas.cafe import CafeCreate  # noqa: E402
-from schemas.user import UserCreate  # noqa: E402
-
-from core.db import get_session  # noqa: E402
-from core.user import verify_password  # noqa: E402
+from core.db import get_session
+from core.user import verify_password
 
 
 class AsyncSessionContext:
@@ -244,3 +234,17 @@ class BackendFoundationTests(IsolatedAsyncioTestCase):
         dish_fields = specification['components']['schemas']['DishInfo']['properties']
         self.assertIn('cafes', dish_fields)
         self.assertNotIn('cafes_id', dish_fields)
+
+    def test_openapi_uses_project_metadata_and_versioned_paths(self) -> None:
+        """Документация содержит данные проекта и публикует API v1."""
+        specification = app.openapi()
+
+        self.assertEqual(
+            specification['info']['title'],
+            'Система бронирования мест в кафе',
+        )
+        self.assertEqual(specification['info']['version'], '0.0.3')
+        self.assertTrue(specification['info']['description'])
+        self.assertTrue(
+            all(path == '/' or path.startswith('/api/v1/') for path in specification['paths']),
+        )

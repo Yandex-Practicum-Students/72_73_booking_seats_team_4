@@ -1,17 +1,16 @@
 import uuid
-from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends
 
 from api.dependencies.cafe import get_cafe_or_404
-from api.dependencies.permissions import CurrentUser, StaffUser
+from api.dependencies.filters import Boolean, resolve_show_active
+from api.dependencies.permissions import CurrentUser, StaffUser, ensure_active_resource_visible
 from api.dependencies.slots import get_slot_in_cafe
 from api.responses import error_responses
 from api.responses.statuses import CREATED, RESOURCE_CREATE_WITH_PARENT, RESOURCE_DETAIL, RESOURCE_UPDATE
 from crud.slot import slot_crud
 from models.cafe import Cafe
 from models.slots import Slot
-from models.user import UserRole
 from schemas.slots import TimeSlotCreate, TimeSlotInfo, TimeSlotUpdate
 from services.cafe import ensure_manager_cafe_access
 
@@ -31,7 +30,7 @@ async def get_slots_by_cafe(
     cafe_id: uuid.UUID,
     current_user: CurrentUser,
     session: DBSession,
-    show_active: Optional[bool] = Query(None),
+    show_active: Boolean = None,
     _cafe: Cafe = Depends(get_cafe_or_404),
 ) -> list[Slot]:
     """Получение списка доступных для бронирования временных слотов в кафе.
@@ -39,8 +38,7 @@ async def get_slots_by_cafe(
     Администратор видит все слоты (учитывая show_active),
     менеджер и пользователь — только активные.
     """
-    if current_user.role != UserRole.ADMIN:
-        show_active = True
+    show_active = resolve_show_active(current_user, show_active)
     return await slot_crud.get_by_cafe(
         cafe_id=cafe_id,
         session=session,
@@ -90,11 +88,7 @@ async def get_slot_by_id(
     """
     ensure_manager_cafe_access(current_user, cafe_id)
 
-    if current_user.role == UserRole.USER and not _slot.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Слот не найден',
-        )
+    ensure_active_resource_visible(current_user, _slot, 'Слот не найден')
 
     return _slot
 

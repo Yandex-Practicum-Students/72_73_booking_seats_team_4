@@ -1,26 +1,16 @@
-import os
-import sys
 import uuid
 from datetime import date, datetime, time, timedelta, timezone
-from pathlib import Path
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import AsyncMock, Mock, patch
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-os.environ.setdefault('POSTGRES_USER', 'test')
-os.environ.setdefault('POSTGRES_PASSWORD', 'test')
-os.environ.setdefault('POSTGRES_DB', 'test')
-os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
-os.environ.setdefault('REDIS_PASSWORD', 'test')
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-
-from models import NotificationStatus, NotificationType, StatusBooking  # noqa: E402
-from services.notification import NotificationService  # noqa: E402
-from tasks.base import shutdown_worker_event_loop  # noqa: E402
-from tasks.channels.email import EmailChannel  # noqa: E402
-from tasks.notifications import (  # noqa: E402
+from models import NotificationStatus, NotificationType, StatusBooking
+from services.notification import NotificationService
+from tasks.base import shutdown_worker_event_loop
+from tasks.channels.email import EmailChannel
+from tasks.notifications import (
     _dispatch_notification,
     process_pending_due_notifications,
     send_booking_notification,
@@ -151,6 +141,7 @@ class NotificationServiceTests(TestCase):
         booking_date = date.today() + timedelta(days=2)
         booking = SimpleNamespace(
             booking_date=booking_date,
+            reminder_minutes_before=60,
             tables_slots=[
                 SimpleNamespace(slot=SimpleNamespace(start_time=time(15, 0))),
                 SimpleNamespace(slot=SimpleNamespace(start_time=time(10, 30))),
@@ -164,8 +155,37 @@ class NotificationServiceTests(TestCase):
             reminder_time,
             datetime.combine(
                 booking_date,
-                time(7, 30, tzinfo=timezone.utc),
+                time(9, 30, tzinfo=timezone.utc),
             ),
+        )
+
+
+class NotificationPlanningTests(IsolatedAsyncioTestCase):
+    """Проверяет создание настраиваемых напоминаний."""
+
+    async def test_disabled_reminder_creates_only_manager_notification(self) -> None:
+        """Null в настройке брони отключает клиентское напоминание."""
+        session = AsyncMock(spec=AsyncSession)
+        notification_crud = AsyncMock()
+        manager_notification = SimpleNamespace(id=uuid.uuid4())
+        notification_crud.create_for_booking.return_value = manager_notification
+        booking = SimpleNamespace(
+            id=uuid.uuid4(),
+            reminder_minutes_before=None,
+        )
+        service = NotificationService(
+            session=session,
+            notification_crud=notification_crud,
+        )
+
+        manager, reminder = await service.create_booking_notifications(booking)
+
+        self.assertIs(manager, manager_notification)
+        self.assertIsNone(reminder)
+        notification_crud.create_for_booking.assert_awaited_once()
+        self.assertEqual(
+            notification_crud.create_for_booking.await_args.kwargs['type_'],
+            NotificationType.CREATED,
         )
 
 

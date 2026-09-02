@@ -1,17 +1,30 @@
-﻿import asyncio
+import asyncio
+import io
 import uuid
 from pathlib import Path
 
+from PIL import Image, UnidentifiedImageError
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.media import Media
 
-MEDIA_ROOT = Path('media')
-
-MAX_FILE_SIZE = 10 * 1024 * 1024
-CHUNK_SIZE = 1024 * 1024
+from core.constants import (
+    ALLOWED_MEDIA_CONTENT_TYPES as ALLOWED_CONTENT_TYPES,
+)
+from core.constants import (
+    MAX_MEDIA_FILE_SIZE as MAX_FILE_SIZE,
+)
+from core.constants import (
+    MEDIA_CHUNK_SIZE as CHUNK_SIZE,
+)
+from core.constants import (
+    MEDIA_JPEG_QUALITY as JPEG_QUALITY,
+)
+from core.constants import (
+    MEDIA_ROOT,
+)
 
 
 class MediaCRUD:
@@ -22,35 +35,59 @@ class MediaCRUD:
         self.session = session
 
     async def save_file(self, upload: UploadFile) -> Media:
-        """Сохраняет файл на диск чанками и создаёт запись в БД."""
+        """Сохраняет файл на диск чанками, конвертирует в JPG и создаёт запись в БД."""
         await asyncio.to_thread(MEDIA_ROOT.mkdir, parents=True, exist_ok=True)
-        media_id = uuid.uuid4()
-        extension = Path(upload.filename or '').suffix
-        file_path = MEDIA_ROOT / f'{media_id}{extension}'
+
+        # Проверяем content-type ещё до чтения тела файла
+        if upload.content_type not in ALLOWED_CONTENT_TYPES:
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail='Разрешены только форматы JPG и PNG.',
+            )
+
+        # Читаем файл чанками в память (но не больше лимита), не пишем сразу на диск —
+        # финальный файл всегда JPG, поэтому промежуточный формат нам не нужен
+        buffer = io.BytesIO()
         total_size = 0
+        while chunk := await upload.read(CHUNK_SIZE):
+            total_size += len(chunk)
+            if total_size > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                    detail='Файл превышает допустимый размер.',
+                )
+            buffer.write(chunk)
 
-        def _open_file() -> object:
-            return open(file_path, 'wb')
+        buffer.seek(0)
 
-        file_obj = await asyncio.to_thread(_open_file)
+        def _convert_to_jpeg() -> bytes:
+            """Открывает изображение и конвертирует его в JPEG (в отдельном потоке)."""
+            try:
+                image = Image.open(buffer)
+                image.load()
+            except UnidentifiedImageError:
+                raise HTTPException(
+                    status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                    detail='Файл не является корректным изображением JPG или PNG.',
+                )
+            if image.mode in ('RGBA', 'P', 'LA'):
+                image = image.convert('RGB')
+            output = io.BytesIO()
+            image.save(output, format='JPEG', quality=JPEG_QUALITY)
+            return output.getvalue()
+
+        jpeg_bytes = await asyncio.to_thread(_convert_to_jpeg)
+
+        media_id = uuid.uuid4()
+        file_path = MEDIA_ROOT / f'{media_id}.jpg'
+
         try:
-            while chunk := await upload.read(CHUNK_SIZE):
-                total_size += len(chunk)
-                if total_size > MAX_FILE_SIZE:
-                    raise HTTPException(
-                        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-                        detail='Файл превышает допустимый размер.',
-                    )
-                await asyncio.to_thread(file_obj.write, chunk)
-        except (OSError, HTTPException):
-            await asyncio.to_thread(file_obj.close)
+            await asyncio.to_thread(file_path.write_bytes, jpeg_bytes)
+        except OSError:
             await asyncio.to_thread(file_path.unlink, True)
             raise
-        finally:
-            if not file_obj.closed:
-                await asyncio.to_thread(file_obj.close)
 
-        media = Media(id=media_id, name=upload.filename or f'{media_id}{extension}')
+        media = Media(id=media_id, name=upload.filename or f'{media_id}.jpg')
         self.session.add(media)
         await self.session.flush()
         await self.session.refresh(media)

@@ -1,26 +1,17 @@
-import os
-import sys
 import uuid
-from pathlib import Path
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import AsyncMock, Mock, patch
 
-os.environ.setdefault('POSTGRES_USER', 'test')
-os.environ.setdefault('POSTGRES_PASSWORD', 'test')
-os.environ.setdefault('POSTGRES_DB', 'test')
-os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-
-from models.user import UserRole  # noqa: E402
-from services.cafe import (  # noqa: E402
+from models.user import UserRole
+from services.cafe import (
     ensure_cafes_exist,
     ensure_manager_cafe_access,
     ensure_manager_cafes_access,
     get_cafe_or_raise,
     get_manager_cafes,
 )
-from services.errors import EntityNotFoundError, PermissionDeniedError  # noqa: E402
-from services.slot import get_slot_in_cafe_or_raise  # noqa: E402
+from services.errors import EntityNotFoundError, PermissionDeniedError
+from services.slot import get_slot_in_cafe_or_raise
 
 
 class ServiceAccessTests(TestCase):

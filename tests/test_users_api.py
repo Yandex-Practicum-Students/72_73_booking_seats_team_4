@@ -1,9 +1,6 @@
-import os
-import sys
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
-from pathlib import Path
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import AsyncMock, patch
@@ -11,22 +8,16 @@ from unittest.mock import AsyncMock, patch
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-os.environ.setdefault('POSTGRES_USER', 'test')
-os.environ.setdefault('POSTGRES_PASSWORD', 'test')
-os.environ.setdefault('POSTGRES_DB', 'test')
-os.environ.setdefault('JWT_SECRET', '01234567890123456789012345678901')
-os.environ.setdefault('REDIS_PASSWORD', 'test')
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
-
-from api.dependencies.logging import (  # noqa: E402
+from api.dependencies.logging import (
     get_current_user_with_logging,
     get_me_user_with_logging,
 )
-from crud.user import UserAlreadyExistsError, UserNotFoundError  # noqa: E402
-from main import app  # noqa: E402
-from models.user import UserRole  # noqa: E402
+from crud.user import UserAlreadyExistsError, UserNotFoundError
+from main import app
+from models.user import UserRole
 
-from core.db import get_session  # noqa: E402
+from core.db import get_session
+from core.redis import get_redis_session
 
 
 def _make_user(
@@ -62,9 +53,9 @@ class UserAPIContractTests(TestCase):
         """Коллекция, текущий пользователь и объект имеют нужные методы."""
         paths = app.openapi()['paths']
 
-        self.assertEqual(set(paths['/users']), {'get', 'post'})
-        self.assertEqual(set(paths['/users/me']), {'get', 'patch'})
-        self.assertEqual(set(paths['/users/{user_id}']), {'get', 'patch'})
+        self.assertEqual(set(paths['/api/v1/users']), {'get', 'post'})
+        self.assertEqual(set(paths['/api/v1/users/me']), {'get', 'patch'})
+        self.assertEqual(set(paths['/api/v1/users/{user_id}']), {'get', 'patch'})
 
 
 class UserAPITests(IsolatedAsyncioTestCase):
@@ -80,7 +71,11 @@ class UserAPITests(IsolatedAsyncioTestCase):
         async def session_override() -> AsyncGenerator[AsyncSession, None]:
             yield self.session
 
+        async def redis_override() -> AsyncGenerator[AsyncMock, None]:
+            yield AsyncMock()
+
         app.dependency_overrides[get_session] = session_override
+        app.dependency_overrides[get_redis_session] = redis_override
         self.client = AsyncClient(
             transport=ASGITransport(app=app),
             base_url='http://test',
@@ -111,7 +106,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.user.user_crud.create', new=create):
             response = await self.client.post(
-                '/users',
+                '/api/v1/users',
                 json={
                     'username': '  New User  ',
                     'email': 'NEW@EXAMPLE.COM',
@@ -139,7 +134,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.user.user_crud.create', new=create):
             response = await self.client.post(
-                '/users',
+                '/api/v1/users',
                 json={
                     'username': 'new-user',
                     'email': 'new@example.com',
@@ -159,7 +154,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.user.user_crud.create', new=create):
             response = await self.client.post(
-                '/users',
+                '/api/v1/users',
                 json={
                     'username': 'new-user',
                     'password': 'strong-password',
@@ -176,7 +171,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.user.user_crud.create', new=create):
             response = await self.client.post(
-                '/users',
+                '/api/v1/users',
                 json={
                     'username': 'existing-user',
                     'email': 'existing@example.com',
@@ -199,7 +194,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
         get_all = AsyncMock(return_value=[user])
 
         with patch('api.endpoints.user.user_crud.get_all', new=get_all):
-            response = await self.client.get('/users')
+            response = await self.client.get('/api/v1/users')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()[0]['id'], str(user.id))
@@ -211,7 +206,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
         get_all = AsyncMock()
 
         with patch('api.endpoints.user.user_crud.get_all', new=get_all):
-            response = await self.client.get('/users')
+            response = await self.client.get('/api/v1/users')
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(
@@ -225,7 +220,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
         user = _make_user(phone='+79991234567')
         self._set_actor(user)
 
-        response = await self.client.get('/users/me')
+        response = await self.client.get('/api/v1/users/me')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['id'], str(user.id))
@@ -235,7 +230,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
         """Специальный контракт /users/me возвращает 403 без токена."""
         app.dependency_overrides.pop(get_me_user_with_logging)
 
-        response = await self.client.get('/users/me')
+        response = await self.client.get('/api/v1/users/me')
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(
@@ -251,7 +246,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.user.user_crud.update', new=update):
             response = await self.client.patch(
-                '/users/me',
+                '/api/v1/users/me',
                 json={
                     'username': 'updated-user',
                     'role': 'ADMIN',
@@ -274,7 +269,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
 
         with patch('api.endpoints.user.user_crud.update', new=update):
             response = await self.client.patch(
-                '/users/me',
+                '/api/v1/users/me',
                 json={'email': None},
             )
 
@@ -294,7 +289,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
             'api.endpoints.user.user_crud.get_or_raise',
             new=get_or_raise,
         ):
-            response = await self.client.get(f'/users/{target.id}')
+            response = await self.client.get(f'/api/v1/users/{target.id}')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['id'], str(target.id))
@@ -309,7 +304,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
             'api.endpoints.user.user_crud.get_or_raise',
             new=get_or_raise,
         ):
-            response = await self.client.get(f'/users/{user_id}')
+            response = await self.client.get(f'/api/v1/users/{user_id}')
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(
@@ -332,7 +327,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
             patch('api.endpoints.user.user_crud.update', new=update),
         ):
             response = await self.client.patch(
-                f'/users/{target.id}',
+                f'/api/v1/users/{target.id}',
                 json={'username': 'changed-admin'},
             )
 
@@ -341,10 +336,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
             response.json(),
             {
                 'code': 403,
-                'message': (
-                    'Менеджер не может изменять администратора '
-                    'или назначать эту роль.'
-                ),
+                'message': ('Менеджер не может изменять администратора или назначать эту роль.'),
             },
         )
         update.assert_not_awaited()
@@ -366,7 +358,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
             patch('api.endpoints.user.user_crud.update', new=update),
         ):
             response = await self.client.patch(
-                f'/users/{target.id}',
+                f'/api/v1/users/{target.id}',
                 json={'role': 'USER'},
             )
 
@@ -385,7 +377,7 @@ class UserAPITests(IsolatedAsyncioTestCase):
             'api.endpoints.user.user_crud.get_or_raise',
             new=get_or_raise,
         ):
-            response = await self.client.get('/users/not-a-uuid')
+            response = await self.client.get('/api/v1/users/not-a-uuid')
 
         self.assertEqual(response.status_code, 422)
         self.assertEqual(response.json()['code'], 422)
