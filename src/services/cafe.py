@@ -135,7 +135,7 @@ async def ensure_managers_exist_and_role(
 
     if missing := requested_ids - found_ids:
         raise ManagerNotFoundError(
-            f'Менеджеры не найдены: {", ".join(sorted(missing))}',
+            f'Менеджеры не найдены: {", ".join(map(str, sorted(missing)))}',
         )
 
     for manager in managers:

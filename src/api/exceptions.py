@@ -7,6 +7,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.errors import APIError
 from crud.action import ActionAlreadyExistsError
+from crud.base import DuplicateError
 from crud.dish import DishAlreadyExistsError
 from crud.user import UserAlreadyExistsError, UserNotFoundError
 from schemas.error import CustomError
@@ -171,6 +172,17 @@ async def manager_already_assigned_handler(
     exception: ManagerAlreadyAssignedError,
 ) -> JSONResponse:
     """Возвращает ошибку, если менеджер уже привязан к другому кафе."""
+    return custom_error_response(
+        status.HTTP_400_BAD_REQUEST,
+        str(exception),
+    )
+
+
+async def duplicate_error_handler(
+    request: Request,
+    exception: DuplicateError,
+) -> JSONResponse:
+    """Возвращает ошибку, если объект с одним из уникальных полей уже существует."""
     return custom_error_response(
         status.HTTP_400_BAD_REQUEST,
         str(exception),
