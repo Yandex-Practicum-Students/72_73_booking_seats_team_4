@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from fastapi import HTTPException, status
@@ -155,6 +155,30 @@ class BookingService:
             logger.warning('Пользователь имеет пересекающие слоты в других бронированиях.')
             raise CrossSlotsExistsError
 
+    async def check_booking_time_earlier_start_time_slot(
+        self,
+        booking_date: date,
+        slot_ids: list,
+    ) -> None:
+        """Проверяет, что начало времени слота еще не наступило."""
+        logger.info('Проверяет, что начало времени слота еще не наступило.')
+        current_day = datetime.now(timezone.utc)
+        if booking_date == current_day.date():
+            current_time = current_day.timetz()
+            slots = await self.session.execute(select(Slot).where(Slot.id.in_(slot_ids)))
+            start_time_slots_new_booking = [slot.start_time for slot in slots.scalars().all()]
+            exist_problem_start_time = any(
+                [start_time < current_time for start_time in start_time_slots_new_booking],
+            )
+            if exist_problem_start_time:
+                logger.warning(
+                    'Нельзя бронировать слот, время которого уже началось.',
+                )
+                raise APIError(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    message=('Нельзя бронировать слот, время которого уже началось.'),
+                )
+
     async def check_cafe_has_tables_slots(
         self,
         cafe_id: uuid.UUID,
@@ -277,6 +301,10 @@ class BookingService:
             table_ids=table_ids,
             slot_ids=slot_ids,
         )
+        await self.check_booking_time_earlier_start_time_slot(
+            slot_ids=slot_ids,
+            booking_date=new_booking.booking_date,
+        )
         await self.check_double_booking_exsist(
             cafe_id=new_booking.cafe_id,
             booking_date=new_booking.booking_date,
@@ -357,6 +385,22 @@ class BookingService:
                 user_id=db_booking.user_id,
                 slot_ids=slot_ids,
                 booking_id=db_booking.id,
+            )
+
+        logger.info(
+            'Проверяет обновлялись ли поля tables_slots и/или booking_date '
+            'для сравенения текущего времени и времени начала слотов.',
+        )
+        if update_data.tables_slots is not None or update_data.booking_date is not None:
+            if update_data.booking_date is not None:
+                booking_date = update_data.booking_date
+            else:
+                booking_date = db_booking.booking_date
+            if update_data.tables_slots is None:
+                table_slot_ids, table_ids, slot_ids = self.split_tables_slots(db_booking.tables_slots)
+            await self.check_booking_time_earlier_start_time_slot(
+                booking_date=booking_date,
+                slot_ids=slot_ids,
             )
 
         logger.info(
