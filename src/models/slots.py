@@ -1,7 +1,7 @@
 import uuid
 from datetime import time
 
-from sqlalchemy import UUID, ForeignKey, Time
+from sqlalchemy import UUID, ForeignKey, Time, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.base_model import Base, DescriptionMixin
@@ -30,6 +30,15 @@ class Slot(Base, DescriptionMixin):
         'BookingTablesSlots',
         back_populates='slot',
         lazy='selectin',
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            'cafe_id',
+            'start_time',
+            'end_time',
+            name='uq_slot_cafe_start_end',
+        ),
     )
 
     def __repr__(self) -> str:

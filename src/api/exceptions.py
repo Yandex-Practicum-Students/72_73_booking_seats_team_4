@@ -12,7 +12,7 @@ from exceptions.cafe import (
     ManagerNotFoundError,
     ManagerRoleError,
 )
-from exceptions.common import EntityNotFoundError, PermissionDeniedError
+from exceptions.common import BadRequestError, EntityNotFoundError, PermissionDeniedError
 from exceptions.dish import DishAlreadyExistsError
 from exceptions.user import UserAlreadyExistsError, UserNotFoundError
 from schemas.error import CustomError
@@ -170,6 +170,17 @@ async def manager_already_assigned_handler(
     exception: ManagerAlreadyAssignedError,
 ) -> JSONResponse:
     """Возвращает ошибку, если менеджер уже привязан к другому кафе."""
+    return custom_error_response(
+        status.HTTP_400_BAD_REQUEST,
+        str(exception),
+    )
+
+
+async def duplicate_error_handler(
+    request: Request,
+    exception: BadRequestError,
+) -> JSONResponse:
+    """Возвращает ошибку, если объект с одним из уникальных полей уже существует."""
     return custom_error_response(
         status.HTTP_400_BAD_REQUEST,
         str(exception),

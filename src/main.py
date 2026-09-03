@@ -13,6 +13,7 @@ from api.exceptions import (
     action_already_exists_handler,
     api_error_handler,
     dish_already_exists_handler,
+    duplicate_error_handler,
     entity_not_found_handler,
     http_exception_handler,
     manager_already_assigned_handler,
@@ -31,7 +32,7 @@ from exceptions.cafe import (
     ManagerNotFoundError,
     ManagerRoleError,
 )
-from exceptions.common import EntityNotFoundError, PermissionDeniedError
+from exceptions.common import BadRequestError, EntityNotFoundError, PermissionDeniedError
 from exceptions.dish import DishAlreadyExistsError
 from exceptions.user import UserAlreadyExistsError, UserNotFoundError
 
@@ -82,6 +83,7 @@ app.add_exception_handler(EntityNotFoundError, entity_not_found_handler)
 app.add_exception_handler(PermissionDeniedError, permission_denied_handler)
 app.add_exception_handler(ActionAlreadyExistsError, action_already_exists_handler)
 app.add_exception_handler(DishAlreadyExistsError, dish_already_exists_handler)
+app.add_exception_handler(BadRequestError, duplicate_error_handler)
 app.add_exception_handler(UserAlreadyExistsError, user_already_exists_handler)
 app.add_exception_handler(UserNotFoundError, user_not_found_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
