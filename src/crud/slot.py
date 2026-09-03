@@ -2,10 +2,11 @@ import uuid
 
 from loguru import logger
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from crud.base import CRUDBase
+from crud.base import BadRequestError, CRUDBase
 from models.slots import Slot
 from schemas.slots import TimeSlotCreate, TimeSlotInfo, TimeSlotUpdate
 
@@ -110,7 +111,12 @@ class SlotCRUD(CRUDBase[Slot, TimeSlotCreate, TimeSlotUpdate]):
             description=obj_in.description,
         )
         session.add(db_slot)
-        await session.commit()
+        try:
+            await session.commit()
+        except IntegrityError as error:
+            logger.error(f'Нарушение целостности БД при изменении {self.model.__tablename__}: {error}')
+            message = f'{self.model.__tablename__} с такими параметрами уже существует'
+            raise BadRequestError(message) from error
         await session.refresh(db_slot)
         logger.info('Слот создан: slot_id={}, cafe_id={}', db_slot.id, cafe_id)
         return await self.get(db_slot.id, session)
