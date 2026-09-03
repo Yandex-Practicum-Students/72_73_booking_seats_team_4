@@ -21,7 +21,7 @@ ResponseSchemaType = TypeVar('ResponseSchemaType', bound=BaseModel)
 
 
 class BadRequestError(ValueError):
-    """Объект с одним из уникальных полей уже существует."""
+    """Ошибка передачи пользователем полей с некорректными значениями."""
 
 
 class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
