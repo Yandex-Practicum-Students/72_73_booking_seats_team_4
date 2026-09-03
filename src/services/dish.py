@@ -4,14 +4,14 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crud.dish import dish_crud
+from exceptions.common import EntityNotFoundError
 from models.dish import Dish
 from models.user import User
 from schemas.dish import DishCreate, DishUpdate
 from services.cafe import ensure_cafes_exist, ensure_manager_cafes_access
-from services.errors import EntityNotFoundError
 from services.media import get_media_or_raise
 
-from core.core_dependencies import redis_dep
+from core.redis import redis_dep
 
 
 async def get_dish_or_raise(
@@ -52,11 +52,7 @@ async def update_dish(
     """Проверяет права и связи, затем обновляет блюдо."""
     current_cafe_ids = [cafe.id for cafe in dish.cafes]
     ensure_manager_cafes_access(current_user, current_cafe_ids)
-    new_cafe_ids = (
-        dish_update.cafes_id
-        if dish_update.cafes_id is not None
-        else current_cafe_ids
-    )
+    new_cafe_ids = dish_update.cafes_id if dish_update.cafes_id is not None else current_cafe_ids
     ensure_manager_cafes_access(current_user, new_cafe_ids)
     await ensure_cafes_exist(new_cafe_ids, session)
     if 'photo_id' in dish_update.model_fields_set and dish_update.photo_id is not None:

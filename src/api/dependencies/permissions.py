@@ -3,7 +3,7 @@ from typing import Annotated, Protocol
 from fastapi import Depends, HTTPException, status
 
 from api.dependencies.logging import get_current_user_with_logging, get_me_user_with_logging
-from api.errors import APIError
+from exceptions.base import APIError
 from models.user import User, UserRole
 from services.user import is_admin
 

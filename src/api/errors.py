@@ -1,3 +1,3 @@
-from core.errors import APIError
+from exceptions.base import APIError
 
 __all__ = ('APIError',)

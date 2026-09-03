@@ -1,7 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, status
 
 from api.dependencies.permissions import (
     MeUser,
@@ -25,8 +24,8 @@ from models.user import User, UserRole
 from schemas.user import AuthData, AuthToken, UserCreate, UserInfo, UserUpdate
 from services.user import ensure_user_update_allowed
 
-from core.core_dependencies import redis_dep
-from core.db import get_session
+from core.db import DBSession
+from core.redis import redis_dep
 from core.user import (
     DUMMY_PASSWORD_HASH,
     create_access_token,
@@ -51,7 +50,7 @@ users_router = APIRouter(prefix='/users', tags=['Пользователи'])
 async def login(
     credentials: AuthData,
     redis: redis_dep,
-    session: AsyncSession = Depends(get_session),
+    session: DBSession,
 ) -> AuthToken:
     """Аутентифицирует пользователя по email или телефону."""
     user = await user_crud.get_by_login(credentials.login, session)
@@ -87,7 +86,7 @@ async def login(
 )
 async def create_user(
     user_create: UserCreate,
-    session: AsyncSession = Depends(get_session),
+    session: DBSession,
 ) -> User:
     """Регистрирует пользователя с безопасным набором полномочий."""
     return await user_crud.create(user_create, session)
@@ -101,7 +100,7 @@ async def create_user(
 )
 async def get_all_users(
     _: StaffUser,
-    session: AsyncSession = Depends(get_session),
+    session: DBSession,
 ) -> list[User]:
     """Возвращает пользователей администратору или менеджеру."""
     return await user_crud.get_all(session)
@@ -127,7 +126,7 @@ async def get_me(user: MeUser) -> User:
 async def update_me(
     user_update: UserUpdate,
     user: MeUser,
-    session: AsyncSession = Depends(get_session),
+    session: DBSession,
 ) -> User:
     """Изменяет доступные пользователю поля собственной записи."""
     update_data = user_update.model_dump(
@@ -148,7 +147,7 @@ async def update_me(
 async def get_user_by_id(
     user_id: uuid.UUID,
     _: StaffUser,
-    session: AsyncSession = Depends(get_session),
+    session: DBSession,
 ) -> User:
     """Возвращает пользователя администратору или менеджеру."""
     return await user_crud.get_or_raise(user_id, session)
@@ -164,7 +163,7 @@ async def update_user_by_id(
     user_id: uuid.UUID,
     user_update: UserUpdate,
     actor: StaffUser,
-    session: AsyncSession = Depends(get_session),
+    session: DBSession,
 ) -> User:
     """Изменяет пользователя с учётом полномочий менеджера."""
     target_user = await user_crud.get_or_raise(user_id, session)

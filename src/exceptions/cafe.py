@@ -1,9 +1,4 @@
-class EntityNotFoundError(Exception):
-    """Сущность не найдена при выполнении бизнес-операции."""
-
-
-class PermissionDeniedError(Exception):
-    """Пользователю запрещено выполнять бизнес-операцию."""
+from exceptions.common import EntityNotFoundError
 
 
 class ManagerNotFoundError(EntityNotFoundError):

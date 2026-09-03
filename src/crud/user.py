@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crud.base import CRUDBase
+from exceptions.user import UserAlreadyExistsError, UserNotFoundError
 from models.user import User
 from schemas.user import UserCreate, UserInfo, UserUpdate
 from schemas.validators import normalize_login, normalize_phone
@@ -14,14 +15,6 @@ from schemas.validators import normalize_login, normalize_phone
 from core.user import hash_password
 
 IDENTITY_FIELDS = ('username', 'email', 'phone', 'tg_id')
-
-
-class UserAlreadyExistsError(ValueError):
-    """Пользователь с одним из уникальных полей уже существует."""
-
-
-class UserNotFoundError(LookupError):
-    """Пользователь с переданным идентификатором не найден."""
 
 
 def _normalize_identity(data: Mapping[str, Any]) -> dict[str, Any]:

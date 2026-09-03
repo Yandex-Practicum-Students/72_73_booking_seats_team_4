@@ -10,18 +10,16 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import interfaces
 
+from exceptions.common import BadRequestError
+
 from core.base_model import Base
-from core.core_dependencies import redis_dep
+from core.redis import redis_dep
 from core.settings import settings
 
 ModelType = TypeVar('ModelType', bound=Base)
 CreateSchemaType = TypeVar('CreateSchemaType', bound=BaseModel)
 UpdateSchemaType = TypeVar('UpdateSchemaType', bound=BaseModel)
 ResponseSchemaType = TypeVar('ResponseSchemaType', bound=BaseModel)
-
-
-class BadRequestError(ValueError):
-    """Ошибка передачи пользователем полей с некорректными значениями."""
 
 
 class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):

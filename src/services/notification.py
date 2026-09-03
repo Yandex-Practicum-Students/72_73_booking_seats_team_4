@@ -2,10 +2,10 @@ import uuid
 from datetime import datetime, time, timedelta, timezone
 from typing import Optional
 
-from fastapi import status
 from loguru import logger
 
 from crud.notification import NotificationCRUD, notification_crud
+from exceptions.notification import NotificationNotFoundError, NotificationRetryNotAllowedError
 from models import (
     Booking,
     BookingNotification,
@@ -15,32 +15,9 @@ from models import (
 )
 
 from core.db import DBSession
-from core.errors import APIError
 
 REMINDER_MINUTES_BEFORE = 180
 DEFAULT_BOOKING_TIME = time(12, 0, tzinfo=timezone.utc)
-
-
-class NotificationNotFoundError(APIError):
-    """Уведомление не найдено в указанном бронировании."""
-
-    def __init__(self) -> None:
-        """Инициализирует ошибку отсутствующего уведомления."""
-        super().__init__(
-            status_code=status.HTTP_404_NOT_FOUND,
-            message='Уведомление не найдено.',
-        )
-
-
-class NotificationRetryNotAllowedError(APIError):
-    """Уведомление не находится в состоянии, допускающем повтор."""
-
-    def __init__(self) -> None:
-        """Инициализирует ошибку недопустимого повторного запуска."""
-        super().__init__(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message='Повторная отправка доступна только для уведомлений со статусом FAILED.',
-        )
 
 
 class NotificationService:

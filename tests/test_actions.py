@@ -14,8 +14,10 @@ from api.endpoints.action import (
     get_all_actions,
     update_action,
 )
-from crud.action import ActionAlreadyExistsError, action_crud
+from crud.action import action_crud
 from crud.base import CRUDBase
+from exceptions.action import ActionAlreadyExistsError
+from exceptions.common import EntityNotFoundError, PermissionDeniedError
 from main import app
 from models.cafe import Cafe
 from models.user import UserRole
@@ -23,7 +25,6 @@ from schemas.action import ActionCreate, ActionUpdate
 from services.action import get_action_or_raise
 from services.action import update_action as update_action_in_service
 from services.cafe import ensure_manager_cafes_access
-from services.errors import EntityNotFoundError, PermissionDeniedError
 
 
 class ActionSchemaTests(TestCase):
@@ -143,19 +144,18 @@ class ActionEndpointTests(IsolatedAsyncioTestCase):
         )
 
     async def test_manager_without_cafe_gets_empty_list(self) -> None:
-        """Менеджер без кафе не получает акции всех заведений."""
+        """Менеджер без кафе получает ошибку доступа."""
         manager = SimpleNamespace(role=UserRole.MANAGER, cafe_id=None)
         get_all = AsyncMock(return_value=[])
 
         with patch('api.endpoints.action.action_crud.get_all', new=get_all):
-            result = await get_all_actions(
-                manager,
-                AsyncMock(spec=AsyncSession),
-                show_active=None,
-                cafe_id=None,
-            )
-
-        self.assertEqual(result, [])
+            with self.assertRaises(PermissionDeniedError):
+                await get_all_actions(
+                    manager,
+                    AsyncMock(spec=AsyncSession),
+                    show_active=None,
+                    cafe_id=None,
+                )
         get_all.assert_not_awaited()
 
     async def test_create_checks_cafes_before_crud(self) -> None:
@@ -307,7 +307,11 @@ class ActionCrudTests(IsolatedAsyncioTestCase):
             photo_id=None,
             cafes_id=[uuid.uuid4()],
         )
-        integrity_error = IntegrityError('INSERT', {}, Exception('duplicate'))
+        integrity_error = IntegrityError(
+            'INSERT',
+            {},
+            SimpleNamespace(constraint_name='actions_description_key'),
+        )
 
         with patch.object(
             CRUDBase,

@@ -1,15 +1,14 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.dependencies.permissions import StaffUser
 from api.responses.statuses import CREATED
 from crud.media import MediaCRUD
 from schemas.media import MediaInfo
 
-from core.db import get_session
+from core.db import DBSession
 
 router = APIRouter()
 
@@ -23,7 +22,7 @@ router = APIRouter()
 async def upload_media(
     file: UploadFile,
     _: StaffUser,
-    session: AsyncSession = Depends(get_session),
+    session: DBSession,
 ) -> MediaInfo:
     """Загружает изображение и сохраняет его метаданные в БД."""
     crud = MediaCRUD(session)
@@ -37,7 +36,7 @@ async def upload_media(
 )
 async def get_media(
     media_id: uuid.UUID,
-    session: AsyncSession = Depends(get_session),
+    session: DBSession,
 ) -> FileResponse:
     """Возвращает файл изображения по его ID."""
     crud = MediaCRUD(session)

@@ -6,7 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from crud.base import BadRequestError, CRUDBase
+from crud.base import CRUDBase
+from exceptions.common import BadRequestError
 from models.slots import Slot
 from schemas.slots import TimeSlotCreate, TimeSlotInfo, TimeSlotUpdate
 

@@ -5,13 +5,13 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crud.media import MediaCRUD
-from services.errors import EntityNotFoundError
+from exceptions.common import EntityNotFoundError
 
 
 async def get_media_or_raise(
-        media_id: uuid.UUID,
-        session: AsyncSession,
-        check_file: bool = True,
+    media_id: uuid.UUID,
+    session: AsyncSession,
+    check_file: bool = True,
 ) -> Path:
     """Возвращает путь к файлу медиа или выбрасывает ошибку."""
     logger.info('Проверка существования медиа: media_id={}', media_id)

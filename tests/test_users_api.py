@@ -12,7 +12,7 @@ from api.dependencies.logging import (
     get_current_user_with_logging,
     get_me_user_with_logging,
 )
-from crud.user import UserAlreadyExistsError, UserNotFoundError
+from exceptions.user import UserAlreadyExistsError, UserNotFoundError
 from main import app
 from models.user import UserRole
 

@@ -13,10 +13,10 @@ from api.dependencies.cafe import get_cafe_or_404
 from api.dependencies.logging import get_current_user_with_logging
 from api.dependencies.slots import get_slot_in_cafe
 from crud.slot import slot_crud
+from exceptions.common import EntityNotFoundError
 from main import app
 from models.user import UserRole
 from schemas.slots import TimeSlotCreate
-from services.errors import EntityNotFoundError
 from tests.test_cafes_api import _make_cafe, _make_user
 
 from core.db import get_session

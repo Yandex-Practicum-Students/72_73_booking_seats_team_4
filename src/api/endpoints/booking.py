@@ -3,7 +3,8 @@ import uuid
 from fastapi import APIRouter
 from loguru import logger
 
-from api.dependencies.filters import Boolean, resolve_show_active
+from api.dependencies.booking import BookingServiceDep, FilterParam
+from api.dependencies.filters import Boolean, filter_user_role_manager_for_cafe_id, resolve_show_active
 from api.dependencies.permissions import CurrentUser
 from api.responses import error_responses
 from api.responses.statuses import (
@@ -18,8 +19,6 @@ from crud.booking import booking_crud
 from models.booking import Booking
 from models.user import UserRole
 from schemas.booking import BookingCreate, BookingInfo, BookingUpdate
-from services.booking import FilterParam
-from services.dependencies import BookingServiceDep
 from tasks.notifications import send_booking_notification
 
 from core.db import DBSession
@@ -54,8 +53,7 @@ async def get_all_bookings(
     )
     if current_user.role == UserRole.USER:
         filters.user_id = current_user.id
-    elif current_user.role == UserRole.MANAGER:
-        filters.cafe_id = current_user.cafe_id
+    filters.cafe_id = filter_user_role_manager_for_cafe_id(current_user, filters.cafe_id)
     return await booking_crud.get_all(
         session=session,
         show_active=show_active,

@@ -7,15 +7,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from crud.base import CRUDBase
+from exceptions.action import (
+    ActionAlreadyExistsError,
+    CafeActionAlreadyExistsError,
+    PhotoError,
+)
 from models.action import Action
 from models.cafe import Cafe
 from schemas.action import ActionCreate, ActionInfo, ActionUpdate
 
-from core.core_dependencies import redis_dep
-
-
-class ActionAlreadyExistsError(ValueError):
-    """Акция с таким описанием уже существует."""
+from core.redis import redis_dep
 
 
 class ActionCRUD(CRUDBase[Action, ActionCreate, ActionUpdate]):
@@ -31,12 +32,19 @@ class ActionCRUD(CRUDBase[Action, ActionCreate, ActionUpdate]):
         session: AsyncSession,
         redis: redis_dep,
     ) -> Action:
-        """Создаёт акцию, преобразуя конфликт уникальности описания."""
+        """Создаёт акцию, переводя конфликты БД в понятные исключения."""
         try:
             return await super().create(obj_in, session, redis)
         except IntegrityError as error:
             await session.rollback()
-            raise ActionAlreadyExistsError from error
+            driver_error = error.orig
+            constrain = getattr(driver_error, 'constraint_name', None)
+            if constrain == 'actions_description_key':
+                raise ActionAlreadyExistsError from error
+            if constrain == 'uq_cafe_action':
+                raise CafeActionAlreadyExistsError from error
+            if constrain == 'fk_action_photo':
+                raise PhotoError from error
 
     async def update(
         self,
@@ -45,12 +53,19 @@ class ActionCRUD(CRUDBase[Action, ActionCreate, ActionUpdate]):
         session: AsyncSession,
         redis: redis_dep,
     ) -> Action:
-        """Обновляет акцию, преобразуя конфликт уникальности описания."""
+        """Обновляет акцию, переводя конфликты БД в понятные исключения."""
         try:
             return await super().update(db_obj, obj_in, session, redis)
         except IntegrityError as error:
             await session.rollback()
-            raise ActionAlreadyExistsError from error
+            driver_error = error.orig
+            constrain = getattr(driver_error, 'constraint_name', None)
+            if constrain == 'actions_description_key':
+                raise ActionAlreadyExistsError from error
+            if constrain == 'uq_cafe_action':
+                raise CafeActionAlreadyExistsError from error
+            if constrain == 'fk_action_photo':
+                raise PhotoError from error
 
     async def get(
         self,

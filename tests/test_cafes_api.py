@@ -11,9 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.dependencies.cafe import get_cafe_or_404
 from api.dependencies.logging import get_current_user_with_logging
+from exceptions.common import EntityNotFoundError
 from main import app
 from models.user import UserRole
-from services.errors import EntityNotFoundError
 
 from core.db import get_session
 from core.redis import get_redis_session
