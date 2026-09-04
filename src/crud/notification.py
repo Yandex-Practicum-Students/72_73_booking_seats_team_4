@@ -1,0 +1,168 @@
+import uuid
+from datetime import datetime, timedelta, timezone
+from typing import Optional, Sequence
+
+from sqlalchemy import or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from models import BookingNotification, NotificationStatus, NotificationType
+
+
+class NotificationCRUD:
+    """CRUD для уведомлений о бронировании.
+
+    ВАЖНО: для атомарности коммитит вызывающая сторона при создании брони -> уведомления.
+    """
+
+    def __init__(self) -> None:
+        """Настройки экземпляра."""
+        self.model = BookingNotification
+
+    async def create_for_booking(
+        self,
+        booking_id: uuid.UUID,
+        type_: NotificationType,
+        scheduled_at: datetime,
+        session: AsyncSession,
+    ) -> BookingNotification:
+        """Создать уведомление для бронирования с получением ID без коммита."""
+        notification = self.model(
+            booking_id=booking_id,
+            type=type_,
+            status=NotificationStatus.PENDING,
+            scheduled_at=scheduled_at,
+            attempts=0,
+        )
+        session.add(notification)
+        await session.flush()
+        return notification
+
+    async def get_for_booking(
+        self,
+        booking_id: uuid.UUID,
+        session: AsyncSession,
+        type_: NotificationType | None = None,
+        status_: NotificationStatus | None = None,
+    ) -> Sequence[BookingNotification]:
+        """Получить уведомления бронирования с необязательной фильтрацией."""
+        query = select(self.model).where(self.model.booking_id == booking_id)
+        if type_ is not None:
+            query = query.where(self.model.type == type_)
+        if status_ is not None:
+            query = query.where(self.model.status == status_)
+        query = query.order_by(
+            self.model.created_at.desc(),
+            self.model.id.desc(),
+        )
+        result = await session.execute(query)
+        return result.scalars().all()
+
+    async def get_by_id_for_booking(
+        self,
+        notification_id: uuid.UUID,
+        booking_id: uuid.UUID,
+        session: AsyncSession,
+        for_update: bool = False,
+    ) -> Optional[BookingNotification]:
+        """Получить уведомление, принадлежащее указанному бронированию."""
+        query = select(self.model).where(
+            self.model.id == notification_id,
+            self.model.booking_id == booking_id,
+        )
+        if for_update:
+            query = query.with_for_update()
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def cancel_pending_for_booking(
+        self,
+        booking_id: uuid.UUID,
+        session: AsyncSession,
+    ) -> None:
+        """Пометить все PENDING уведомления бронирования как CANCELED."""
+        await session.execute(
+            update(self.model)
+            .where(
+                self.model.booking_id == booking_id,
+                self.model.status == NotificationStatus.PENDING,
+            )
+            .values(status=NotificationStatus.CANCELED),
+        )
+        await session.flush()
+
+    async def get_due_notifications(
+        self,
+        session: AsyncSession,
+        limit: int = 100,
+        stuck_timeout_minutes: int = 10,
+    ) -> Sequence[uuid.UUID]:
+        """Атомарно выбирает PENDING и зависшие PROCESSING уведомления.
+
+        Переводит их в статус PROCESSING с защитой от параллельных воркеров.
+        """
+        now = datetime.now(timezone.utc)
+        stuck_threshold = now - timedelta(minutes=stuck_timeout_minutes)
+
+        subquery = (
+            select(self.model.id)
+            .where(
+                or_(
+                    (self.model.status == NotificationStatus.PENDING) & (self.model.scheduled_at <= now),
+                    (self.model.status == NotificationStatus.PROCESSING)
+                    & (self.model.updated_at <= stuck_threshold),
+                ),
+            )
+            .order_by(self.model.scheduled_at.asc())
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+            .scalar_subquery()
+        )
+
+        stmt = (
+            update(self.model)
+            .where(self.model.id.in_(subquery))
+            .values(
+                status=NotificationStatus.PROCESSING,
+                updated_at=now,
+            )
+            .returning(self.model.id)
+        )
+        result = await session.execute(stmt)
+        return result.scalars().all()
+
+    async def get_for_processing(
+        self,
+        notification_id: uuid.UUID,
+        session: AsyncSession,
+    ) -> Optional[BookingNotification]:
+        """Получить уведомление с блокировкой строки для безопасной отправки."""
+        query = (
+            select(self.model)
+            .options(selectinload(self.model.booking))
+            .where(self.model.id == notification_id)
+            .with_for_update(skip_locked=True)
+        )
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def increment_attempts(
+        self,
+        notification: BookingNotification,
+        error: str,
+        session: AsyncSession,
+        max_attempts: int = 3,
+    ) -> None:
+        """Увеличить счётчик попыток и, при необходимости, пометить как FAILED."""
+        notification.attempts += 1
+        notification.last_error = error
+
+        if notification.attempts >= max_attempts:
+            notification.status = NotificationStatus.FAILED
+        else:
+            notification.status = NotificationStatus.PROCESSING
+
+        session.add(notification)
+
+
+notification_crud = NotificationCRUD()

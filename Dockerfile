@@ -10,7 +10,9 @@ ARG USER_ID=1000
 ARG GROUP_ID=1000
 
 RUN groupadd -g ${GROUP_ID} devuser \
-    && useradd -u ${USER_ID} -g devuser -m -s /bin/bash devuser
+    && useradd -u ${USER_ID} -g devuser -m -s /bin/bash devuser \
+    && mkdir -p /logs \
+    && chown -R ${USER_ID}:${GROUP_ID} /logs
 
 USER devuser
 
@@ -33,12 +35,7 @@ WORKDIR /app
 
 COPY --chown=$USER_ID:$GROUP_ID pyproject.toml uv.lock entrypoint.sh /app/
 
-RUN <<EOF
-uv sync \
-  --no-dev \
-  --no-install-project \
-  --frozen
-EOF
+RUN uv sync --no-dev --no-install-project --frozen
 
 # PYTHONOPTIMIZE — указывает интерпретатору Python, что нужно использовать ранее скомпилированные файлы из  директории `__pycache__` с  суффиксом `opt-1` в имени.
 # PYTHONFAULTHANDLER — устанавливает обработчики ошибок для дополнительных сигналов.
