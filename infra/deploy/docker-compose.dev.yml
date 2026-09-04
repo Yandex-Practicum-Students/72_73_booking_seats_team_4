@@ -73,6 +73,7 @@ services:
       - flower
       - --address=0.0.0.0
       - --port=5555
+      - --url_prefix=flower
     ports:
       - "5555"
     depends_on:
