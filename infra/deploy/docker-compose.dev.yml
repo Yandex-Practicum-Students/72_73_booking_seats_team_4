@@ -10,8 +10,6 @@ services:
     working_dir: /app
     ports:
       - "8000"
-    volumes:
-      - "app_logs:/app/logs"
     depends_on:
       db:
         condition: service_healthy
@@ -130,7 +128,6 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - "pgdata:/var/lib/postgresql/data/pgdata"
-      - "pg_logs:/logs"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 30s
@@ -158,5 +155,3 @@ volumes:
   pgdata:
   rabbitmq_data:
   redis_data:
-  app_logs:
-  pg_logs:
