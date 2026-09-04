@@ -261,7 +261,6 @@ jobs:
         with:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_USER }}
-          key: ${{ secrets.DEV_SSH_KEY }}
           password: ${{ secrets.DEV_SSH_PASSPHRASE }}
           script: |
             cd /opt/booking-seats
