@@ -242,7 +242,7 @@ jobs:
           # Сохраняем результат в переменную шага для использования дальше
           echo "tag=$DEPLOY_TAG" >> $GITHUB_OUTPUT
       - name: Copy docker-compose.yml via ssh
-        uses: appleboy/scp-action@master
+        uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_USER }}
