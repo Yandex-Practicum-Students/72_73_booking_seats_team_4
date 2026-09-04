@@ -2,12 +2,13 @@ import uuid
 
 from fastapi import APIRouter, Query
 
+from api.dependencies.booking import BookingServiceDep
+from api.dependencies.notification import NotificationServiceDep
 from api.dependencies.permissions import CurrentUser, StaffUser
 from api.responses import error_responses
 from api.responses.statuses import ACCEPTED, NOTIFICATION_DETAIL, NOTIFICATION_RETRY
 from models import BookingNotification, NotificationStatus, NotificationType
 from schemas.notification import BookingNotificationInfo
-from services.dependencies import BookingServiceDep, NotificationServiceDep
 from tasks.notifications import send_booking_notification
 
 router = APIRouter()

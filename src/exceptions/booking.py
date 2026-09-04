@@ -1,6 +1,6 @@
 from fastapi import status
 
-from core.errors import APIError
+from exceptions.base import APIError
 
 
 class BookingNotFoundError(APIError):

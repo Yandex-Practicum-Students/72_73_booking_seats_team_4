@@ -5,18 +5,17 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from api.errors import APIError
-from crud.action import ActionAlreadyExistsError
-from crud.dish import DishAlreadyExistsError
-from crud.user import UserAlreadyExistsError, UserNotFoundError
-from schemas.error import CustomError
-from services.errors import (
-    EntityNotFoundError,
+from exceptions.action import ActionAlreadyExistsError
+from exceptions.base import APIError
+from exceptions.cafe import (
     ManagerAlreadyAssignedError,
     ManagerNotFoundError,
     ManagerRoleError,
-    PermissionDeniedError,
 )
+from exceptions.common import BadRequestError, EntityNotFoundError, PermissionDeniedError
+from exceptions.dish import DishAlreadyExistsError
+from exceptions.user import UserAlreadyExistsError, UserNotFoundError
+from schemas.error import CustomError
 
 
 def custom_error_response(
@@ -171,6 +170,17 @@ async def manager_already_assigned_handler(
     exception: ManagerAlreadyAssignedError,
 ) -> JSONResponse:
     """Возвращает ошибку, если менеджер уже привязан к другому кафе."""
+    return custom_error_response(
+        status.HTTP_400_BAD_REQUEST,
+        str(exception),
+    )
+
+
+async def duplicate_error_handler(
+    request: Request,
+    exception: BadRequestError,
+) -> JSONResponse:
+    """Возвращает ошибку, если объект с одним из уникальных полей уже существует."""
     return custom_error_response(
         status.HTTP_400_BAD_REQUEST,
         str(exception),

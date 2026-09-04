@@ -15,8 +15,8 @@ from services.cafe import create_cafe as create_cafe_service
 from services.cafe import ensure_manager_cafe_access, get_manager_cafes
 from services.cafe import update_cafe as update_cafe_service
 
-from core.core_dependencies import redis_dep
 from core.db import DBSession
+from core.redis import redis_dep
 
 router = APIRouter()
 
@@ -59,7 +59,7 @@ async def get_cafes(
 )
 async def create_cafe(
     cafe_create: CafeCreate,
-    _: AdminUser,
+    user: AdminUser,
     session: DBSession,
     redis: redis_dep,
 ) -> Cafe:
@@ -103,7 +103,7 @@ async def get_cafe_by_id(
 async def update_cafe(
     cafe_id: uuid.UUID,
     cafe_update: CafeUpdate,
-    _: StaffUser,
+    user: StaffUser,
     session: DBSession,
     redis: redis_dep,
     cafe: Cafe = Depends(get_cafe_or_404),
@@ -112,5 +112,5 @@ async def update_cafe(
 
     Только для администраторов и менеджеров.
     """
-    ensure_manager_cafe_access(_, cafe_id)
+    ensure_manager_cafe_access(user, cafe_id)
     return await update_cafe_service(cafe, cafe_update, session, redis)

@@ -8,14 +8,14 @@ from unittest.mock import AsyncMock, Mock, patch
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.dependencies.booking import get_booking_service
 from api.dependencies.logging import get_current_user_with_logging
-from api.errors import APIError
+from exceptions.base import APIError
 from main import app
 from models.booking import StatusBooking
 from models.user import UserRole
 from schemas.booking import BookingCreate, BookingTableSlot, BookingUpdate
 from services.booking import BookingService
-from services.dependencies import get_booking_service
 
 from core.db import get_session
 from core.redis import get_redis_session

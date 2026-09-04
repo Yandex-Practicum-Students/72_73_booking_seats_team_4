@@ -6,11 +6,14 @@ from loguru import logger
 from pydantic import BaseModel, RootModel
 from redis.exceptions import RedisError
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import interfaces
 
+from exceptions.common import BadRequestError
+
 from core.base_model import Base
-from core.core_dependencies import redis_dep
+from core.redis import redis_dep
 from core.settings import settings
 
 ModelType = TypeVar('ModelType', bound=Base)
@@ -243,6 +246,11 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         except ConnectionError as e:
             logger.error(f'Ошибка подключения к бд при сохранении объекта: {db_obj}.\n {e}')
             raise
+        except IntegrityError as e:
+            await session.rollback()
+            logger.error(f'Нарушение целостности БД при создании {self.model.__tablename__}: {e}')
+            message = f'{self.model.__tablename__} с такими параметрами уже существует'
+            raise BadRequestError(message) from e
         except Exception as e:
             logger.error(f'Ошибка при сохранении объекта: {db_obj}.\n {e}')
             raise
@@ -288,8 +296,13 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         except ConnectionError as e:
             logger.error(f'Ошибка подключения к бд при сохранении объекта: {db_obj}.\n {e}')
             raise
+        except IntegrityError as e:
+            await session.rollback()
+            logger.error(f'Нарушение целостности БД при изменении {self.model.__tablename__}: {e}')
+            message = f'{self.model.__tablename__} с такими параметрами уже существует'
+            raise BadRequestError(message) from e
         except Exception as e:
-            logger.error(f'Ошибка при обнвлении объекта "{db_obj}":\n {e}')
+            logger.error(f'Ошибка при обновлении объекта "{db_obj}":\n {e}')
             raise
 
     def _all_cache_key(self, is_active: Optional[bool] = None) -> str:

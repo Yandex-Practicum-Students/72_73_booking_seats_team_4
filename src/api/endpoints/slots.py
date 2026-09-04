@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends
 
 from api.dependencies.cafe import get_cafe_or_404
-from api.dependencies.filters import Boolean, resolve_show_active
+from api.dependencies.filters import Boolean, filter_user_role_manager_for_cafe_id, resolve_show_active
 from api.dependencies.permissions import CurrentUser, StaffUser, ensure_active_resource_visible
 from api.dependencies.slots import get_slot_in_cafe
 from api.responses import error_responses
@@ -14,8 +14,8 @@ from models.slots import Slot
 from schemas.slots import TimeSlotCreate, TimeSlotInfo, TimeSlotUpdate
 from services.cafe import ensure_manager_cafe_access
 
-from core.core_dependencies import redis_dep
 from core.db import DBSession
+from core.redis import redis_dep
 
 router = APIRouter()
 
@@ -39,6 +39,7 @@ async def get_slots_by_cafe(
     менеджер и пользователь — только активные.
     """
     show_active = resolve_show_active(current_user, show_active)
+    cafe_id = filter_user_role_manager_for_cafe_id(current_user, cafe_id)
     return await slot_crud.get_by_cafe(
         cafe_id=cafe_id,
         session=session,

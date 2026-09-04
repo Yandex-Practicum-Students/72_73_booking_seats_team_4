@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import AsyncMock, patch
 
+from exceptions.common import PermissionDeniedError
 from main import app
 from models.user import UserRole
 from schemas.action import ActionCreate
@@ -13,7 +14,6 @@ from schemas.dish import DishCreate, DishUpdate
 from services.action import create_action
 from services.cafe import create_cafe
 from services.dish import create_dish, update_dish
-from services.errors import PermissionDeniedError
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 

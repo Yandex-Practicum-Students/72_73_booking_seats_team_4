@@ -7,15 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from crud.base import CRUDBase
+from exceptions.dish import DishAlreadyExistsError
 from models.cafe import Cafe
 from models.dish import Dish
 from schemas.dish import DishCreate, DishInfo, DishUpdate
 
-from core.core_dependencies import redis_dep
-
-
-class DishAlreadyExistsError(ValueError):
-    """Блюдо с таким именем уже существует."""
+from core.redis import redis_dep
 
 
 class DishCRUD(CRUDBase[Dish, DishCreate, DishUpdate]):

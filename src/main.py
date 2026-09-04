@@ -9,11 +9,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from api.errors import APIError
 from api.exceptions import (
     action_already_exists_handler,
     api_error_handler,
     dish_already_exists_handler,
+    duplicate_error_handler,
     entity_not_found_handler,
     http_exception_handler,
     manager_already_assigned_handler,
@@ -25,16 +25,16 @@ from api.exceptions import (
     user_not_found_handler,
 )
 from api.routers import v1_api_router
-from crud.action import ActionAlreadyExistsError
-from crud.dish import DishAlreadyExistsError
-from crud.user import UserAlreadyExistsError, UserNotFoundError
-from services.errors import (
-    EntityNotFoundError,
+from exceptions.action import ActionAlreadyExistsError
+from exceptions.base import APIError
+from exceptions.cafe import (
     ManagerAlreadyAssignedError,
     ManagerNotFoundError,
     ManagerRoleError,
-    PermissionDeniedError,
 )
+from exceptions.common import BadRequestError, EntityNotFoundError, PermissionDeniedError
+from exceptions.dish import DishAlreadyExistsError
+from exceptions.user import UserAlreadyExistsError, UserNotFoundError
 
 from core.logging import configure_loguru
 from core.settings import settings
@@ -83,6 +83,7 @@ app.add_exception_handler(EntityNotFoundError, entity_not_found_handler)
 app.add_exception_handler(PermissionDeniedError, permission_denied_handler)
 app.add_exception_handler(ActionAlreadyExistsError, action_already_exists_handler)
 app.add_exception_handler(DishAlreadyExistsError, dish_already_exists_handler)
+app.add_exception_handler(BadRequestError, duplicate_error_handler)
 app.add_exception_handler(UserAlreadyExistsError, user_already_exists_handler)
 app.add_exception_handler(UserNotFoundError, user_not_found_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
@@ -96,6 +97,7 @@ app.include_router(v1_api_router)
 @app.get(
     path='/',
     response_model=dict,
+    include_in_schema=False,
 )
 async def index() -> dict:
     """Основная страница."""
