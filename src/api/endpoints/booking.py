@@ -90,7 +90,7 @@ async def get_booking(
     response_model=BookingInfo,
     status_code=CREATED,
     responses=error_responses(*BOOKING_CREATE),
-    summary='Создает новое бронирования.',
+    summary='Создает новое бронирование.',
 )
 async def create_booking(
     current_user: CurrentUser,

@@ -5,13 +5,19 @@ from typing import Optional
 from fastapi import HTTPException, status
 from loguru import logger
 from sqlalchemy import and_, or_, select, tuple_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from api.dependencies.cafe import get_cafe_or_404
 from api.dependencies.permissions import CurrentUser
 from crud.booking import BookingCRUD, booking_crud
 from exceptions.base import APIError
-from exceptions.booking import BookingAlreadyExistsError, BookingNotFoundError, CrossSlotsExistsError
+from exceptions.booking import (
+    BookingAlreadyExistsError,
+    BookingNotFoundError,
+    CrossSlotsExistsError,
+    TableAlreadyBookedError,
+)
 from models.booking import Booking, BookingTablesSlots, StatusBooking
 from models.slots import Slot
 from models.table import Table
@@ -320,12 +326,20 @@ class BookingService:
             table_ids=table_ids,
         )
 
-        booking = await self.crud.create(
-            obj_in=new_booking,
-            session=self.session,
-            current_user=current_user,
-        )
+        try:
+            booking = await self.crud.create(
+                obj_in=new_booking,
+                session=self.session,
+                current_user=current_user,
+            )
+        except IntegrityError as error:
+            await self.session.rollback()
+            if 'uniq_active_booking_table_slot' in str(error.orig):
+                raise TableAlreadyBookedError from error
+            raise error
+
         manager_notification, _ = await self.notification_service.create_booking_notifications(booking)
+
         await self.session.commit()
         await self.session.refresh(booking)
 
@@ -423,6 +437,7 @@ class BookingService:
         self.check_role_user_cant_not_changed_is_active(update_data, current_user)
 
         booking = await self.crud.update(session=self.session, db_booking=db_booking, obj_in=update_data)
+
         manager_notification, _ = await self.notification_service.update_booking_notifications(booking)
         await self.session.commit()
         await self.session.refresh(booking)
