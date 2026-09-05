@@ -46,6 +46,16 @@ class BookingTablesSlots(Base):
     )
     slot: Mapped['Slot'] = relationship('Slot', back_populates='booking_tables_slots', lazy='selectin')  # noqa: F821
 
+    __table_args__ = (
+        Index(
+            'uniq_active_booking_table_slot',
+            'table_id',
+            'slot_id',
+            unique=True,
+            postgresql_where='is_active = true',
+        ),
+    )
+
 
 class Booking(Base):
     """Модель бронирования заказов."""

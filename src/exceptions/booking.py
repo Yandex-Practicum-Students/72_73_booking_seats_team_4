@@ -34,3 +34,14 @@ class CrossSlotsExistsError(APIError):
             status_code=status.HTTP_400_BAD_REQUEST,
             message='У пользователя есть бронирования с пересекающимися слотами.',
         )
+
+
+class TableAlreadyBookedError(APIError):
+    """Стол в выбранное время уже занят."""
+
+    def __init__(self) -> None:
+        """Инициализирует ошибку при недоступности стола на выбранное время при состоянии гонки запросов."""
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            message='Стол в выбранное время занят.',
+        )
