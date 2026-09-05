@@ -1,6 +1,7 @@
 import uuid
 
 from loguru import logger
+from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -108,6 +109,20 @@ class TableCRUD(CRUDBase[Table, TableCreate, TableUpdate]):
         await session.refresh(db_table)
         logger.info('Стол создан: table_id={}, cafe_id={}', db_table.id, cafe_id)
         return await self.get(db_table.id, session)
+
+    async def update(
+        self,
+        table: Table,
+        table_update: TableUpdate,
+        session: AsyncSession,
+        redis: Redis,
+    ) -> Table:
+        """Обновляет стол с обработкой явного None."""
+        update_data = table_update.model_dump(exclude_unset=True)
+
+        if table_update.description is None and 'description' not in update_data:
+            update_data['description'] = None
+        return await super().update(table, update_data, session, redis)
 
 
 table_crud = TableCRUD()

@@ -69,5 +69,10 @@ class CafeUpdate(CafeCreate):
     phone: Optional[Phone] = Field(None, max_length=PHONE_NUMBER_MAX_LENGTH, description='Телефон кафе')
     managers_id: Optional[List[uuid.UUID]] = None
     is_active: Optional[bool] = None
-
-    check_not_null_fields = field_validator('name', 'address', 'phone')(field_cannot_be_null)
+    check_not_null_fields = field_validator(
+        'name',
+        'address',
+        'phone',
+        'is_active',
+        'managers_id',
+    )(field_cannot_be_null)

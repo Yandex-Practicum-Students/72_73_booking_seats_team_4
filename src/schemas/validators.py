@@ -1,6 +1,6 @@
 import uuid
 from datetime import time
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 import phonenumbers
 from phonenumbers.phonenumberutil import NumberParseException
@@ -91,10 +91,15 @@ def validate_empty_field(
 
 
 def field_cannot_be_null(
-    value: str | List[uuid.UUID],
+    value: Union[str, List[uuid.UUID], bool, int, None],
     info: ValidationInfo,
-) -> str | List[uuid.UUID]:
-    """Проверяет, чтобы поле не имело значения null."""
+) -> Union[str, List[uuid.UUID], bool, int, None]:
+    """Проверяет, чтобы поле не имело значения null.
+
+     Используется для полей, которые:
+    - Могут быть не переданы (None как "не передано")
+    - Если переданы, не могут быть null
+    """
     if value is None:
         error = f'Поле {info.field_name} не может содержать значение null!'
         raise ValueError(error)
