@@ -171,6 +171,7 @@ async def update_user_by_id(
     reject_null_required_fields(update_data)
     requested_role = update_data.get('role')
     ensure_user_update_allowed(actor, target_user, requested_role)
+
     if requested_role is not None and requested_role != UserRole.MANAGER:
         target_user.cafe_id = None
 
