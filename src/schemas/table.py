@@ -1,9 +1,10 @@
 from typing import Optional
 
-from pydantic import ConfigDict, Field, PositiveInt
+from pydantic import ConfigDict, Field, PositiveInt, field_validator
 
 from schemas.base import BaseInfoScheme, DescriptionScheme, IdScheme
 from schemas.cafe import CafeShortInfo
+from schemas.validators import field_cannot_be_null
 
 
 class TableCreate(DescriptionScheme):
@@ -22,6 +23,7 @@ class TableUpdate(TableCreate):
         description='Количество мест',
     )
     is_active: Optional[bool] = Field(None, description='Активность стола')
+    check_not_null_fields = field_validator('seat_number', 'is_active')(field_cannot_be_null)
 
 
 class TableShortInfo(IdScheme, TableCreate):

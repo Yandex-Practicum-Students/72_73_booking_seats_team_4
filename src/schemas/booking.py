@@ -2,7 +2,7 @@ import uuid
 from datetime import date
 from typing import Annotated, List, Optional
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PositiveInt
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PositiveInt, field_validator
 
 from models.booking import StatusBooking
 from schemas.base import BaseInfoScheme, IdScheme
@@ -10,6 +10,7 @@ from schemas.cafe import CafeShortInfo
 from schemas.slots import TimeSlotShortInfo
 from schemas.table import TableShortInfo
 from schemas.user import UserShortInfo
+from schemas.validators import field_cannot_be_null
 
 from core.constants import BOOKING_NOTE_MAX_LENGTH
 
@@ -91,6 +92,13 @@ class BookingUpdate(BookingBase):
             'Null отключает напоминание.'
         ),
     )
+    check_not_null_fields = field_validator(
+        'tables_slots',
+        'guest_number',
+        'booking_date',
+        'status',
+        'is_active',
+    )(field_cannot_be_null)
 
 
 class BookingInfo(IdScheme, BookingBase, BaseInfoScheme):
