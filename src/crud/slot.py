@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 
 from loguru import logger
 from sqlalchemy import select
@@ -8,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from crud.base import CRUDBase
 from exceptions.common import BadRequestError
+from models.booking import Booking, BookingTablesSlots, StatusBooking
 from models.slots import Slot
 from schemas.slots import TimeSlotCreate, TimeSlotInfo, TimeSlotUpdate
 
@@ -49,13 +51,35 @@ class SlotCRUD(CRUDBase[Slot, TimeSlotCreate, TimeSlotUpdate]):
         session: AsyncSession,
         *,
         show_active: bool | None = None,
+        table_id: uuid.UUID | None = None,
+        booking_date: date | None = None,
     ) -> list[Slot]:
-        """Возвращает слоты кафе с фильтрацией по активности."""
-        logger.info('Получение слотов кафе: cafe_id={}, show_active={}', cafe_id, show_active)
+        """Возвращает слоты кафе с фильтрацией по активности и занятости."""
+        logger.info(
+            'Получение слотов кафе: cafe_id={}, show_active={}, table_id={}, booking_date={}',
+            cafe_id,
+            show_active,
+            table_id,
+            booking_date,
+        )
         query = select(Slot).where(Slot.cafe_id == cafe_id)
 
         if show_active is not None:
             query = query.where(Slot.is_active == show_active)
+
+        # Если выбран стол и дата - исключаем слоты, занятые этим столом
+        if table_id is not None and booking_date is not None:
+            booked_slots = (
+                select(BookingTablesSlots.slot_id)
+                .join(Booking, Booking.id == BookingTablesSlots.booking_id)
+                .where(
+                    BookingTablesSlots.table_id == table_id,
+                    Booking.booking_date == booking_date,
+                    Booking.status != StatusBooking.CANCELED,
+                    Booking.is_active.is_(True),
+                )
+            )
+            query = query.where(~Slot.id.in_(booked_slots))
 
         query = query.options(selectinload(Slot.cafe))
         result = await session.execute(query)

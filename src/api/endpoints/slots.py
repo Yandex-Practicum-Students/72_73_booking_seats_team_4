@@ -1,6 +1,7 @@
 import uuid
+from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from api.dependencies.cafe import get_cafe_or_404
 from api.dependencies.filters import Boolean, filter_user_role_manager_for_cafe_id, resolve_show_active
@@ -13,6 +14,7 @@ from models.cafe import Cafe
 from models.slots import Slot
 from schemas.slots import TimeSlotCreate, TimeSlotInfo, TimeSlotUpdate
 from services.cafe import ensure_manager_cafe_access
+from services.slot import create_slot_in_cafe
 
 from core.db import DBSession
 from core.redis import redis_dep
@@ -31,12 +33,15 @@ async def get_slots_by_cafe(
     current_user: CurrentUser,
     session: DBSession,
     show_active: Boolean = None,
+    table_id: uuid.UUID | None = Query(None, description='ID стола для фильтрации свободных слотов'),
+    booking_date: date | None = Query(None, description='Дата бронирования для фильтрации занятых слотов'),
     _cafe: Cafe = Depends(get_cafe_or_404),
 ) -> list[Slot]:
     """Получение списка доступных для бронирования временных слотов в кафе.
 
     Администратор видит все слоты (учитывая show_active),
     менеджер и пользователь — только активные.
+    Если переданы table_id и booking_date - возвращаются только свободные слоты стола.
     """
     show_active = resolve_show_active(current_user, show_active)
     cafe_id = filter_user_role_manager_for_cafe_id(current_user, cafe_id)
@@ -44,6 +49,8 @@ async def get_slots_by_cafe(
         cafe_id=cafe_id,
         session=session,
         show_active=show_active,
+        table_id=table_id,
+        booking_date=booking_date,
     )
 
 
@@ -65,8 +72,7 @@ async def create_slot(
 
     Менеджер создает слоты только в своём кафе.
     """
-    ensure_manager_cafe_access(current_user, cafe_id)
-    return await slot_crud.create_with_cafe(cafe_id, slot_create, session)
+    return await create_slot_in_cafe(cafe_id, slot_create, current_user, session)
 
 
 @router.get(
