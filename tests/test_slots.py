@@ -132,6 +132,8 @@ class SlotAPITests(IsolatedAsyncioTestCase):
             cafe_id=self.cafe_id,
             session=self.session,
             show_active=False,
+            table_id=None,
+            booking_date=None,
         )
 
     async def test_list_requires_authentication(self) -> None:
@@ -172,6 +174,8 @@ class SlotAPITests(IsolatedAsyncioTestCase):
             cafe_id=self.cafe_id,
             session=self.session,
             show_active=True,
+            table_id=None,
+            booking_date=None,
         )
 
     async def test_manager_gets_active_slots_by_default_in_own_cafe(self) -> None:
@@ -191,6 +195,8 @@ class SlotAPITests(IsolatedAsyncioTestCase):
             cafe_id=self.cafe_id,
             session=self.session,
             show_active=True,
+            table_id=None,
+            booking_date=None,
         )
 
     async def test_manager_cannot_request_inactive_slots_in_own_cafe(self) -> None:
@@ -211,6 +217,8 @@ class SlotAPITests(IsolatedAsyncioTestCase):
             cafe_id=self.cafe_id,
             session=self.session,
             show_active=True,
+            table_id=None,
+            booking_date=None,
         )
 
     async def test_admin_can_create_slot(self) -> None:
@@ -223,9 +231,15 @@ class SlotAPITests(IsolatedAsyncioTestCase):
             'description': 'Тестовый слот',
         }
 
-        with patch(
-            'api.endpoints.slots.slot_crud.create_with_cafe',
-            new=create_with_cafe,
+        with (
+            patch(
+                'services.slot.check_slot_not_overlapping',
+                new=AsyncMock(),
+            ),
+            patch(
+                'api.endpoints.slots.slot_crud.create_with_cafe',
+                new=create_with_cafe,
+            ),
         ):
             response = await self.client.post(
                 f'/api/v1/cafes/{self.cafe_id}/time_slots',
@@ -379,7 +393,13 @@ class SlotAPITests(IsolatedAsyncioTestCase):
             'description': 'Тестовый слот',
         }
 
-        with patch('api.endpoints.slots.slot_crud.create_with_cafe', new=create_with_cafe):
+        with (
+            patch(
+                'services.slot.check_slot_not_overlapping',
+                new=AsyncMock(),
+            ),
+            patch('api.endpoints.slots.slot_crud.create_with_cafe', new=create_with_cafe),
+        ):
             response = await self.client.post(
                 f'/api/v1/cafes/{self.cafe_id}/time_slots',
                 json=payload,
@@ -493,6 +513,47 @@ class SlotAPITests(IsolatedAsyncioTestCase):
             {'code': 403, 'message': 'Менеджер может управлять только своим кафе'},
         )
         update.assert_not_awaited()
+
+    async def test_create_slot_rejects_overlapping(self) -> None:
+        """Создание слота с пересечением по времени отклоняется (400)."""
+        from exceptions.slot import SlotOverlapError
+
+        existing = _make_slot(
+            cafe_id=self.cafe_id,
+            start_time=time(10, 0, tzinfo=timezone.utc),
+            end_time=time(12, 0, tzinfo=timezone.utc),
+        )
+        scalar_result = MagicMock()
+        scalar_result.first.return_value = existing
+        query_result = MagicMock()
+        query_result.scalars.return_value = scalar_result
+        self.session.execute.return_value = query_result
+
+        create_with_cafe = AsyncMock()
+        payload = {
+            'start_time': '11:00',
+            'end_time': '13:00',
+            'description': 'Пересекающийся слот',
+        }
+
+        with (
+            patch(
+                'services.slot.check_slot_not_overlapping',
+                new=AsyncMock(side_effect=SlotOverlapError),
+            ),
+            patch('api.endpoints.slots.slot_crud.create_with_cafe', new=create_with_cafe),
+        ):
+            response = await self.client.post(
+                f'/api/v1/cafes/{self.cafe_id}/time_slots',
+                json=payload,
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {'code': 400, 'message': 'Слот пересекается по времени с существующим слотом кафе.'},
+        )
+        create_with_cafe.assert_not_awaited()
 
 
 class SlotCRUDTests(IsolatedAsyncioTestCase):
